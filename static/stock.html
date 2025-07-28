@@ -1,0 +1,277 @@
+<div class="stock_title">
+  <h2 style="cursor:pointer" ng-click="star()">
+    <span ng-bind="stock.name"></span>
+    <span ng-if="!stock.stared">♥︎</span>
+    <span ng-if="stock.stared">❤️</span>
+  </h2>
+  <span class="stock_title_realtime" ng-if="stock.realtime">
+    <span class="date--realtime" ng-bind="stock.realtime.date | date:'MM/dd'"></span>
+    <!-- class price-up 上漲，price-down 下跌-->
+    <span class="price--realtime"
+      ng-class="{'price-up': (stock.realtime.diff > 0), 'price-down': (stock.realtime.diff < 0)}">
+      <span ng-bind="stock.realtime.close.toFixed(2)"></span>
+      <span ng-if="stock.realtime.diff > 0">▲</span>
+      <span ng-if="stock.realtime.diff < 0">▼</span>
+      <span ng-bind="stock.realtime.diff.toFixed(2)"></span>
+      （<span ng-bind="(stock.realtime.diffRate * 100).toFixed(2)"></span>%）
+      <span class="price--others">
+        開 <span ng-bind="stock.realtime.open.toFixed(2)"></span> |
+        高 <span ng-bind="stock.realtime.high.toFixed(2)"></span> |
+        低 <span ng-bind="stock.realtime.low.toFixed(2)"></span> |
+        量 <span ng-bind="stock.realtime.volume"></span>
+      </span>
+    </span>
+    <!-- <span style="cursor:pointer" ng-click="checkList.blank()">💪</span> -->
+    <br />
+    <span style="cursor:pointer" ng-click="sync()">🔄</span>
+    <a title="本益比河流圖" ng-href="https://www.wantgoo.com/stock/{{stock.code}}/enterprise-value/price-to-earning-river"
+      target="_wantgoo">🎯</a>
+    <a title="歷年股利" ng-href="https://www.wantgoo.com/stock/{{stock.code}}/dividend-policy/ex-dividend"
+      target="_wantgoo">🧧</a>
+	<span ng-if="stock.dividend">
+	  股利：<span ng-bind="stock.dividend['除息日']"></span>：
+	  ＄<span ng-bind="stock.dividend['股利']"></span>
+	  （<span ng-bind="stock.dividend['年殖利率']"></span>％）➡︎
+	  <span ng-bind="stock.dividend['發放日']"></span>
+	</span>
+    <!-- <a title="技術線圖" ng-href="https://www.wantgoo.com/stock/{{stock.code}}/technical-chart" target="_wantgoo">📈</a> -->
+  </span>
+  <button style="cursor:pointer" ng-click="invest.edit({ act: '買入' })">買入</button>
+  <button style="cursor:pointer" ng-click="dividend.edit({})">股利</button>
+</div>
+
+<div ng-if="stock.trade.invest" class="stock_invest" ng-class="{'trade-rsi-hot': stock.trade.invest.rsiHot}">
+  <!-- suggest clsss 表示「推薦」操作！ -->
+  <div ng-class="{'suggest': !log.id}" ng-if="log.act" ng-repeat="log in stock.trade.invest.logs">
+    <div class="stock_invest-info">
+      <span class="date--stock-invest" ng-bind="(log.date || log.day.date) | date:'MM/dd'"></span>
+      <span class="price--stock-invest" ng-bind="(log.price || log.day.close).toFixed(2)"></span>
+      <div class="stock_invest-profit"><span ng-if="log.invested > 0">目前</span>損益
+        <span class="price--invest" ng-bind="log.profit"></span>（<span class="pct--invest"
+          ng-bind="log.profitRate"></span>）
+      </div>
+    </div>
+    <div class="stock_invest-detail">
+      <span ng-bind="log.act"></span>
+      <span ng-bind="log.amount"></span> 股<br />
+      持倉：<span ng-bind="log.totalInvested"></span> 股<br />
+      平均成本：<span class="price--invest" ng-bind="log.avgCost"></span><br />
+	  稅費：<span class="price--invest" ng-bind="stock.trade.invest.tax.toFixed(2)"></span>
+    </div>
+    <!--停損：<span class="price" ng-bind="(log.stopLossPrice || 0).toFixed(2)"></span>-->
+    <span class="stock_invest-auto">
+      停損：<span class="price--investup" ng-bind="stock.trade.invest.stopLossPrice.toFixed(2)"></span>
+      停利：<span class="price--investdown" ng-bind="stock.trade.invest.stopProfitPrice.toFixed(2)"></span>
+    </span>
+    <button ng-if="log.id" style="cursor:pointer" ng-click="invest.edit(log)">編輯</button>
+    <button ng-if="log.act == '買入'" style="cursor:pointer" ng-click="invest.edit({ act: '賣出' })">賣出</button>
+  </div>
+</div>
+<div ng-if="stock.done.lenth" class="notes_block">
+  <div ng-repeat="trade in stock.done">
+    <span class="date--note" ng-bind="trade.entryDate | date:'MM/dd'"></span>～<span class="date--note"
+      ng-bind="trade.exitDate | date:'MM/dd'"></span>
+    已實現損益 <span class="price" ng-bind="trade.totalProfit"></span>（<span class="percent"
+      ng-bind="trade.profitRate * 100"></span>）
+  </div>
+</div>
+<div ng-if="notes.length" class="notes_block">
+  <div style="cursor:pointer" ng-repeat="note in notes" ng-click="edit(note)">
+    <span class="date--note" ng-bind="note.date | date:'MM/dd'"></span>
+    <span ng-bind="note.title"></span>
+  </div>
+</div>
+<div ng-if="dividends.length" class="notes_block">
+  <div style="cursor:pointer" ng-repeat="d in dividends" ng-click="dividend.edit(d)">
+    <span class="date--note" ng-bind="d.date | date:'MM/dd'"></span>
+    每股 <span ng-bind="d.price"></span> 元
+	× <span ng-bind="d.amount"></span> 股
+	＝ <span ng-bind="d.payment"></span> 元
+  </div>
+</div>
+
+<div ng-if="stock.done" class="stock_result">
+  <div ng-repeat="trade in stock.done">
+    <span class="date--result" ng-bind="trade.entryDate | date:'MM/dd'"></span>
+    <span class="price--result" ng-bind="trade.entryPrice"></span> 買入
+    <span class="date--result" ng-bind="trade.exitDate | date:'MM/dd'"></span>
+    <span class="price--result" ng-bind="trade.exitPrice"></span> 賣出
+    稅金 <span class="price--result" ng-bind="trade.tax | number"></span>
+    已實現損益 <span class="price--result" ng-bind="trade.netProfit | number"></span>
+    （<span class="pct--result" ng-bind="trade.netProfitRate | pct"></span>）
+  </div>
+</div>
+
+<div class="stock_trades">
+  <ng-container ng-repeat="test in tests">
+    <input type="radio" name="tabset" id="tab{{$index}}" ng-checked="$index === 0">
+    <label for="tab{{$index}}" id="label{{$index}}">
+      <span class="ma--label" ng-bind="test.ma"></span>
+      <span class="date--label"><span ng-bind="test.startDate | dt"></span> ~
+        <span ng-bind="test.endDate | dt"></span></span>
+      <div class="stock_trades-price">
+        <span class="price--label" ng-bind="test.profit"></span>
+        <span class="pct--label rate" ng-bind="test.profitRate | pct" ng-click="allBand(test)"></span>
+      </div>
+    </label>
+    <div class="stock_trades-info" id="info{{$index}}">
+      <div>
+        <a href="https://t.ly/TgoWR" target="_faq">盈虧比</a> <span ng-bind="test.pnl"></span>
+        期望值 <span class="price--label" ng-bind="test.expectation"></span>
+        <span ng-if="test.expectation > 1">👍</span>
+      </div>
+      <div>
+        二日有效率 <span class="pct--breakoutRate" ng-bind="test.breakoutRate | pct"></span>
+        總勝率 <span class="pct--winRate" ng-bind="test.winRate | pct"></span>
+      </div>
+
+      <div>
+        返場 <span ng-bind="test.reentry"></span> 次
+        成功 <span ng-bind="test.reentryWins"></span> 次
+        勝率 <span class="pct--reentryWinRate" ng-bind="test.reentryWinRate | pct"></span><br />
+        返場損益 <span class="price--label" ng-bind="test.reentryProfit"></span>
+        <span class="pct--reentryProfit" ng-bind="(test.reentryProfit / test.profit) | pct"></span>
+      </div>
+      <!--<div>最大回撤 <span ng-bind="test.maxDrawdown"></span></div>-->
+    </div>
+    <div id="trade{{$index}}">
+      <div class="stock_trades_row" ng-repeat="trade in test.trades" style="cursor:pointer" ng-click="jump(trade)">
+        <div class="date--dates">
+          <div>🗓️ <span ng-bind="trade.entryDate | dt"></span> ~
+            <span ng-bind="trade.exitDate | dt"></span>
+            <span ng-if="trade.duration" ng-bind="trade.duration"></span>
+          </div>
+          <span class="rt-badge" ng-if="trade.breakout">二日法則</span>
+          <span class="rt-badge" ng-if="trade.reentry">重新入場</span>
+        </div>
+        <div>
+          <div class="info-banner">💰📈 <span class="price--inout" ng-bind="trade.entryPrice.toFixed(2)"></span></div>
+          <div class="info-banner" ng-if="trade.exitPrice">🏃📉 <span class="price--inout"
+              ng-bind="trade.exitPrice.toFixed(2)"></span></div>
+        </div>
+        <div class="profit" ng-if="trade.duration">
+          <div>🧧 <span class="price--profit" ng-bind="trade.profit"></span></div>
+          <span class="pct--profit" ng-bind="trade.profitRate | pct"></span>
+        </div>
+
+        <div ng-if="trade.invest" class="profit">
+          <div ng-if="trade.invest.profit != 0" class="price--profit">🤑 <span ng-bind="trade.invest.profit"></span>
+          </div>
+          <span ng-if="trade.invest.profit != 0" class="pct--profit" ng-bind="trade.invest.profitRate | pct"></span>
+        </div>
+
+        <div class="reason">
+          <span ng-bind="trade.entryReason"></span>
+          <span ng-bind="trade.exitReason"></span>
+          <span class="rt-badge" ng-if="trade.exitReason.includes('過熱')">過熱</span>
+        </div>
+        <div ng-if="trade.invest" class="investstock" ng-class="{'rich-stock-trade-rsi-hot': trade.invest.rsiHot}">
+          <div ng-if="log.act" ng-repeat="log in trade.invest.logs">
+            <span class="date" ng-bind="log.day.date.toLocaleDateString()"></span>
+            <span class="price" ng-bind="log.day.close.toFixed(2)"></span>
+            <span ng-bind="log.act"></span>：<span class="percent" ng-bind="log.amount"></span>
+            持倉：<span class="percent" ng-bind="log.invested"></span>
+            成本：<span class="price" ng-bind="log.avgCost"></span>
+            停損價：<span class="price" ng-bind="(log.stopLossPrice || 0).toFixed(2)"></span>
+            <span class="result" ng-if="log.profit != 0">
+              <span ng-if="log.invested > 0">當前</span>損益
+              <span class="price" ng-bind="log.profit"></span>（<span class="percent" ng-bind="log.profitRate"></span>）
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<div id="invest-form" style="display: none">
+  <br />
+  <div>
+    <span ng-bind="invest.log.act"></span>
+    <input type="date" ng-model="invest.log.date">
+    <input type="number" ng-model="invest.log.price"> 元
+    <input type="number" ng-model="invest.log.amount"> 股
+  </div>
+  <br />
+  <div>
+    <textarea rows="4" cols="50" ng-model="note.log.note"></textarea>
+  </div>
+  <div>
+    <p>
+      <button ng-click="invest.save()">確認</button>
+      <button ng-if="invest.log.id" ng-click="invest.destroy()">刪除</button>
+    </p>
+  </div>
+</div>
+
+<div id="dividend-form" style="display: none">
+  <br />
+  <div>
+    <span>收款紀錄</span>
+    <input type="date" ng-model="dividend.trade.date">
+    <input type="number" ng-model="dividend.trade.price"> 元
+    <input type="number" ng-model="dividend.trade.amount"> 股
+  </div>
+  <div>
+    <p>
+      <button ng-click="dividend.save()">確認</button>
+      <button ng-if="dividend.trade.id" ng-click="dividend.destroy()">刪除</button>
+    </p>
+  </div>
+</div>
+
+<div id="stock-check-list" style="display: none">
+  <div class="checklist">
+    <div class="caption">
+      <span ng-bind="blankList.title"></span>
+    </div>
+    <div class="header-row">
+      <div class="header-cell">多方檢查</div>
+      <div class="header-cell">空方檢查</div>
+    </div>
+    <div class="content-row">
+      <div class="cell">
+        <div class="section">
+          <div class="item" ng-repeat="rule in blankList.long.required">
+            <input type="checkbox" ng-checked="rule.checked" ng-model="rule.checked" />
+            <span ng-bind="rule.title"></span>
+          </div>
+        </div>
+      </div>
+      <div class="cell">
+        <div class="section">
+          <div class="item" ng-repeat="rule in blankList.short.required">
+            <input type="checkbox" ng-checked="rule.checked" ng-model="rule.checked" />
+            <span ng-bind="rule.title"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="content-row">
+      <div class="cell">
+        <div class="section">
+          <div class="item" ng-repeat="rule in blankList.long.optional">
+            <input type="checkbox" ng-checked="rule.checked" ng-model="rule.checked" />
+            <span ng-bind="rule.title"></span>
+          </div>
+        </div>
+      </div>
+      <div class="cell">
+        <div class="section">
+          <div class="item" ng-repeat="rule in blankList.short.optional">
+            <input type="checkbox" ng-checked="rule.checked" ng-model="rule.checked" />
+            <span ng-bind="rule.title"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="rich-stock-chart">
+  <label ng-repeat="axis in chartAxis.all">
+    <input type="checkbox" ng-model="axis.visible" ng-change="chartAxis.toggle(axis)">
+    <a target="_blank" ng-href="{{ axis.url }}"><span ng-bind="axis.id"></span></a>
+  </label>
+</div>
+<div id="stock-chart" style="height: 800px; min-width: 800px"></div>

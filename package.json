@@ -1,0 +1,26 @@
+{
+  "name": "tiger-stock",
+  "version": "1.0.0",
+  "description": "金唬男股市波段投資",
+  "license": "ISC",
+  "author": "tin.chen@jii.tw",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "axios": "^1.10.0",
+    "cheerio": "^1.1.0",
+    "csv-parse": "^5.6.0",
+    "csv-parser": "^3.2.0",
+    "csv-stringify": "^6.5.2",
+    "date-fns": "^4.1.0",
+    "express": "^5.1.0",
+    "fs": "^0.0.1-security",
+    "node-schedule": "^2.1.1",
+    "sequelize": "^6.37.7",
+    "sqlite3": "^5.1.7",
+    "yahoo-finance2": "^2.13.3"
+  }
+}

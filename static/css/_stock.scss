@@ -1,0 +1,319 @@
+.stock_title {
+  display: flex;
+  max-width: $max-width-content;
+  margin: 0 auto;
+  padding: 20px 20px 0 20px;
+
+  h2 {
+    color: white;
+    font-family: $font-rt-title;
+    font-size: 1.8em;
+    white-space: nowrap;
+  }
+
+  button {
+    align-self: center;
+  }
+
+  &_realtime {
+    color: $color-text-bright;
+    font-size: 0.8em;
+    margin-left: 10px;
+    align-self: center;
+    height: fit-content;
+    background-color: $color-bg-realtime;
+    border-radius: 5px;
+    padding: 5px 10px;
+  }
+}
+
+.stock {
+  &_invest {
+    background-color: white;
+    border-radius: 8px;
+    mask: linear-gradient(180deg, #0000 10px, #000 0), radial-gradient(10px, #000 calc(100% - 1px), #0000) top/18.5px 20px;
+    margin: 0 auto;
+    max-width: $max-width-content;
+
+    &>div {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      padding: 20px;
+    }
+
+    &-info {
+      grid-column: span 2;
+      display: grid;
+      border-right: 2px solid $color-rt-bg;
+    }
+
+    &-detail {
+      grid-column: span 2;
+      color: $color-text-mid;
+      padding: 20px;
+      line-height: 1.5em;
+    }
+
+    &-profit {
+      color: $color-text-secondary;
+      font-size: 1.2em;
+      margin-top: 10px;
+    }
+
+    &-auto {
+      grid-column: span 2;
+
+      .price--investup {
+        color: $color-text-win;
+      }
+
+      .price--investdown {
+        color: $color-text-loss;
+      }
+    }
+  }
+
+  &_result {
+    grid-column: 1 / -1;
+    color: $color-text-mid;
+    --corner: 20px;
+    border: var(--corner) solid;
+    background-color: transparent !important;
+    border-image-source: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="5" height="5" fill="white"><path d="M3 0C3.55228 0 4 0.447715 4 1C4.55228 1 5 1.44772 5 2V3C5 3.55228 4.55228 4 4 4C4 4.55228 3.55228 5 3 5H2C1.44772 5 1 4.55228 1 4C0.447715 4 0 3.55228 0 3V2C0 1.44772 0.447715 1 1 1C1 0.447715 1.44772 0 2 0H3Z"/></svg>');
+    border-image-slice: 2 fill;
+    margin: 10px auto 0;
+    max-width: $max-width-content;
+
+    >div {
+      padding: 5px 0;
+      font-size: 0.8em;
+    }
+
+  }
+
+  &_trades {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    max-width: 800px;
+    margin: 20px auto 0 auto;
+    background-color: $color-tab-bg;
+    border-radius: 8px 8px 0 0;
+
+    input[type="radio"] {
+      position: absolute;
+      left: -200vw;
+    }
+
+    label {
+      grid-row: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      cursor: pointer;
+
+      .ma--label {
+        font-size: 1.2em;
+        color: $color-text-bright;
+        margin-bottom: 3px;
+
+        &::before {
+          content: "MA:";
+          color: $color-text-light;
+          font-size: 0.8em;
+        }
+      }
+
+      .date--label {
+        margin-bottom: 3px;
+
+        &::before {
+          content: "(";
+        }
+
+        &::after {
+          content: ")";
+        }
+      }
+
+      .rate {
+        color: $color-text-blocktitle;
+        background-color: $color-text-bright;
+        padding: 2px 5px;
+        font-size: 0.6em;
+      }
+    }
+
+    &-price {
+      font-size: 1.5em;
+      color: $color-text-dark;
+      background-color: white;
+      border-radius: 8px;
+      padding: 5px;
+      margin-bottom: 3px;
+
+    }
+
+    &-info {
+      display: grid;
+      gap: 2px;
+      margin: 5px;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+
+      div {
+        background-color: $color-menu-bg;
+        border-radius: 4px;
+        padding: 10px 4px;
+        font-size: 0.8em;
+        line-height: 1.3em;
+        color: $color-text-title;
+        text-align: right;
+        align-content: center;
+
+        span {
+          color: $color-text-bright;
+          font-size: 1.5em;
+        }
+
+        a {
+          color: $color-text-title;
+        }
+      }
+
+      .pct--reentryProfit {
+        font-size: 0.7em;
+
+        &::before {
+
+          content: "(";
+        }
+
+        &::after {
+          content: "%)";
+        }
+      }
+    }
+
+    // tab內容區塊
+    [id^="trade"] {
+      grid-column: 1 / -1;
+      grid-row: 3;
+      display: none;
+    }
+
+    [id^="info"] {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      display: none;
+    }
+
+    // 選擇狀態
+    [id^="tab"]:checked~[id^="label"] {
+      background-color: $color-tab-bg;
+      border-radius: 8px 8px 0 0;
+      border: 2px solid $color-text-mid;
+      border-bottom: 0;
+    }
+
+    [id^="tab"]:not(:checked)~[id^="label"] {
+      background-color: $color-tab-bg-dark;
+      border-radius: 8px 8px 0 0;
+      border: 2px solid $color-text-mid;
+      border-top: 0;
+      border-left: 0;
+      border-right: 0;
+    }
+
+    [id^="tab"]:checked~[id^="trade"] {
+      display: block;
+    }
+
+    [id^="tab"]:checked~[id^="info"] {
+      display: grid;
+    }
+
+    &_row {
+      display: grid;
+      grid-template-columns: 1fr 120px 120px 1fr;
+      margin: 10px 20px 0 20px;
+      border-bottom: 1px dashed $color-menu-border;
+      padding: 10px 0;
+
+      .date--dates {
+        color: $color-text-mid;
+
+        span:nth-child(1) {
+          font-size: 0.5em;
+
+          &:before {
+            content: "(";
+          }
+
+          &:after {
+            content: " 天)";
+          }
+        }
+
+        .info-banner {
+          margin-right: 10px;
+        }
+      }
+
+      .profit {
+        padding: 0 10px;
+        border-right: 1px solid $rt-block1-color4;
+        text-align: right;
+
+        .price--profit {
+          font-size: 1.5em;
+          color: $color-rt-bg;
+          white-space: nowrap;
+          text-align: right;
+
+          span::before {
+            content: "$";
+            font-size: 0.5em;
+          }
+        }
+
+        .pct--profit {
+          color: $color-text-blocktitle;
+          background-color: $color-text-bright;
+          padding: 2px 5px;
+        }
+      }
+
+      .reason {
+        padding: 20px;
+        font-size: 0.9em;
+        line-height: 1.8em;
+        color: $color-text-mid;
+
+        span {
+          display: block;
+          margin-bottom: 5px;
+        }
+      }
+
+      .investstock {
+        grid-column: span 4;
+        background-color: white;
+        padding: 10px;
+        color: $color-text-secondary;
+      }
+    }
+  }
+}
+
+// 其它相關區塊
+ng-container {
+  display: contents;
+}
+
+.rich-stock-chart {
+  a {
+    text-decoration: none;
+    color: #fff;
+    font-size: 1.2em;
+    padding: 5px;
+  }
+}

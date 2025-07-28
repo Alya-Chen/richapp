@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base href="/">
+  <link rel="icon" href="gold.ico">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular-csp.min.css"
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chiron+Hei+HK:ital,wght@0,200..900;1,200..900&display=swap"
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+    rel="stylesheet">
+  <script src="https://code.highcharts.com/stock/highstock.js"></script>
+  <script src="https://code.highcharts.com/stock/modules/data.js"></script>
+  <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-resource/1.8.3/angular-resource.min.js"
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-route/1.8.3/angular-route.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.blockUI/2.70/jquery.blockUI.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+</head>
+
+<body ng-app="rich-app" ng-controller="indexCtrl">
+
+  <h2 class="rich-app_header cursor-pointer" ng-click="home()"> 🏆 <span ng-bind="name"></span></h2>
+
+  <div class="rich-app_menu">
+    <h2>績優股</h2>
+    <select ng-model="stock" ng-change="change()"
+      ng-options="(s.code + ' ' + (s.otc ? '🌱' : '') + s.name + (s.ma ? s.ma : '') + (s.profit ? s.profit : '')) for s in stocks">
+      <option value="">-- 請選擇 --</option>
+    </select>
+    <select ng-model="stock.defaultMa" ng-change="changeMa()" ng-options="ma for ma in mas">
+    </select>
+    <span ng-if="!stock.code" class="cursor-pointer" ng-click="add.blank()">✚</span>
+    <select ng-model="user" ng-change="switch()" ng-options="u.name for u in users">
+    </select>
+    <span class="cursor-pointer" ng-click="note.edit()">📝</span>
+	<span class="cursor-pointer" ng-click="simulate.setup()">📊</span>
+  </div>
+
+  <div id="stock-form" style="display: none">
+    <div>
+      股票代碼：<input ng-model="add.code" />
+    </div>
+    <div>
+      股票名稱：<input ng-model="add.name" />
+    </div>
+    <div ng-if="add.save.result" ng-bind="add.save.result"></div>
+    <div>
+      <p><button ng-click="add.save()">確認</button></p>
+    </div>
+  </div>
+
+  <div id="note-form" style="display: none">
+    <br />
+    <div>
+      標題：<input size="50" ng-model="note.model.title" />
+    </div>
+    <br />
+    <div>
+      <textarea rows="8" cols="50" ng-model="note.model.content"></textarea>
+    </div>
+    <div ng-if="note.save.result" ng-bind="note.save.result"></div>
+    <div>
+      <p>
+        <button ng-click="note.save()">確認</button>
+        <button ng-if="note.model.id" ng-click="note.destroy()">刪除</button>
+      </p>
+    </div>
+  </div>
+
+  <div id="simulate-form" style="display: none">
+    <br />
+    <div>
+      回測股票：我的關注，可交易，全部台股，全部上市台股，全部上櫃台股，全部美股
+    </div>
+    <div>
+      回測區間：2024/01/01～今天
+    </div>
+    <div>
+      入場策略：金唬男
+    </div>
+    <div>
+      出場策略：金唬男＋金牛＋停損
+    </div>
+    <br />
+    <div ng-if="simulate.run.result" ng-bind="simulate.run.result"></div>
+    <div>
+      <p>
+        <button ng-click="simulate.run()">確認</button>
+      </p>
+    </div>
+  </div>
+  
+  <div ng-view></div>
+
+  <script src="/js/lang.js"></script>
+  <script type="module">
+    import { Macd, Kdj, Cci, Rsi, BullBear, ExitAlert } from '/js/macd-kdj.js';
+    window.Macd = Macd;
+    window.Kdj = Kdj;
+    window.Cci = Cci;
+    window.Rsi = Rsi;
+    window.BullBear = BullBear;
+    window.ExitAlert = ExitAlert;
+    Number.prototype.scale = function (digits = 0) {
+      return Number(this.toFixed(digits));
+    }
+  </script>
+  <script src="/js/tiger-invest.js"></script>
+  <script src="/js/rsi-invest.js"></script>
+  <script src="/js/stock-chart.js"></script>
+  <script src="/js/rich-app.js"></script>
+</body>
+
+</html>
