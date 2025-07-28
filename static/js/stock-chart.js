@@ -102,13 +102,13 @@ class StockChart {
 				    tooltip: {
 						pointFormatter: function () {
 							const color = this.diff > 0 ? 'red' : (this.diff == 0 ? 'gray' : 'green');
-							const diffRate = (this.diff * 100 / (this.close - this.diff)).toFixed(2);
-							const diff = (this.diff > 0 ? ' ▲ ' : (this.diff == 0 ? ' ' : ' ▼ ')) + this.diff.toFixed(2) + `（${diffRate}%）`;
-							const close = `<span style="color:${color}">${this.close.toFixed(2)} ${diff}</span>`;
+                                                        const diffRate = (this.diff * 100 / (this.close - this.diff)).scale(2);
+                                                        const diff = (this.diff > 0 ? ' ▲ ' : (this.diff == 0 ? ' ' : ' ▼ ')) + this.diff.scale(2) + `（${diffRate}%）`;
+                                                        const close = `<span style="color:${color}">${this.close.scale(2)} ${diff}</span>`;
 							const prevVolume = stockData[stockData.findIndex(d => d[0] == this.x) - 1][5];
 							const isVolumeUp = this.volume > (prevVolume || 0);
 							const volume = `<span style="color:green">${(this.diff > 0 && !isVolumeUp) ? '（價漲量縮）' : (this.diff < 0 && isVolumeUp ? '（價跌量漲）' : '')}</span>`;						
-							this.series.chart.setTitle({ text: `${Highcharts.dateFormat('%Y-%m-%d', this.x)} | ${close} | 開 ${this.open.toFixed(2)} | 高 ${this.high.toFixed(2)} | 低 ${this.low.toFixed(2)} | 量 ${this.volume}${volume}`});
+                                                        this.series.chart.setTitle({ text: `${Highcharts.dateFormat('%Y-%m-%d', this.x)} | ${close} | 開 ${this.open.scale(2)} | 高 ${this.high.scale(2)} | 低 ${this.low.scale(2)} | 量 ${this.volume}${volume}`});
 							return false;
 						}
 				    },

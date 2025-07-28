@@ -86,7 +86,7 @@ async function main() {
         //console.log(tests[0].params);
         const stock = await service.getStock(STOCK_CODE);
         const result = await service.backtest(STOCK_CODE, params);
-        const profitRate = (result.profitRate * 100).toFixed(0) + '%';
+        const profitRate = (result.profitRate * 100).scale(0) + '%';
         console.log(`${stock.code} ${stock.name} MA${result.ma} ${result.profit} ${profitRate}`);
         console.log(result);
         //console.log(result.trades);

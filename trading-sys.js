@@ -1,5 +1,5 @@
-function toFixed(num, digits) {
-	return parseFloat(num.toFixed(digits || 2));
+function scale(num, digits) {
+        return num.scale(digits);
 }
 
 export class TradingSystem {
@@ -122,18 +122,18 @@ export class TradingSystem {
 		const pnl = profit / Math.abs(loss || 1); // 盈虧比：總獲利金額除以總虧損金額
 		const winRate = wins.length / closedTrades.length;
 		const expectation = (pnl * winRate) - (1 - winRate); // 期望值 =（盈虧比 x 勝率）–（1 - 勝率）
-		return {
-			profit: toFixed(profit + loss),
-			loss: toFixed(loss),
-			profitRate: toFixed(closedTrades.reduce((sum, t) => sum + t.profitRate, 0)),
-			breakoutRate: toFixed(breakouts / closedTrades.length),
-			winRate: toFixed(winRate),
+                return {
+                        profit: scale(profit + loss),
+                        loss: scale(loss),
+                        profitRate: scale(closedTrades.reduce((sum, t) => sum + t.profitRate, 0)),
+                        breakoutRate: scale(breakouts / closedTrades.length),
+                        winRate: scale(winRate),
 			reentry: reentry.length,
 			reentryWins: reentryWins.length,
-			reentryWinRate: toFixed(reentryWins.length / reentry.length),
-			reentryProfit: toFixed(reentryProfit),
-			pnl: toFixed(pnl),
-			expectation: toFixed(expectation),
+                        reentryWinRate: scale(reentryWins.length / reentry.length),
+                        reentryProfit: scale(reentryProfit),
+                        pnl: scale(pnl),
+                        expectation: scale(expectation),
 			maxDrawdown: this.calculateMaxDrawdown(closedTrades)
 		};
 	}
@@ -148,7 +148,7 @@ export class TradingSystem {
 			if (equity > peak) peak = equity;
 			maxDrawdown = Math.min(maxDrawdown, equity - peak);
 		});
-		return toFixed(maxDrawdown);
+                return scale(maxDrawdown);
 	}
 
 	// 記錄開倉
@@ -175,11 +175,11 @@ export class TradingSystem {
 	// 記錄平倉
 	closePosition(position, day, reason) {
 		position.exitPrice = day.close;
-		position.pnl = toFixed((day.close / position.entryPrice - 1) * 100);
-		position.duration = toFixed((day.date - position.entryDate) / (1000 * 60 * 60 * 24));
+                position.pnl = scale((day.close / position.entryPrice - 1) * 100);
+                position.duration = scale((day.date - position.entryDate) / (1000 * 60 * 60 * 24));
 		position.exitReason = reason;
-		position.profit = toFixed(position.exitPrice - position.entryPrice);
-		position.profitRate = toFixed(position.profit / position.entryPrice);
+                position.profit = scale(position.exitPrice - position.entryPrice);
+                position.profitRate = scale(position.profit / position.entryPrice);
 		position.entryDate = position.entryDate.toLocaleDateString();
 		position.exitDate = day.date.toLocaleDateString();
 		position.status = 'closed';

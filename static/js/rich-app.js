@@ -392,10 +392,10 @@
 						name: stock.name,
 						type,
 						length: trades.length,
-						profit: (profit + loss).toFixed(2),
-						pnl: (profit / Math.abs(loss || 1)).toFixed(2), // 盈虧比：總獲利金額除以總虧損金額
-						profitRate: (trades.reduce((sum, t) => sum + t.profitRate, 0)).toFixed(2),
-						winRate: (wins.length / trades.length).toFixed(2),
+                                                profit: (profit + loss).scale(2),
+                                                pnl: (profit / Math.abs(loss || 1)).scale(2), // 盈虧比：總獲利金額除以總虧損金額
+                                                profitRate: (trades.reduce((sum, t) => sum + t.profitRate, 0)).scale(2),
+                                                winRate: (wins.length / trades.length).scale(2),
 					};
 				}
 				const result = { re: [], first: [] };

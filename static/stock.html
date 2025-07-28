@@ -9,15 +9,15 @@
     <!-- class price-up 上漲，price-down 下跌-->
     <span class="price--realtime"
       ng-class="{'price-up': (stock.realtime.diff > 0), 'price-down': (stock.realtime.diff < 0)}">
-      <span ng-bind="stock.realtime.close.toFixed(2)"></span>
+      <span ng-bind="stock.realtime.close.scale(2)"></span>
       <span ng-if="stock.realtime.diff > 0">▲</span>
       <span ng-if="stock.realtime.diff < 0">▼</span>
-      <span ng-bind="stock.realtime.diff.toFixed(2)"></span>
-      （<span ng-bind="(stock.realtime.diffRate * 100).toFixed(2)"></span>%）
+      <span ng-bind="stock.realtime.diff.scale(2)"></span>
+      （<span ng-bind="(stock.realtime.diffRate * 100).scale(2)"></span>%）
       <span class="price--others">
-        開 <span ng-bind="stock.realtime.open.toFixed(2)"></span> |
-        高 <span ng-bind="stock.realtime.high.toFixed(2)"></span> |
-        低 <span ng-bind="stock.realtime.low.toFixed(2)"></span> |
+        開 <span ng-bind="stock.realtime.open.scale(2)"></span> |
+        高 <span ng-bind="stock.realtime.high.scale(2)"></span> |
+        低 <span ng-bind="stock.realtime.low.scale(2)"></span> |
         量 <span ng-bind="stock.realtime.volume"></span>
       </span>
     </span>
@@ -45,7 +45,7 @@
   <div ng-class="{'suggest': !log.id}" ng-if="log.act" ng-repeat="log in stock.trade.invest.logs">
     <div class="stock_invest-info">
       <span class="date--stock-invest" ng-bind="(log.date || log.day.date) | date:'MM/dd'"></span>
-      <span class="price--stock-invest" ng-bind="(log.price || log.day.close).toFixed(2)"></span>
+      <span class="price--stock-invest" ng-bind="(log.price || log.day.close).scale(2)"></span>
       <div class="stock_invest-profit"><span ng-if="log.invested > 0">目前</span>損益
         <span class="price--invest" ng-bind="log.profit"></span>（<span class="pct--invest"
           ng-bind="log.profitRate"></span>）
@@ -56,12 +56,12 @@
       <span ng-bind="log.amount"></span> 股<br />
       持倉：<span ng-bind="log.totalInvested"></span> 股<br />
       平均成本：<span class="price--invest" ng-bind="log.avgCost"></span><br />
-	  稅費：<span class="price--invest" ng-bind="stock.trade.invest.tax.toFixed(2)"></span>
+       稅費：<span class="price--invest" ng-bind="stock.trade.invest.tax.scale(2)"></span>
     </div>
-    <!--停損：<span class="price" ng-bind="(log.stopLossPrice || 0).toFixed(2)"></span>-->
+    <!--停損：<span class="price" ng-bind="(log.stopLossPrice || 0).scale(2)"></span>-->
     <span class="stock_invest-auto">
-      停損：<span class="price--investup" ng-bind="stock.trade.invest.stopLossPrice.toFixed(2)"></span>
-      停利：<span class="price--investdown" ng-bind="stock.trade.invest.stopProfitPrice.toFixed(2)"></span>
+      停損：<span class="price--investup" ng-bind="stock.trade.invest.stopLossPrice.scale(2)"></span>
+      停利：<span class="price--investdown" ng-bind="stock.trade.invest.stopProfitPrice.scale(2)"></span>
     </span>
     <button ng-if="log.id" style="cursor:pointer" ng-click="invest.edit(log)">編輯</button>
     <button ng-if="log.act == '買入'" style="cursor:pointer" ng-click="invest.edit({ act: '賣出' })">賣出</button>
@@ -145,9 +145,9 @@
           <span class="rt-badge" ng-if="trade.reentry">重新入場</span>
         </div>
         <div>
-          <div class="info-banner">💰📈 <span class="price--inout" ng-bind="trade.entryPrice.toFixed(2)"></span></div>
+          <div class="info-banner">💰📈 <span class="price--inout" ng-bind="trade.entryPrice.scale(2)"></span></div>
           <div class="info-banner" ng-if="trade.exitPrice">🏃📉 <span class="price--inout"
-              ng-bind="trade.exitPrice.toFixed(2)"></span></div>
+              ng-bind="trade.exitPrice.scale(2)"></span></div>
         </div>
         <div class="profit" ng-if="trade.duration">
           <div>🧧 <span class="price--profit" ng-bind="trade.profit"></span></div>
@@ -168,11 +168,11 @@
         <div ng-if="trade.invest" class="investstock" ng-class="{'rich-stock-trade-rsi-hot': trade.invest.rsiHot}">
           <div ng-if="log.act" ng-repeat="log in trade.invest.logs">
             <span class="date" ng-bind="log.day.date.toLocaleDateString()"></span>
-            <span class="price" ng-bind="log.day.close.toFixed(2)"></span>
+            <span class="price" ng-bind="log.day.close.scale(2)"></span>
             <span ng-bind="log.act"></span>：<span class="percent" ng-bind="log.amount"></span>
             持倉：<span class="percent" ng-bind="log.invested"></span>
             成本：<span class="price" ng-bind="log.avgCost"></span>
-            停損價：<span class="price" ng-bind="(log.stopLossPrice || 0).toFixed(2)"></span>
+            停損價：<span class="price" ng-bind="(log.stopLossPrice || 0).scale(2)"></span>
             <span class="result" ng-if="log.profit != 0">
               <span ng-if="log.invested > 0">當前</span>損益
               <span class="price" ng-bind="log.profit"></span>（<span class="percent" ng-bind="log.profitRate"></span>）

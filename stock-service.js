@@ -171,7 +171,7 @@ class Service {
 			const alerts = {
 				code,
 				date: last.date,
-				ma: parseFloat(last.ma.toFixed(2)),
+                                ma: last.ma.scale(2),
 				close: last.close
 			};
 			if (!trade.exitDate) { // 開倉中
@@ -212,7 +212,7 @@ class Service {
 				)[0];
 				stock.defaultMa = best.ma;				
 			}
-			const profitRate = (best.profitRate * 100).toFixed(0) + '%';
+                        const profitRate = (best.profitRate * 100).scale(0) + '%';
 			best.code = stock.code;
 			best.name = stock.name;
 			best.opened = best.trades.find(trade => trade.status != 'closed') !== undefined;
@@ -241,13 +241,13 @@ class Service {
 			test.result = test.result || {};
 			const stock = await this.getStock(test.code);
 			//console.log(test);
-			const profitRate = (test.profitRate).toFixed(2);
-			const winRate = (test.winRate || test.result.winRate || 0).toFixed(2);
-			const pnl = (test.pnl || test.result.pnl || 0).toFixed(2);
-			const expectation = (test.expectation || test.result.expectation || 0).toFixed(2);
-			const reentryWinRate = (test.reentryWinRate || test.result.reentryWinRate || 0).toFixed(2);
-			const reentryProfit = (test.reentryProfit || test.result.reentryProfit || 0).toFixed(2);
-			const reentryProfitRate = (reentryProfit / test.profit).toFixed(2);
+                        const profitRate = (test.profitRate).scale(2);
+                        const winRate = (test.winRate || test.result.winRate || 0).scale(2);
+                        const pnl = (test.pnl || test.result.pnl || 0).scale(2);
+                        const expectation = (test.expectation || test.result.expectation || 0).scale(2);
+                        const reentryWinRate = (test.reentryWinRate || test.result.reentryWinRate || 0).scale(2);
+                        const reentryProfit = (test.reentryProfit || test.result.reentryProfit || 0).scale(2);
+                        const reentryProfitRate = (reentryProfit / test.profit).scale(2);
 			const reentry = test.reentry || test.result.reentry || 0;
 			const otc = stock.otc ? '[櫃]' : '';
 			test.trades = test.trades || test.result.trades;

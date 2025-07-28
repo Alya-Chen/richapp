@@ -40,7 +40,7 @@ export class Macd {
         // MACD (紅綠柱) Histogram：DIF - DEA
         const histogramArray = diffArray.map((m, idx) => {
             if (m === null || fullDeaArray[idx] === null) return null;
-            return parseFloat((m - fullDeaArray[idx]).toFixed(3));
+            return parseFloat((m - fullDeaArray[idx]).scale(3));
         });
 
         const result = this.data.map((day, idx) => ({
@@ -344,7 +344,7 @@ export class BullBear {
         this.data.forEach((day, index) => {
             if (index < period - 1) return null;
             const sum = this.data.slice(index - period + 1, index + 1).reduce((sum, curr) => sum + curr.close, 0);
-            day['ma' + period] = parseFloat((sum / period).toFixed(2));
+            day['ma' + period] = (sum / period).scale(2);
         });
         return this;
     }

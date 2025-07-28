@@ -44,14 +44,14 @@
         </div>
       </div>
       <span class="blocks_cell_realtime" ng-if="stock.realtime">
-        <span class="price--realtime" ng-bind="stock.realtime.close.toFixed(2)"></span>
+        <span class="price--realtime" ng-bind="stock.realtime.close.scale(2)"></span>
         <span class="pct--realtime" ng-bind="stock.realtime.diffRate | pct"></span>
         <span class="date--realtime" ng-if="stock.realtime.isToday" ng-bind="stock.realtime.date | date:'H:mm'"></span>
         <span class="date--realtime" ng-if="!stock.realtime.isToday" ng-bind="stock.realtime.date | date:'M/d'"></span>
       </span>
 
       <span ng-if="!stock.trade.invest" class="info-banner" title="入場">
-        🛒 <span class="price--inout" ng-bind="stock.trade.entryPrice.toFixed(2)"></span>
+        🛒 <span class="price--inout" ng-bind="stock.trade.entryPrice.scale(2)"></span>
         <span ng-class="{'date--today': stock.trade.entryDate.isToday()}" class="date--inout"
           ng-bind="stock.trade.entryDate | date:'MM/dd'"></span>
         <span class="rt-badge" ng-if="stock.trade.reentry">返場</span>
@@ -61,7 +61,7 @@
         ng-class="{'blocks_cell_hot': stock.trade.rsiHot, 'info-banner--loss': stock.trade.profit < 0, 'info-banner--win': stock.trade.profit > 0}"
         title="出場">
         <span ng-if="stock.trade.profit < 0">📉</span><span ng-if="stock.trade.profit > 0">📈</span>
-        <span class="price--inout" ng-bind="stock.trade.exitPrice.toFixed(2)"></span>
+        <span class="price--inout" ng-bind="stock.trade.exitPrice.scale(2)"></span>
         <span ng-class="{'date--today': stock.trade.exitDate.isToday()}" class="date--inout"
           ng-bind="stock.trade.exitDate | date:'MM/dd'"></span>
         <span class="pct--result" ng-bind="stock.trade.profitRate | pct"></span>
@@ -72,7 +72,7 @@
         <span ng-class="{'suggest': !log.id}" ng-if="log.act" ng-repeat="log in stock.trade.invest.logs"
           ng-click="invest.edit(log)">
           <span class="date--invest" ng-bind="(log.date || log.day.date) | date:'MM/dd'"></span>
-          <span class="price--invest" ng-bind="(log.price || log.day.close).toFixed(2)"></span>
+          <span class="price--invest" ng-bind="(log.price || log.day.close).scale(2)"></span>
           <span ng-bind="log.act"></span>
           <span ng-bind="log.amount"></span> 股
           <!--
@@ -84,7 +84,7 @@
 		  -->
           <span class="blocks_cell_invest_result" ng-if="log.profit != 0">
             <span ng-if="log.invested > 0">目前</span>損益
-            <span class="price--invest" ng-bind="log.profit.toFixed(2)"></span>
+            <span class="price--invest" ng-bind="log.profit.scale(2)"></span>
             （<span class="pct--invest" ng-bind="log.profitRate"></span>）
           </span>
         </span>
@@ -93,7 +93,7 @@
         ng-class="{'info-banner--up': stock.alerts.close >= stock.alerts.ma, 'info-banner--down': stock.alerts.close < stock.alerts.ma}">
         <span ng-if="stock.alerts.close >= stock.alerts.ma">✅</span>
         <span ng-if="stock.alerts.close < stock.alerts.ma">⚠️</span>
-        <span class="price--inout" ng-bind="stock.alerts.close.toFixed(2)"></span>
+        <span class="price--inout" ng-bind="stock.alerts.close.scale(2)"></span>
         <span ng-class="{'date--today': stock.alerts.date.isToday()}" class="date--inout"
           ng-bind="stock.alerts.date | date:'MM/dd'"></span>
         <span class="rt-badge" ng-if="stock.alerts.close >= stock.alerts.ma">漲破</span>
