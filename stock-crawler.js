@@ -328,10 +328,10 @@ export class Crawler {
 				close: parseFloat(item.z != '-' ? item.z : (item.b ? item.b.split('_').shift() : 0)),
 				pre: parseFloat(item.y),
 			}));
-			dailies.forEach(day => {
-				day.diff = parseFloat((day.close - day.pre).toFixed(2));
-				day.diffRate = parseFloat((day.diff / day.pre).toFixed(2));
-			});
+                        dailies.forEach(day => {
+                                day.diff = parseFloat((day.close - day.pre).scale(2));
+                                day.diffRate = parseFloat((day.diff / day.pre).scale(2));
+                        });
 			result.push(dailies);
 			return await this.realtimeTw(allCodes, start + 100, result);
 		} catch (error) {
