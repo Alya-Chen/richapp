@@ -344,7 +344,7 @@
 			$$.bulls = [];
 			$$.invested = {  // 已經購買的股票紀錄
 				date: new Date(),
-				totalCapital: 488022,
+				totalCapital: 555022,
 				cost: 0,
 				stocks: []
 			};	

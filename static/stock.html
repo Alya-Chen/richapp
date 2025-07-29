@@ -90,7 +90,7 @@
   </div>
 </div>
 
-<div ng-if="stock.done" class="stock_result">
+<div ng-if="stock.done.lenth" class="stock_result">
   <div ng-repeat="trade in stock.done">
     <span class="date--result" ng-bind="trade.entryDate | date:'MM/dd'"></span>
     <span class="price--result" ng-bind="trade.entryPrice"></span> 買入
