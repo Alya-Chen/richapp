@@ -28,7 +28,7 @@ const Base = {
 		}	
 	},
 	del: async function(dao, id) {
-		const count = await dao.destroy({ where: { id } }); 
+		return await dao.destroy({ where: { id } });
 	}
 };
 
@@ -360,7 +360,7 @@ StockDaily.query = async function(code, startDate, endDate) {
 		where: {
 			code,
 			date: {
-				[Sequelize.Op.between]: [startDate, endDate]
+				[Op.between]: [startDate, endDate]
 			}
 		},
 		order: [
