@@ -1,6 +1,4 @@
 # richapp
-test
-
 
 ## Getting started
 
