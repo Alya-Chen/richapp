@@ -1,6 +1,6 @@
 # richapp
 
-
+- tinchen
 
 ## Getting started
 
