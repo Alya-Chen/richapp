@@ -1,6 +1,6 @@
 # richapp
 
-- tinchen
+- tinchen, pinname
 
 ## Getting started
 
