@@ -167,7 +167,7 @@
 				if (callback) callback(running.concat(exited).concat(dividend));
 			});
 		}		
-		saveNoet(note, callback) {
+		saveNote(note, callback) {
 			note.owner = note.owner.replaceAll('/', '／');
 			this.$http.post('/note', note).then((res) => {
 				if (callback) callback(res.data);
@@ -288,7 +288,7 @@
 				},				
 				save: function() {
 					if (!this.model.title) return;
-					service.saveNoet(this.model, (notes) => {
+					service.saveNote(this.model, (notes) => {
 						service.notes(this.model.owner);
 						//this.model = {};
 						$.unblockUI();
@@ -630,7 +630,7 @@
 			$$.allBand = function(test) {
 				test.trades.forEach(trade => {
 					const entryTime = Date.parse(trade.entryDate);
-					const exitTime = (trade.exitDate ? Date.parse(trade.exitDate) : now) + EIGHT_HOURS * 2;
+					const exitTime = (trade.exitDate ? Date.parse(trade.exitDate) : new Date()) + EIGHT_HOURS * 2;
 					$$.chart.get().xAxis[0].addPlotBand({
 						from: entryTime,
 						to: exitTime,
@@ -683,7 +683,7 @@
 					id: '200MA',
 					visible: false
 				}],
-				toggle: function(axis) {
+				toggle: function() {
 					$$.chart.draw($$.chartAxis.all).addMa($$.stock.defaultMa);
 				}
 			};
