@@ -1,4 +1,9 @@
 # richapp
+<<<<<<< .merge_file_bScsLr
+=======
+
+- Collaborators: tinehen（廷嘉）, pinname（小宇）
+>>>>>>> .merge_file_oIjkpe
 
 ## Getting started
 
