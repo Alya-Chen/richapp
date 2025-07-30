@@ -1,6 +1,6 @@
 # richapp
-test
 
+- Collaborators: tinehen, pinname
 
 ## Getting started
 
