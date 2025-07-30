@@ -1,6 +1,6 @@
 # richapp
 
-- Collaborators: tinehen, pinname
+- Collaborators: tinehen（廷嘉）, pinname（小宇）
 
 ## Getting started
 
