@@ -1,6 +1,6 @@
 # richapp
 
-- Collaborators: tinehen, pinname
+- 共同開發者: tinehen, pinname
 
 ## Getting started
 
