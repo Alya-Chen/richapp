@@ -379,7 +379,9 @@
 					stock.trade.invest = new RsiInvest(dailies, stock.defaultMa).start(stock.trade);
 					if (!$$.invested.stocks.find(i => i.code == stock.code)) {
 						$$.invested.stocks.push({ code: stock.code, invest: stock.trade.invest });
-						$$.invested.cost += stock.trade.invest.avgCost * stock.trade.invest.totalInvested;
+						// 尚未被模擬賣出
+						if (stock.trade.invest.totalInvested) return $$.invested.cost += stock.trade.invest.avgCost * stock.trade.invest.totalInvested;
+						$$.invested.cost += stock.trade.logs.filter(l => l.act == '買入').reduce((sum, l) => sum + (l.price * l.amount), 0);
 					}
 				});
 			};
@@ -392,10 +394,10 @@
 						name: stock.name,
 						type,
 						length: trades.length,
-                                                profit: (profit + loss).scale(2),
-                                                pnl: (profit / Math.abs(loss || 1)).scale(2), // 盈虧比：總獲利金額除以總虧損金額
-                                                profitRate: (trades.reduce((sum, t) => sum + t.profitRate, 0)).scale(2),
-                                                winRate: (wins.length / trades.length).scale(2),
+                        profit: (profit + loss).scale(2),
+                        pnl: (profit / Math.abs(loss || 1)).scale(2), // 盈虧比：總獲利金額除以總虧損金額
+                        profitRate: (trades.reduce((sum, t) => sum + t.profitRate, 0)).scale(2),
+                        winRate: (wins.length / trades.length).scale(2),
 					};
 				}
 				const result = { re: [], first: [] };
