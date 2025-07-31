@@ -6,3 +6,4 @@ npm-debug.log
 .DS_Store
 stock-sqlite.db
 package-lock.json
+.vscode
