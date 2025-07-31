@@ -80,6 +80,7 @@ export class Crawler {
 				period1,
 				period2
 			});
+			if (!rawData || !rawData.quotes) return [];
 			// 轉換數據格式
 			const quotes = rawData.quotes.filter(d => d.open && !isNaN(d.open));
 			quotes.forEach((item, idx) => {
@@ -106,6 +107,7 @@ export class Crawler {
 		const stocks = await db.Stock.findAll();
 		codes = codes.map(code => {
 			const stock = stocks.find(s => s.code == code);
+			if (!stock) throw new Error(`股票代碼 ${code} 不存在！`);
 			return (stock.country == 'us') ? code : (stock.otc ? `${code}.TWO` : `${code}.TW`);
 		});
 		try {
@@ -183,20 +185,18 @@ export class Crawler {
 				timeout: 10000
 			});
 
+			const result = {
+				stockNo,
+				data: []
+			};
 			// 處理回應數據
 			const rawData = response.data;
-			if (rawData.total == 0) {
-				return {
-					stockNo,
-					data: []
-				};
-			}
+			if (rawData.total == 0) return result;
 			if (rawData.stat !== 'OK') {
 				throw new Error(`抓取 ${this.stockNo} 錯誤: ${rawData.stat || '未知錯誤'}`);
 			}
-
 			// 轉換數據格式
-			const processedData = rawData.data.map(item => ({
+			result.data = rawData.data.map(item => ({
 				date: dateUtils.convertTwDate(item[0]),
 				volume: parseInt(item[1].replace(/,/g, '')),
 				money: parseInt(item[2].replace(/,/g, '')),
@@ -207,14 +207,14 @@ export class Crawler {
 				diff: parseFloat(item[7].replace('+', '').replace('X', '')),
 				transCount: parseInt(item[8].replace(/,/g, ''))
 			})).filter(d => !isNaN(d.open));
-			return {
-				stockNo,
-				dateRange: {
-					start: processedData[0].date,
-					end: processedData[processedData.length - 1].date
-				},
-				data: processedData
-			};
+			
+			if (result.data.length) {
+				result.dateRange = {
+					start: result.data[0].date,
+					end: result.data[result.data.length - 1].date
+				};				
+			}
+			return result;
 		} catch (error) {
 			db.Log.error(`抓取 ${this.stockNo} 錯誤: ${error.message || '未知錯誤'}`);
 			throw error;
@@ -244,22 +244,22 @@ export class Crawler {
 				timeout: 10000
 			});
 
-			if (response.data.includes('共0筆')) return {
+			const result = {
 				stockNo,
 				data: []
 			};
+			if (response.data.includes('共0筆')) return result;
 			// 處理回應數據
 			const rawData = response.data.split('\r\n').slice(5);
 			//console.log(rawData); 
 			// 轉換數據格式，日 期,成交張數,成交仟元,開盤,最高,最低,收盤,漲跌,筆
-			const processedData = [];
 			rawData.forEach(item => {
 				item = [...item.matchAll(/"([^"]*)"/g)].map(match => {
 					const cleaned = match[1].replace(/,/g, '');
 					return isNaN(cleaned) ? cleaned : Number(cleaned);
 				});
 				if (item.length != 9 || isNaN(item[3])) return;
-				processedData.push({
+				result.data.push({
 					date: dateUtils.convertTwDate(item[0]),
 					volume: parseInt(item[1]),
 					money: parseInt(item[2]),
@@ -271,14 +271,13 @@ export class Crawler {
 					transCount: parseInt(item[8])
 				});
 			});
-			return {
-				stockNo,
-				dateRange: {
-					start: processedData[0].date,
-					end: processedData[processedData.length - 1].date
-				},
-				data: processedData
-			};
+			if (result.data.length) {
+				result.dateRange = {
+					start: result.data[0].date,
+					end: result.data[result.data.length - 1].date
+				};				
+			}
+			return result;
 		} catch (error) {
 			db.Log.error(`抓取 ${this.stockNo} 錯誤: ${error.message || '未知錯誤'}`);
 			throw error;
@@ -294,6 +293,7 @@ export class Crawler {
 		const stocks = await db.Stock.findAll();
 		codes = codes.map(code => {
 			const stock = stocks.find(s => s.code == code);
+			if (!stock) throw new Error(`股票代碼 ${code} 不存在！`);
 			return stock.otc ? `otc_${code}.tw` : `tse_${code}.tw`;
 		}).join('|');
 		try {
@@ -328,10 +328,10 @@ export class Crawler {
 				close: parseFloat(item.z != '-' ? item.z : (item.b ? item.b.split('_').shift() : 0)),
 				pre: parseFloat(item.y),
 			}));
-                        dailies.forEach(day => {
-                                day.diff = parseFloat((day.close - day.pre).scale(2));
-                                day.diffRate = parseFloat((day.diff / day.pre).scale(2));
-                        });
+            dailies.forEach(day => {
+                    day.diff = parseFloat((day.close - day.pre).scale(2));
+                    day.diffRate = parseFloat((day.diff / day.pre).scale(2));
+            });
 			result.push(dailies);
 			return await this.realtimeTw(allCodes, start + 100, result);
 		} catch (error) {
