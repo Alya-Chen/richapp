@@ -34,7 +34,7 @@ export class Macd {
         const slopeArray = diffArray.map((m, idx) => {
             if (m === null || idx <= 10) return null;
             const prev10 = diffArray[idx - 10]; // 计算近 10 日均线斜率
-            return prev10 && ((m - prev10) / 10) > 0;
+            return prev10 && ((m - prev10) / 10 > 0);
         });
 
         // MACD (紅綠柱) Histogram：DIF - DEA
@@ -101,7 +101,7 @@ export class Macd {
     detectBearishEngulfing(diffArray) {
         const result = [false]; // 第一根沒辦法判斷
         for (let i = 1; i < this.data.length; i++) {
-            if (!rsiArray[i]) continue;
+            if (!diffArray[i]) continue;
             const prev = this.data[i - 1];
             const curr = this.data[i];
             const isBullishPrev = prev.close > prev.open;
@@ -418,8 +418,8 @@ export class ExitAlert {
                 i >= 1 && arr[i - 1].close > ma && arr[i].close > ma
             ).length;
 
-            const atrNow = this.calcATR(this.data.slice(idx - ATR_PERIOD + 1, idx + 1));
-            const atrPrev = this.calcATR(this.data.slice(idx - ATR_PERIOD - 20 + 1, idx - 20 + 1));
+            const atrNow = this.calcATR(this.data.slice(idx - ATR_PERIOD + 1, idx + 1), ATR_PERIOD);
+            const atrPrev = this.calcATR(this.data.slice(idx - ATR_PERIOD - 20 + 1, idx - 20 + 1), ATR_PERIOD);
             const atrChange = atrPrev ? ((atrNow - atrPrev) / atrPrev) * 100 : 0;
 
             let score = 0;
