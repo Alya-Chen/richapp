@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW" data-theme="coffee">
 
 <head>
   <base href="/">
   <link rel="icon" href="gold.ico">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular-csp.min.css"
     crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,24 +34,55 @@
     referrerpolicy="no-referrer"></script>
 </head>
 
-<body ng-app="rich-app" ng-controller="indexCtrl">
+<body ng-app="rich-app" ng-controller="indexCtrl" class="bg-base-200 text-base-content">
 
-  <h2 class="rich-app_header cursor-pointer" ng-click="home()"> 🏆 <span ng-bind="name"></span></h2>
 
-  <div class="rich-app_menu">
-    <h2>績優股</h2>
-    <select ng-model="stock" ng-change="change()"
-      ng-options="(s.code + ' ' + (s.otc ? '🌱' : '') + s.name + (s.ma ? s.ma : '') + (s.profit ? s.profit : '')) for s in stocks">
-      <option value="">-- 請選擇 --</option>
-    </select>
-    <select ng-model="stock.defaultMa" ng-change="changeMa()" ng-options="ma for ma in mas">
-    </select>
-    <span ng-if="!stock.code" class="cursor-pointer" ng-click="add.blank()">✚</span>
-    <select ng-model="user" ng-change="switch()" ng-options="u.name for u in users">
-    </select>
-    <span class="cursor-pointer" ng-click="note.edit()">📝</span>
-	<span class="cursor-pointer" ng-click="simulate.setup()">📊</span>
+  <!-- 使用 DaisyUI 的 navbar 組件 -->
+  <div class="navbar bg-base-100 shadow-sm">
+    <div class="navbar-start" ng-click="home()">
+      <div class="btn text-2xl"> <svg fill="currentColor" class="icon icon-investment size-[1em]">
+          <use xlink:href="css/symbol-defs.svg#icon-investment"></use>
+        </svg> <span ng-bind="name"></span></div>
+    </div>
+    <div class="navbar-center flex-wrap gap-2">
+      <h2 class="text-xl font-bold text-primary">績優股</h2>
+      <!-- 股票選擇器 -->
+      <div class="form-control">
+        <select class="select select-bordered select-sm w-full max-w-xs" ng-model="stock" ng-change="change()"
+          ng-options="(s.code + ' ' + (s.otc ? '🌱' : '') + s.name + (s.ma ? s.ma : '') + (s.profit ? s.profit : '')) for s in stocks">
+          <option value="">-- 請選擇股票 --</option>
+        </select>
+      </div>
+
+      <!-- MA 選擇器 -->
+      <div class="form-control">
+        <select class="select select-bordered select-sm w-full max-w-xs" ng-model="stock.defaultMa"
+          ng-change="changeMa()" ng-options="ma for ma in mas">
+          <option value="">-- MA設定 --</option>
+        </select>
+      </div>
+
+      <!-- 用戶選擇器 -->
+      <div class="form-control">
+        <select class="select select-bordered select-sm w-full max-w-xs" ng-model="user" ng-change="switch()"
+          ng-options="u.name for u in users">
+          <option value="">-- 選擇用戶 --</option>
+        </select>
+      </div>
+    </div>
+    <div class="navbar-end">
+      <!-- 操作按鈕組 -->
+      <div class="btn-group">
+        <button class="btn btn-ghost btn-sm tooltip" ng-if="!stock.code" ng-click="add.blank()" data-tip="新增股票">
+          <span class="text-lg">✚</span>
+        </button>
+        <button class="btn btn-ghost btn-sm tooltip" ng-click="simulate.setup()" data-tip="模擬回測">
+          <span class="text-lg">📊</span>
+        </button>
+      </div>
+    </div>
   </div>
+
 
   <div id="stock-form" style="display: none">
     <div>
@@ -103,10 +137,14 @@
       </p>
     </div>
   </div>
-  
+
   <div ng-view></div>
 
   <script src="/js/lang.js"></script>
+
+  <script src="/js/svg-helper.js"></script>
+  <script src="/js/svg-init.js"></script>
+
   <script type="module">
     import { Macd, Kdj, Cci, Rsi, BullBear, ExitAlert } from '/js/macd-kdj.js';
     window.Macd = Macd;
