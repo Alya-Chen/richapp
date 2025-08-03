@@ -8,7 +8,6 @@
       </div>
       <div class="stat-title">總資金</div>
       <div class="stat-value"><span class="font-price" ng-bind="invested.totalCapital | number"></span></div>
-      <div class="stat-desc">Jan 1st - Feb 1st</div>
     </div>
     <div class="stat">
       <div class="stat-figure text-secondary">
@@ -18,7 +17,6 @@
       </div>
       <div class="stat-title">目前投資</div>
       <div class="stat-value"><span class="font-price" ng-bind="invested.cost | number"></span></div>
-      <div class="stat-desc">Jan 1st - Feb 1st</div>
     </div>
     <div class="stat">
       <div class="stat-figure text-secondary">
@@ -29,7 +27,6 @@
       <div class="stat-title">剩餘資金</div>
       <div class="stat-value"><span class="font-price"
           ng-bind="(invested.totalCapital - invested.cost) | number"></span></div>
-      <div class="stat-desc">Jan 1st - Feb 1st</div>
     </div>
   </div>
 
@@ -44,7 +41,7 @@
       <span ng-bind="note.title" class="list-col-grow"></span>
     </div>
     <div class="list-row hover:bg-gray-100" ng-repeat="log in logs">
-      <span ng-bind="log.date | date:'MM/dd'" class="date--log"></span>
+      <span ng-bind="log.date | date:'MM/dd'" class="font-date"></span>
       <span ng-bind="log.msg" class="list-col-grow"></span>
     </div>
   </div>
