@@ -1,15 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-TW" data-theme="retro">
+<html lang="zh-TW" data-theme="unfriendlyqueen">
 
 <head>
   <base href="/">
   <link rel="icon" href="gold.ico">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular-csp.min.css"
     crossorigin="anonymous" referrerpolicy="no-referrer" />
-
-  <link rel="stylesheet" href="/css/output.css">
-  <!-- 自定義樣式 -->
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chiron+Hei+HK:ital,wght@0,200..900;1,200..900&display=swap"
@@ -17,6 +13,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"
     rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/output.css">
+  <!-- 自定義樣式 --><!-- 自定義主題 CSS -->
+  <link href="css/themes.css" rel="stylesheet" type="text/css" />
+
   <script src="https://code.highcharts.com/stock/highstock.js"></script>
   <script src="https://code.highcharts.com/stock/modules/data.js"></script>
   <script src="https://code.highcharts.com/modules/accessibility.js"></script>
@@ -34,13 +35,11 @@
     referrerpolicy="no-referrer"></script>
 </head>
 
-<body ng-app="rich-app" ng-controller="indexCtrl" class="bg-base-200 text-base-content">
-
-
+<body ng-app="rich-app" ng-controller="indexCtrl" class="bg-base-200 text-base-content font-rich">
   <!-- 使用 DaisyUI 的 navbar 組件 -->
   <div class="navbar bg-base-100 shadow-sm">
     <div class="navbar-start" ng-click="home()">
-      <div class="btn btn-ghost text-2xl font-bold text-primary hover:bg-base-100"> <svg fill="currentColor"
+      <div class="btn btn-ghost text-3xl font-bold text-primary hover:bg-base-100 font-title"> <svg fill="currentColor"
           class="icon icon-investment size-[1em]">
           <use xlink:href="css/symbol-defs.svg#icon-investment"></use>
         </svg> <span ng-bind="name"></span></div>
