@@ -1,5 +1,5 @@
 <div class="">
-  <div class="stats cursor-pointer" ng-click="showTrades()">
+  <div class="stats cursor-pointer w-full" ng-click="showTrades()">
     <div class="stat">
       <div class="stat-figure text-secondary">
         <svg fill="currentColor" class="icon-gold size-[3em] ">
@@ -31,26 +31,25 @@
   </div>
 
   <div class="list">
-    <div class="list-row">
-      <button class="cursor-pointer" ng-click="note.edit()"><svg fill="currentColor" class="icon-addnote size-[1.5em]">
+    <div class="self-end">
+      <button class="btn btn-primary" ng-click="note.edit()"><svg fill="currentColor" class="icon-addnote size-[1.5em]">
           <use xlink:href="css/symbol-defs.svg#icon-addnote"></use>
         </svg></button>
     </div>
     <div class="list-row cursor-pointer hover:bg-gray-100" ng-repeat="note in notes" ng-click="edit(note)">
-      <span ng-bind="note.date | date:'MM/dd'" class="font-date"></span>
-      <span ng-bind="note.title" class="list-col-grow"></span>
+      <span ng-bind="note.date | date:'MM/dd'" class="font-date text-xl text-primary-content/40"></span>
+      <span ng-bind="note.title" class="text-lg"></span>
     </div>
     <div class="list-row hover:bg-gray-100" ng-repeat="log in logs">
-      <span ng-bind="log.date | date:'MM/dd'" class="font-date"></span>
-      <span ng-bind="log.msg" class="list-col-grow"></span>
+      <span ng-bind="log.date | date:'MM/dd'" class="font-date text-xl text-primary-content/40"></span>
+      <span ng-bind="log.msg" class=""></span>
     </div>
   </div>
 
   <div class="tabs tabs-lift w-full">
-
     <label ng-repeat-start="(title, stocks) in blocks" ng-if="stocks.length" ng-if="stocks.length" class="tab">
-      <input type="radio" class="tab" name="stock_tabs" />
-      <span ng-bind="title"></span>
+      <input type="radio" class="tab" name="stock_tabs" ng-checked="$index === 0" />
+      <span class="font-bold " ng-bind="title"></span>
     </label>
 
     <div class="tab-content bg-base-100 border-base-300" ng-repeat-end>
