@@ -1,14 +1,20 @@
 @charset "UTF-8";
+
 body {
   font-family: "Chiron Hei HK", sans-serif;
-  background-color: #692121;
-  margin: 0;
-  padding: 0;
-  color: #292222;
 }
 
-.cursor-pointer {
-  cursor: pointer;
+.font-date {
+  font-family: "Huninn", sans-serif;
+}
+
+.font-price {
+  font-family: "Anonymous Pro", monospace;
+
+  &:before {
+    content: "$";
+    font-size: 0.5em;
+  }
 }
 
 .rich-app_header {
@@ -31,12 +37,14 @@ body {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   border: 2px solid #827738;
 }
+
 .rich-app_menu h2 {
   font-size: 1.5em;
   color: #49421b;
   padding: 0 10px;
   display: contents;
 }
+
 .rich-app_menu select {
   font-size: 1em;
   padding: 10px;
@@ -55,32 +63,40 @@ body {
   font-size: 0.6em;
   color: #A05C5C;
 }
+
 .date--summary {
   font-size: 1em;
   color: brown;
 }
+
 .date--log {
   font-size: 0.6em;
   color: #A05C5C;
 }
+
 .date--inout {
   font-size: 0.8em;
   color: #827738;
 }
+
 .date--today {
   color: #827738;
 }
+
 .date--today::after {
   content: "💡";
 }
+
 .date--stock-invest {
   font-size: 1em;
   color: #827738;
 }
+
 .date--stock-result {
   font-size: 0.8em;
   color: #827738;
 }
+
 .date--label {
   font-size: 0.8em;
   color: #827738;
@@ -102,14 +118,17 @@ body {
   color: brown;
   font-weight: 700;
 }
+
 .price--inout {
   color: #692121;
   font-size: 1.3em;
 }
+
 .price--stock-invest {
   font-size: 2.5em;
   color: brown;
 }
+
 .price--result {
   color: #D97777;
   font-size: 1.5em;
@@ -119,6 +138,7 @@ body {
 [class*=" pct--"] {
   font-family: "Anonymous Pro", monospace;
 }
+
 [class^=pct--]::after,
 [class*=" pct--"]::after {
   content: "%";
@@ -128,6 +148,7 @@ body {
 .pct--result {
   font-size: 0.8em;
 }
+
 .pct--invest {
   color: #692121;
   font-size: 1em;
@@ -140,20 +161,7 @@ body {
   color: #f3d8c2;
 }
 
-button {
-  font-family: "Huninn", sans-serif;
-  font-size: 1.2em;
-  color: #f3d8c2;
-  background-color: orangered;
-  border: none;
-  border-radius: 5px;
-  padding: 5px 10px;
-  margin-left: 20px;
-  cursor: pointer;
-  height: -moz-fit-content;
-  height: fit-content;
-  white-space: nowrap;
-}
+
 button:hover {
   background-color: #cc3700;
 }
@@ -165,6 +173,7 @@ button:hover {
   margin: 0 auto;
   gap: 10px;
 }
+
 .rich-app_blocks_title {
   grid-column: 1/-1;
   background-color: #A05C5C;
@@ -175,6 +184,7 @@ button:hover {
   border-radius: 8px 8px 0 0;
   font-family: "Huninn", sans-serif;
 }
+
 .rich-app_blocks .blocks_cell {
   flex: 1;
   padding: 20px;
@@ -186,31 +196,38 @@ button:hover {
   height: -moz-fit-content;
   height: fit-content;
 }
+
 .rich-app_blocks .blocks_cell_usa {
   background-image: url("data:image/svg+xml,%3Csvg%20width%3D%22300%22%20height%3D%2216%22%20viewBox%3D%220%200%20300%2016%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Crect%20y%3D%220%22%20width%3D%22300%22%20height%3D%224%22%20fill%3D%22%23b22234%22/%3E%3Crect%20y%3D%228%22%20width%3D%22300%22%20height%3D%224%22%20fill%3D%22%23b22234%22/%3E%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%2240%22%20height%3D%2216%22%20fill%3D%22%233c3b6e%22/%3E%3Cpolygon%20points%3D%228%2C5%209%2C8%2012%2C8%209.5%2C10%2010.5%2C13%208%2C11.5%205.5%2C13%206.5%2C10%204%2C8%207%2C8%22%20fill%3D%22%23fff%22/%3E%3Cpolygon%20points%3D%2220%2C5%2021%2C8%2024%2C8%2021.5%2C10%2022.5%2C13%2020%2C11.5%2017.5%2C13%2018.5%2C10%2016%2C8%2019%2C8%22%20fill%3D%22%23fff%22/%3E%3Cpolygon%20points%3D%2232%2C5%2033%2C8%2036%2C8%2033.5%2C10%2034.5%2C13%2032%2C11.5%2029.5%2C13%2030.5%2C10%2028%2C8%2031%2C8%22%20fill%3D%22%23fff%22/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: left top;
   background-size: 300px 16px;
 }
+
 .rich-app_blocks .blocks_cell_code {
   color: #D97777;
 }
+
 .rich-app_blocks .blocks_cell_financial {
   height: -moz-fit-content;
   height: fit-content;
 }
+
 .rich-app_blocks .blocks_cell_animal {
   font-size: 1.2em;
 }
+
 .rich-app_blocks .blocks_cell_namespan {
   grid-column: span 2;
   margin-top: 4px;
 }
+
 .rich-app_blocks .blocks_cell_namespan span {
   color: #A05C5C;
   font-size: 1.8em;
   font-family: "Huninn", sans-serif;
 }
+
 .rich-app_blocks .blocks_cell_defaultMa {
   grid-row: 1/3;
   /* From row 1 to row 2 */
@@ -224,10 +241,12 @@ button:hover {
   height: -moz-fit-content;
   height: fit-content;
 }
+
 .rich-app_blocks .blocks_cell_defaultMa div:first-child {
   font-size: 1.2em;
   color: #F4EDE4;
 }
+
 .rich-app_blocks .blocks_cell_defaultMa div:last-child {
   margin-top: 2px;
   font-size: 0.8em;
@@ -236,10 +255,12 @@ button:hover {
   background-color: brown;
   border-radius: 0 0 8px 8px;
 }
+
 .rich-app_blocks .blocks_cell_tigerMa {
   font-size: 0.8em;
   color: brown;
 }
+
 .rich-app_blocks .blocks_cell_realtime {
   grid-column: span 2;
   color: #827738;
@@ -247,12 +268,15 @@ button:hover {
   padding-left: 15px;
   border-left: 3px solid #692121;
 }
+
 .rich-app_blocks .blocks_cell_realtime .price--realtime {
   margin-right: 5px;
 }
+
 .rich-app_blocks .blocks_cell_realtime .date--realtime {
   color: #A05C5C;
 }
+
 .rich-app_blocks .blocks_cell_invest {
   grid-column: span 2;
   background-color: white;
@@ -260,9 +284,10 @@ button:hover {
   border-radius: 8px;
   margin-top: 10px;
   -webkit-mask: linear-gradient(180deg, rgba(0, 0, 0, 0) 10px, #000 0), radial-gradient(10px, #000 calc(100% - 1px), rgba(0, 0, 0, 0)) top/18.5px 20px;
-          mask: linear-gradient(180deg, rgba(0, 0, 0, 0) 10px, #000 0), radial-gradient(10px, #000 calc(100% - 1px), rgba(0, 0, 0, 0)) top/18.5px 20px;
+  mask: linear-gradient(180deg, rgba(0, 0, 0, 0) 10px, #000 0), radial-gradient(10px, #000 calc(100% - 1px), rgba(0, 0, 0, 0)) top/18.5px 20px;
   color: #827738;
 }
+
 .rich-app_blocks .blocks_cell_invest_result {
   display: block;
   font-size: 0.8em;
@@ -281,25 +306,30 @@ button:hover {
   overflow: hidden;
   height: 100%;
 }
-.trades_popup > div {
+
+.trades_popup>div {
   overflow: auto;
 }
-.trades_popup > div > div {
+
+.trades_popup>div>div {
   display: grid;
   grid-template-columns: 150px 200px auto;
   border-bottom: 1px solid #cac1b1;
   gap: 10px;
 }
-.trades_popup > div > div > div {
+
+.trades_popup>div>div>div {
   align-content: center;
   text-align: left;
 }
-.trades_popup > div > div > div:first-child {
+
+.trades_popup>div>div>div:first-child {
   display: flex;
   flex-direction: column;
   padding: 16px;
 }
-.trades_popup > div > div > div:nth-child(2) {
+
+.trades_popup>div>div>div:nth-child(2) {
   background-color: #ede5d7;
   border-radius: 17px;
   height: -moz-fit-content;
@@ -309,77 +339,97 @@ button:hover {
   display: grid;
   grid-template-columns: auto auto;
 }
-.trades_popup > div > div > div:last-child {
+
+.trades_popup>div>div>div:last-child {
   text-align: right;
   margin-right: 15px;
   line-height: 2em;
 }
-.trades_popup > div:last-child {
+
+.trades_popup>div:last-child {
   border-bottom: none;
   background-color: #cac1b1;
   text-align: right;
   padding-right: 20px;
   align-content: center;
 }
+
 .trades_popup .price--in {
   color: #A05C5C;
   font-size: 1.2em;
 }
+
 .trades_popup .price--in::before {
   content: "💰 ";
 }
+
 .trades_popup .price--out {
   color: #A05C5C;
   font-size: 1.2em;
 }
+
 .trades_popup .price--out::before {
   content: "🔚 ";
 }
+
 .trades_popup .price--tax {
   font-size: 0.8em;
   display: block;
   color: #827738;
 }
+
 .trades_popup .price--tax::before {
   content: "稅費 $";
 }
+
 .trades_popup .price--netProfit {
   font-size: 1.5em;
   color: #A05C5C;
 }
+
 .trades_popup .price--netProfit.positive {
   color: #d03939;
 }
+
 .trades_popup .price--netProfit.negative {
   color: #1f782f;
 }
+
 .trades_popup .pct--netProfitRate {
   font-size: 0.8em;
   margin-right: 10px;
 }
+
 .trades_popup .pct--netProfitRate.positive {
   color: #d03939;
 }
+
 .trades_popup .pct--netProfitRate.negative {
   color: #1f782f;
 }
+
 .trades_popup .pct--netProfitRate::before {
   content: "損益 ";
 }
+
 .trades_popup .date--popup {
   font-size: 0.8em;
   color: #827738;
 }
+
 .trades_popup .date--popup::before {
   content: "(";
 }
+
 .trades_popup .date--popup::after {
   content: ")";
 }
+
 .trades_popup .trade-code {
   font-size: 0.8em;
   color: #827738;
 }
+
 .trades_popup .trade-name {
   font-size: 1.5em;
   color: #A05C5C;
@@ -394,6 +444,7 @@ button:hover {
   padding: 20px 0;
   font-size: 0.9em;
 }
+
 .notes_block div {
   border-right: #692121 3px solid;
   border-left: #692121 3px solid;
@@ -415,6 +466,7 @@ button:hover {
   white-space: nowrap;
   float: right;
 }
+
 .rt-badge.hot {
   background-color: orangered;
 }
@@ -429,22 +481,28 @@ button:hover {
   height: fit-content;
   white-space: nowrap;
 }
+
 .info-banner--win {
   background: linear-gradient(to right, #ff7777, white 30%);
 }
+
 .info-banner--win .pct--result {
   color: #d03939;
 }
+
 .info-banner--loss {
   background: linear-gradient(to right, #98d7a4, white 30%);
 }
+
 .info-banner--loss .pct--result {
   color: #1f782f;
 }
+
 .info-banner--up {
   background-color: rgba(255, 119, 119, 0.1);
   border: 1px dashed #ff7777;
 }
+
 .info-banner--down {
   background-color: rgba(152, 215, 164, 0.1);
   border: 1px dashed #98d7a4;
@@ -456,15 +514,18 @@ button:hover {
   margin: 0 auto;
   padding: 20px 20px 0 20px;
 }
+
 .stock_title h2 {
   color: white;
   font-family: "Huninn", sans-serif;
   font-size: 1.8em;
   white-space: nowrap;
 }
+
 .stock_title button {
   align-self: center;
 }
+
 .stock_title_realtime {
   color: #D97777;
   font-size: 0.8em;
@@ -481,40 +542,48 @@ button:hover {
   background-color: white;
   border-radius: 8px;
   -webkit-mask: linear-gradient(180deg, rgba(0, 0, 0, 0) 10px, #000 0), radial-gradient(10px, #000 calc(100% - 1px), rgba(0, 0, 0, 0)) top/18.5px 20px;
-          mask: linear-gradient(180deg, rgba(0, 0, 0, 0) 10px, #000 0), radial-gradient(10px, #000 calc(100% - 1px), rgba(0, 0, 0, 0)) top/18.5px 20px;
+  mask: linear-gradient(180deg, rgba(0, 0, 0, 0) 10px, #000 0), radial-gradient(10px, #000 calc(100% - 1px), rgba(0, 0, 0, 0)) top/18.5px 20px;
   margin: 0 auto;
   max-width: 820px;
 }
-.stock_invest > div {
+
+.stock_invest>div {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
   padding: 20px;
 }
+
 .stock_invest-info {
   grid-column: span 2;
   display: grid;
   border-right: 2px solid #692121;
 }
+
 .stock_invest-detail {
   grid-column: span 2;
   color: #827738;
   padding: 20px;
   line-height: 1.5em;
 }
+
 .stock_invest-profit {
   color: #A05C5C;
   font-size: 1.2em;
   margin-top: 10px;
 }
+
 .stock_invest-auto {
   grid-column: span 2;
 }
+
 .stock_invest-auto .price--investup {
   color: #d03939;
 }
+
 .stock_invest-auto .price--investdown {
   color: #1f782f;
 }
+
 .stock_result {
   grid-column: 1/-1;
   color: #827738;
@@ -526,10 +595,12 @@ button:hover {
   margin: 10px auto 0;
   max-width: 820px;
 }
-.stock_result > div {
+
+.stock_result>div {
   padding: 5px 0;
   font-size: 0.8em;
 }
+
 .stock_trades {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -538,10 +609,12 @@ button:hover {
   background-color: #ede5d7;
   border-radius: 8px 8px 0 0;
 }
+
 .stock_trades input[type=radio] {
   position: absolute;
   left: -200vw;
 }
+
 .stock_trades label {
   grid-row: 1;
   display: flex;
@@ -549,31 +622,38 @@ button:hover {
   padding: 10px;
   cursor: pointer;
 }
+
 .stock_trades label .ma--label {
   font-size: 1.2em;
   color: #D97777;
   margin-bottom: 3px;
 }
+
 .stock_trades label .ma--label::before {
   content: "MA:";
   color: #b6b08d;
   font-size: 0.8em;
 }
+
 .stock_trades label .date--label {
   margin-bottom: 3px;
 }
+
 .stock_trades label .date--label::before {
   content: "(";
 }
+
 .stock_trades label .date--label::after {
   content: ")";
 }
+
 .stock_trades label .rate {
   color: #F4EDE4;
   background-color: #D97777;
   padding: 2px 5px;
   font-size: 0.6em;
 }
+
 .stock_trades-price {
   font-size: 1.5em;
   color: #692121;
@@ -582,12 +662,14 @@ button:hover {
   padding: 5px;
   margin-bottom: 3px;
 }
+
 .stock_trades-info {
   display: grid;
   gap: 2px;
   margin: 5px;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }
+
 .stock_trades-info div {
   background-color: #C9B8A3;
   border-radius: 4px;
@@ -598,39 +680,48 @@ button:hover {
   text-align: right;
   align-content: center;
 }
+
 .stock_trades-info div span {
   color: #D97777;
   font-size: 1.5em;
 }
+
 .stock_trades-info div a {
   color: #49421b;
 }
+
 .stock_trades-info .pct--reentryProfit {
   font-size: 0.7em;
 }
+
 .stock_trades-info .pct--reentryProfit::before {
   content: "(";
 }
+
 .stock_trades-info .pct--reentryProfit::after {
   content: "%)";
 }
+
 .stock_trades [id^=trade] {
   grid-column: 1/-1;
   grid-row: 3;
   display: none;
 }
+
 .stock_trades [id^=info] {
   grid-column: 1/-1;
   grid-row: 2;
   display: none;
 }
-.stock_trades [id^=tab]:checked ~ [id^=label] {
+
+.stock_trades [id^=tab]:checked~[id^=label] {
   background-color: #ede5d7;
   border-radius: 8px 8px 0 0;
   border: 2px solid #827738;
   border-bottom: 0;
 }
-.stock_trades [id^=tab]:not(:checked) ~ [id^=label] {
+
+.stock_trades [id^=tab]:not(:checked)~[id^=label] {
   background-color: #cac1b1;
   border-radius: 8px 8px 0 0;
   border: 2px solid #827738;
@@ -638,12 +729,15 @@ button:hover {
   border-left: 0;
   border-right: 0;
 }
-.stock_trades [id^=tab]:checked ~ [id^=trade] {
+
+.stock_trades [id^=tab]:checked~[id^=trade] {
   display: block;
 }
-.stock_trades [id^=tab]:checked ~ [id^=info] {
+
+.stock_trades [id^=tab]:checked~[id^=info] {
   display: grid;
 }
+
 .stock_trades_row {
   display: grid;
   grid-template-columns: 1fr 120px 120px 1fr;
@@ -651,51 +745,63 @@ button:hover {
   border-bottom: 1px dashed #827738;
   padding: 10px 0;
 }
+
 .stock_trades_row .date--dates {
   color: #827738;
 }
+
 .stock_trades_row .date--dates span:nth-child(1) {
   font-size: 0.5em;
 }
+
 .stock_trades_row .date--dates span:nth-child(1):before {
   content: "(";
 }
+
 .stock_trades_row .date--dates span:nth-child(1):after {
   content: " 天)";
 }
+
 .stock_trades_row .date--dates .info-banner {
   margin-right: 10px;
 }
+
 .stock_trades_row .profit {
   padding: 0 10px;
   border-right: 1px solid #827738;
   text-align: right;
 }
+
 .stock_trades_row .profit .price--profit {
   font-size: 1.5em;
   color: #692121;
   white-space: nowrap;
   text-align: right;
 }
+
 .stock_trades_row .profit .price--profit span::before {
   content: "$";
   font-size: 0.5em;
 }
+
 .stock_trades_row .profit .pct--profit {
   color: #F4EDE4;
   background-color: #D97777;
   padding: 2px 5px;
 }
+
 .stock_trades_row .reason {
   padding: 20px;
   font-size: 0.9em;
   line-height: 1.8em;
   color: #827738;
 }
+
 .stock_trades_row .reason span {
   display: block;
   margin-bottom: 5px;
 }
+
 .stock_trades_row .investstock {
   grid-column: span 4;
   background-color: white;
@@ -712,4 +818,6 @@ ng-container {
   color: #fff;
   font-size: 1.2em;
   padding: 5px;
-}/*# sourceMappingURL=style.css.map */
+}
+
+/*# sourceMappingURL=style.css.map */

@@ -1,14 +1,18 @@
 <!DOCTYPE html>
-<html lang="zh-TW" data-theme="coffee">
+<html lang="zh-TW" data-theme="retro">
 
 <head>
   <base href="/">
   <link rel="icon" href="gold.ico">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular-csp.min.css"
     crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- DaisyUI 5 官方 CDN 設定 -->
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- 自定義主題 CSS -->
+  <link href="themes.css" rel="stylesheet" type="text/css" />
+
   <link rel="stylesheet" href="/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,12 +44,13 @@
   <!-- 使用 DaisyUI 的 navbar 組件 -->
   <div class="navbar bg-base-100 shadow-sm">
     <div class="navbar-start" ng-click="home()">
-      <div class="btn text-2xl"> <svg fill="currentColor" class="icon icon-investment size-[1em]">
+      <div class="btn btn-ghost text-2xl font-bold text-primary hover:bg-base-100"> <svg fill="currentColor"
+          class="icon icon-investment size-[1em]">
           <use xlink:href="css/symbol-defs.svg#icon-investment"></use>
         </svg> <span ng-bind="name"></span></div>
     </div>
     <div class="navbar-center flex-wrap gap-2">
-      <h2 class="text-xl font-bold text-primary">績優股</h2>
+      <h2 class="text-xl text-primary">績優股</h2>
       <!-- 股票選擇器 -->
       <div class="form-control">
         <select class="select select-bordered select-sm w-full max-w-xs" ng-model="stock" ng-change="change()"
@@ -72,12 +77,16 @@
     </div>
     <div class="navbar-end">
       <!-- 操作按鈕組 -->
-      <div class="btn-group">
-        <button class="btn btn-ghost btn-sm tooltip" ng-if="!stock.code" ng-click="add.blank()" data-tip="新增股票">
-          <span class="text-lg">✚</span>
+      <div class="join">
+        <button class="btn btn-primary join-item" ng-if="!stock.code" ng-click="add.blank()" data-tip="新增股票">
+          <svg fill="currentColor" class="icon-eye-plus size-[1em]">
+            <use xlink:href="css/symbol-defs.svg#icon-eye-plus"></use>
+          </svg> 股票
         </button>
-        <button class="btn btn-ghost btn-sm tooltip" ng-click="simulate.setup()" data-tip="模擬回測">
-          <span class="text-lg">📊</span>
+        <button class="btn btn-primary join-item" ng-click="simulate.setup()" data-tip="模擬回測">
+          <svg fill="currentColor" class="icon-spinner9 size-[1em]">
+            <use xlink:href="css/symbol-defs.svg#icon-spinner9"></use>
+          </svg> 回測
         </button>
       </div>
     </div>
@@ -138,7 +147,7 @@
     </div>
   </div>
 
-  <div ng-view></div>
+  <div ng-view class="flex items-center justify-center"></div>
 
   <script src="/js/lang.js"></script>
 
