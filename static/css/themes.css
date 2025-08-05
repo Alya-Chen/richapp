@@ -1,39 +1,70 @@
 /* 自定義 DaisyUI 主題 */
 
 /* Running Almost 主題 */
-[data-theme="runningalmost"] {
-    name: "runningalmost";
+[data-theme="rosewood"] {
+    name: "rosewood";
     default: false;
     prefersdark: false;
     color-scheme: "light";
-    --color-base-100: oklch(96% 0.018 272.314);
-    --color-base-200: oklch(93% 0.034 272.788);
-    --color-base-300: oklch(87% 0.065 274.039);
-    --color-base-content: oklch(35% 0.144 278.697);
-    --color-primary: oklch(90% 0.182 98.111);
-    --color-primary-content: oklch(28% 0.066 53.813);
-    --color-secondary: oklch(83% 0.128 66.29);
-    --color-secondary-content: oklch(26% 0.079 36.259);
-    --color-accent: oklch(87% 0 0);
-    --color-accent-content: oklch(14% 0 0);
-    --color-neutral: oklch(25% 0.09 281.288);
-    --color-neutral-content: oklch(96% 0.018 272.314);
-    --color-info: oklch(68% 0.169 237.323);
-    --color-info-content: oklch(97% 0.013 236.62);
-    --color-success: oklch(76% 0.233 130.85);
-    --color-success-content: oklch(98% 0.031 120.757);
-    --color-warning: oklch(76% 0.188 70.08);
-    --color-warning-content: oklch(98% 0.022 95.277);
-    --color-error: oklch(63% 0.237 25.331);
-    --color-error-content: oklch(97% 0.013 17.38);
-    --radius-selector: 1rem;
-    --radius-field: 0.25rem;
-    --radius-box: 1rem;
-    --size-selector: 0.25rem;
-    --size-field: 0.25rem;
-    --border: 1px;
-    --depth: 0;
-    --noise: 0;
+
+    --color-primary: oklch(75% 0.14 20);
+    /* #db9e9e */
+    --color-primary-focus: oklch(55% 0.22 27);
+    /* #b84242 */
+    --color-primary-content: oklch(100% 0 0);
+    /* #ffffff */
+
+    --color-secondary: oklch(82% 0.19 10);
+    /* #ef9fbc */
+    --color-secondary-focus: oklch(73% 0.21 10);
+    /* #e7739e */
+    --color-secondary-content: oklch(100% 0 0);
+    /* #ffffff */
+
+    --color-accent: oklch(78% 0.23 80);
+    /* #eeaf3a */
+    --color-accent-focus: oklch(68% 0.25 80);
+    /* #e09915 */
+    --color-accent-content: oklch(100% 0 0);
+    /* #ffffff */
+
+    --color-neutral: oklch(17% 0.05 310);
+    /* #261230 */
+    --color-neutral-focus: oklch(14% 0.04 310);
+    /* #200f29 */
+    --color-neutral-content: oklch(100% 0 0);
+    /* #ffffff */
+
+    --color-base-100: oklch(97% 0.01 70);
+    /* #faf7f5 */
+    --color-base-200: oklch(92% 0.01 70);
+    /* #efeae6 */
+    --color-base-300: oklch(88% 0.01 70);
+    /* #e7e2df */
+    --color-base-content: oklch(38.49% 0.102 330.48);
+    /* #261230 */
+
+    --color-info: oklch(55% 0.05 270);
+    /* #5b608b */
+    --color-success: oklch(60% 0.10 95);
+    /* #696130 */
+    --color-success-content: oklch(80.32% 0.084 102.71%);
+    /* #c4d600 */
+    --color-warning: oklch(80% 0.25 75);
+    /* #ff9900 */
+    --color-error: oklch(66% 0.25 30);
+    /* #ff5724 */
+
+    --rounded-box: 1rem;
+    --rounded-btn: 1.9rem;
+    --rounded-badge: 1.9rem;
+
+    --animation-btn: 0.25s;
+    --animation-input: 0.2s;
+
+    --btn-text-case: uppercase;
+    --navbar-padding: 0.5rem;
+    --border-btn: 1px;
 }
 
 [data-theme="lowkeynoodle"] {

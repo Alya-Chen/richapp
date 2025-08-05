@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW" data-theme="unfriendlyqueen">
+<html lang="zh-TW" data-theme="rosewood">
 
 <head>
   <base href="/">
@@ -15,6 +15,7 @@
     rel="stylesheet">
 
   <link rel="stylesheet" href="/css/output.css">
+  <link rel="stylesheet" href="/css/style.css">
   <!-- 自定義樣式 --><!-- 自定義主題 CSS -->
   <link href="css/themes.css" rel="stylesheet" type="text/css" />
 
@@ -38,7 +39,7 @@
 <body ng-app="rich-app" ng-controller="indexCtrl" class="bg-base-200 text-base-content font-rich">
   <!-- 使用 DaisyUI 的 navbar 組件 -->
   <div class="navbar bg-base-100 shadow-sm">
-    <div class="navbar-start" ng-click="home()">
+    <div class="navbar-start text-primary" ng-click="home()">
       <div class="btn btn-ghost text-3xl font-bold text-primary hover:bg-base-100 font-title"> <svg fill="currentColor"
           class="icon icon-investment size-[1em]">
           <use xlink:href="css/symbol-defs.svg#icon-investment"></use>
@@ -142,12 +143,14 @@
     </div>
   </div>
 
-  <div ng-view class="flex items-center justify-center"></div>
+  <div ng-view class=""></div>
 
   <script src="/js/lang.js"></script>
 
   <script src="/js/svg-helper.js"></script>
   <script src="/js/svg-init.js"></script>
+  <!-- SVG 開發工具 - 開發階段使用 -->
+  <script src="/js/svg-dev-tools.js"></script>
 
   <script type="module">
     import { Macd, Kdj, Cci, Rsi, BullBear, ExitAlert } from '/js/macd-kdj.js';
