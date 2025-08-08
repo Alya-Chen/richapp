@@ -67,14 +67,6 @@
     <button ng-if="log.act == '買入'" style="cursor:pointer" ng-click="invest.edit({ act: '賣出' })">賣出</button>
   </div>
 </div>
-<div ng-if="stock.done.lenth" class="notes_block">
-  <div ng-repeat="trade in stock.done">
-    <span class="date--note" ng-bind="trade.entryDate | date:'MM/dd'"></span>～<span class="date--note"
-      ng-bind="trade.exitDate | date:'MM/dd'"></span>
-    已實現損益 <span class="price" ng-bind="trade.totalProfit"></span>（<span class="percent"
-      ng-bind="trade.profitRate * 100"></span>）
-  </div>
-</div>
 <div ng-if="notes.length" class="notes_block">
   <div style="cursor:pointer" ng-repeat="note in notes" ng-click="edit(note)">
     <span class="date--note" ng-bind="note.date | date:'MM/dd'"></span>
@@ -86,11 +78,11 @@
     <span class="date--note" ng-bind="d.date | date:'MM/dd'"></span>
     每股 <span ng-bind="d.price"></span> 元
 	× <span ng-bind="d.amount"></span> 股
-	＝ <span ng-bind="d.payment"></span> 元
+	＝ 獲利 <span ng-bind="d.payment | number"></span> 元
   </div>
 </div>
 
-<div ng-if="stock.done.lenth" class="stock_result">
+<div ng-if="stock.done.length" class="stock_result">
   <div ng-repeat="trade in stock.done">
     <span class="date--result" ng-bind="trade.entryDate | date:'MM/dd'"></span>
     <span class="price--result" ng-bind="trade.entryPrice"></span> 買入

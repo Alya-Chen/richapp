@@ -49,7 +49,7 @@
 			this.$http.get('/stock/' + code).then((res) => {
 				const stock = res.data;
 				if (stock.financial && stock.financial['股利']) {
-					stock.dividend = stock.financial['股利'].shift();
+					stock.dividend = stock.financial['股利'].find(f => f['除息日'] != '--');
 				}
 				callback(res.data);
 			});
