@@ -89,57 +89,117 @@
   </div>
 
 
-  <div id="stock-form" style="display: none">
-    <div>
-      股票代碼：<input ng-model="add.code" />
-    </div>
-    <div>
-      股票名稱：<input ng-model="add.name" />
-    </div>
-    <div ng-if="add.save.result" ng-bind="add.save.result"></div>
-    <div>
-      <p><button ng-click="add.save()">確認</button></p>
+  <div id="stock-form" class="rounded-2xl grid gap-4 p-6 bg-base-100 max-w-md mx-auto shadow-lg" style="display: none">
+    <div class="text-left">
+      <h3 class="text-2xl text-primary font-bold mb-4">新增股票</h3>
+      <div class="grid gap-4">
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text text-sm text-success">股票代碼</span>
+          </label>
+          <input ng-model="add.code" class="input input-bordered w-full" placeholder="請輸入股票代碼" />
+        </div>
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text text-sm text-success">股票名稱</span>
+          </label>
+          <input ng-model="add.name" class="input input-bordered w-full" placeholder="請輸入股票名稱" />
+        </div>
+      </div>
+      <div ng-if="add.save.result" class="alert alert-info mt-4">
+        <span ng-bind="add.save.result"></span>
+      </div>
+      <div class="flex justify-end mt-6">
+        <button ng-click="add.save()" class="btn btn-primary">
+          <svg fill="currentColor" class="icon-eye-plus size-[1em] mr-2">
+            <use xlink:href="css/symbol-defs.svg#icon-eye-plus"></use>
+          </svg>確認新增
+        </button>
+      </div>
     </div>
   </div>
 
-  <div id="note-form" style="display: none">
-    <br />
-    <div>
-      標題：<input size="50" ng-model="note.model.title" />
-    </div>
-    <br />
-    <div>
-      <textarea rows="8" cols="50" ng-model="note.model.content"></textarea>
-    </div>
-    <div ng-if="note.save.result" ng-bind="note.save.result"></div>
-    <div>
-      <p>
-        <button ng-click="note.save()">確認</button>
-        <button ng-if="note.model.id" ng-click="note.destroy()">刪除</button>
-      </p>
+  <div id="note-form" class="rounded-2xl grid gap-4 p-6 bg-base-100 max-w-2xl mx-auto shadow-lg" style="display: none">
+    <div class="text-left">
+      <h3 class="text-2xl text-primary font-bold mb-4">筆記編輯</h3>
+      <div class="grid gap-4">
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text text-sm text-success">標題</span>
+          </label>
+          <input ng-model="note.model.title" class="input input-bordered w-full" placeholder="請輸入筆記標題" />
+        </div>
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text text-sm text-success">內容</span>
+          </label>
+          <textarea ng-model="note.model.content" class="textarea textarea-bordered w-full h-32"
+            placeholder="請輸入筆記內容"></textarea>
+        </div>
+      </div>
+      <div ng-if="note.save.result" class="alert alert-info mt-4">
+        <span ng-bind="note.save.result"></span>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button ng-click="note.save()" class="btn btn-primary">
+          <svg fill="currentColor" class="icon-addnote size-[1em] mr-2">
+            <use xlink:href="css/symbol-defs.svg#icon-addnote"></use>
+          </svg>儲存
+        </button>
+        <button ng-if="note.model.id" ng-click="note.destroy()" class="btn btn-error">
+          <svg fill="currentColor" class="icon icon-crying size-[1em] mr-2">
+            <use xlink:href="css/symbol-defs.svg#icon-crying"></use>
+          </svg>刪除
+        </button>
+      </div>
     </div>
   </div>
 
-  <div id="simulate-form" style="display: none">
-    <br />
-    <div>
-      回測股票：我的關注，可交易，全部台股，全部上市台股，全部上櫃台股，全部美股
-    </div>
-    <div>
-      回測區間：2024/01/01～今天
-    </div>
-    <div>
-      入場策略：金唬男
-    </div>
-    <div>
-      出場策略：金唬男＋金牛＋停損
-    </div>
-    <br />
-    <div ng-if="simulate.run.result" ng-bind="simulate.run.result"></div>
-    <div>
-      <p>
-        <button ng-click="simulate.run()">確認</button>
-      </p>
+  <div id="simulate-form" class="rounded-2xl grid gap-4 p-6 bg-base-100 max-w-3xl mx-auto shadow-lg"
+    style="display: none">
+    <div class="text-left">
+      <h3 class="text-2xl text-primary font-bold mb-4">模擬回測設定</h3>
+      <div class="grid gap-4">
+        <div class="bg-success rounded-2xl p-4">
+          <h4 class="text-lg text-base-100 font-bold mb-3">回測參數</h4>
+          <div class="grid grid-cols-2 gap-4 text-base-100">
+            <div class="list">
+              <span class="text-sm text-base-200">回測股票</span>
+              <span class="text-lg font-bold">我的關注，可交易，全部台股，全部上市台股，全部上櫃台股，全部美股</span>
+            </div>
+            <div class="list">
+              <span class="text-sm text-base-200">回測區間</span>
+              <span class="text-lg font-bold font-date">2024/01/01～今天</span>
+            </div>
+          </div>
+        </div>
+        <div class="bg-secondary rounded-2xl p-4">
+          <h4 class="text-lg text-base-100 font-bold mb-3">策略設定</h4>
+          <div class="grid grid-cols-2 gap-4 text-base-100">
+            <div class="list">
+              <span class="text-sm text-secondary-content">入場策略</span>
+              <span class="text-lg font-bold">金唬男</span>
+            </div>
+            <div class="list">
+              <span class="text-sm text-secondary-content">出場策略</span>
+              <span class="text-lg font-bold">金唬男＋金牛＋停損</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div ng-if="simulate.run.result" class="alert alert-success mt-4">
+        <svg fill="currentColor" class="icon icon-grin size-[1.5em]">
+          <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
+        </svg>
+        <span ng-bind="simulate.run.result"></span>
+      </div>
+      <div class="flex justify-end mt-6">
+        <button ng-click="simulate.run()" class="btn btn-primary btn-lg">
+          <svg fill="currentColor" class="icon-spinner9 size-[1em] mr-2">
+            <use xlink:href="css/symbol-defs.svg#icon-spinner9"></use>
+          </svg>開始回測
+        </button>
+      </div>
     </div>
   </div>
 
