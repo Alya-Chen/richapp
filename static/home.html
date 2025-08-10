@@ -194,55 +194,77 @@
 
 </div>
 
-<div id="trades-block" class="trades_popup" style="display: none">
-  <div class="cursor-pointer">
-    <div ng-repeat="trade in trades" ng-if="trade.entryDate" ng-click="changeTo(trade.code)">
-      <div>
-        <span class="trade-code" ng-bind="trade.code"></span>
-        <span class="trade-name" ng-bind="trade.name"></span>
+<div id="trades-block" class="rounded-2xl grid grid-rows-[90%_auto] h-full" style="display: none">
+  <div class="cursor-pointer overflow-y-scroll bg-base-100">
+    <div ng-repeat="trade in trades" ng-if="trade.entryDate" ng-click="changeTo(trade.code)"
+      class="grid grid-cols-3 gap-4 p-4 border-b border-base-200">
+      <div class="text-left list">
+        <span class="text-sm text-success" ng-bind="trade.code"></span>
+        <span class="text-3xl text-primary" ng-bind="trade.name"></span>
       </div>
-      <div>
-        <span class="price--in" ng-bind="trade.entryPrice | number"></span>
-        <span ng-bind="trade.entryDate | date:'MM/dd'" class="date--popup"></span>
+      <div class="bg-success grid grid-cols-2 rounded-2xl p-2 w-fit items-center text-right">
+        <span class="font-price text-2xl text-base-100" ng-bind="trade.entryPrice | number"></span>
+        <span ng-bind="trade.entryDate | date:'MM/dd'" class="font-date text-secondary"></span>
         <ng-container ng-if="trade.exitDate">
-          <span class="price--out" ng-bind="trade.exitPrice | number"></span>
-          <span ng-bind="trade.exitDate | date:'MM/dd'" class="date--popup"></span>
+          <span class="font-price text-2xl text-base-100" ng-bind="trade.exitPrice | number"></span>
+          <span ng-bind="trade.exitDate | date:'MM/dd'" class="font-date text-secondary"></span>
         </ng-container>
       </div>
-      <div>
-        <span class="price--tax" ng-bind="trade.tax | number"></span>
-        <span class="pct--netProfitRate"
-          ng-class="{'positive': trade.netProfitRate > 0, 'negative': trade.netProfitRate < 0}"
+      <div class="text-right list">
+
+        <span class="text-sm text-rich-green">
+          稅費 <span class="font-price " ng-bind="trade.tax | number"></span>
+        </span>
+        <span class="flex self-end">
+          <svg fill="currentColor" ng-if="trade.netProfit < 0" class="icon icon-crying size-[2em] text-base-content">
+            <use xlink:href="css/symbol-defs.svg#icon-crying"></use>
+          </svg>
+          <svg fill="currentColor" ng-if="trade.netProfit > 0" class="icon icon-grin size-[2em] text-base-content">
+            <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
+          </svg>
+          <span class="font-price text-2xl ml-2"
+            ng-class="{'text-rich-red': trade.netProfit > 0, 'text-rich-green': trade.netProfit < 0}"
+            ng-bind="trade.netProfit | number"></span>
+        </span>
+
+
+        <span class="font-pct font-bold"
+          ng-class="{'text-rich-red': trade.netProfitRate > 0, 'text-rich-green': trade.netProfitRate < 0}"
           ng-bind="trade.netProfitRate | pct"></span>
-        <span class="price--netProfit" ng-class="{'positive': trade.netProfit > 0, 'negative': trade.netProfit < 0}"
-          ng-bind="trade.netProfit | number"></span>
       </div>
     </div>
-    <div ng-repeat="trade in trades" ng-if="!trade.entryDate" ng-click="changeTo(trade.code)">
-      <div>
-        <span class="trade-code" ng-bind="trade.code"></span>
-        <span class="trade-name" ng-bind="trade.name"></span>
+    <div ng-repeat="trade in trades" ng-if="!trade.entryDate" ng-click="changeTo(trade.code)"
+      class="grid grid-cols-3 gap-4 p-4 border-b border-base-200">
+      <div class="text-left list">
+        <span class="text-sm text-success" ng-bind="trade.code"></span>
+        <span class="text-3xl text-primary" ng-bind="trade.name"></span>
       </div>
-      <div>
-        <span class="price--in" ng-bind="trade.price | number"></span>
-        <span ng-bind="trade.date | date:'MM/dd'" class="date--popup"></span>
+      <div class="rounded-2xl p-2 bg-secondary text-left w-fit">
+        <span class="font-price text-2xl text-base-100 after:content-['每股']" ng-bind="trade.price | number"></span>
+        <span ng-bind="trade.date | date:'MM/dd'" class="font-date text-secondary-content"></span>
       </div>
-      <div>
-        <span ng-bind="trade.amount"></span> 股
-        <span class="price--netProfit" ng-class="positive" ng-bind="trade.payment | number"></span>
+      <div class="text-right">
+        <span class="text-base-content after:content-['股']" ng-bind="trade.amount"></span>
+        <span class="font-price text-2xl ml-2 text-rich-red" ng-class="positive"
+          ng-bind="trade.payment | number"></span>
       </div>
     </div>
   </div>
-  <div>
-    <span class="pct--netProfitRate"
-      ng-class="{'positive': trades.netProfitRate > 0, 'negative': trades.netProfitRate < 0}"
-      ng-bind="trades.netProfitRate | pct"></span>
-    <span class="price--netProfit" ng-class="{'positive': trades.netProfit > 0, 'negative': trades.netProfit < 0}"
-      ng-bind="trades.netProfit | number"></span>
-    <ng-container ng-if="trades.totalDividend">
+  <div class="bg-success text-right flex items-center justify-end p-4">
+
+    <svg fill="currentColor" ng-if="trades.netProfit < 0" class="icon icon-crying size-[2em] text-base-content">
+      <use xlink:href="css/symbol-defs.svg#icon-crying"></use>
+    </svg>
+    <svg fill="currentColor" ng-if="trades.netProfit > 0" class="icon icon-grin size-[2em] text-base-content">
+      <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
+    </svg>
+
+    <span class="ml-3 font-pct" ng-bind="trades.netProfitRate | pct"></span>
+    <span class="font-price text-2xl badge ml-3 pt-4 pb-4" ng-bind="trades.netProfit | number"></span>
+    <span class="ml-3" ng-if="trades.totalDividend">
       股利：
-      <span class="price--netProfit" ng-if="trades.totalDividend" ng-class="positive"
+      <span class="font-price badge" ng-if="trades.totalDividend" ng-class="positive"
         ng-bind="trades.totalDividend | number"></span>
-    </ng-container>
+    </span>
   </div>
 </div>
