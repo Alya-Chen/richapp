@@ -377,6 +377,47 @@ export class BullBear {
     }
 }
 
+export class BollingerBands {
+	constructor(data, period = 20, k = 2) {
+        this.data = data;
+		this.period = period; // N 日
+		this.k = k; // 標準差倍數
+	}
+
+	// 計算移動平均
+	sma(prices) {
+		const sum = prices.reduce((acc, val) => acc + val, 0);
+		return sum / prices.length;
+	}
+
+	// 計算標準差
+	stdDev(prices, mean) {
+		const variance = prices.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / prices.length;
+		return Math.sqrt(variance);
+	}
+
+	// 計算布林帶
+	calculate() {
+		if (this.data.length < this.period) {
+			throw new Error(`資料長度必須至少 ${this.period} 筆`);
+		}
+		let result = [];
+		for (let i = this.period - 1; i < this.data.length; i++) {
+			const windowData = this.data.slice(i - this.period + 1, i + 1).map(d => d.close);
+			const mid = this.sma(windowData);
+			const sd = this.stdDev(windowData, mid);
+			const upper = mid + this.k * sd;
+			const lower = mid - this.k * sd;
+			result.push({
+				time: Date.parse(this.data[i].date),
+				upper,
+				lower
+			});
+		}
+		return result;
+	}
+}
+
 export class ExitAlert {
     constructor(data) {
         this.data = data;

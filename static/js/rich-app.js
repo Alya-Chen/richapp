@@ -664,7 +664,15 @@
 					id: 'MACD',
 					visible: false,
 					url: 'https://t.ly/PPRaC'
-				}, { id: 'CCI', visible: false, url: 'https://t.ly/G4dSi' },
+				}, { 
+					id: 'CCI', 
+					visible: false, 
+					url: 'https://t.ly/G4dSi' 
+				}, { 
+					id: 'Bollinger', 
+					visible: false, 
+					url: 'https://t.ly/aDzD9' 
+				},
 				/*{
 					id: 'RSI',
 					visible: false,

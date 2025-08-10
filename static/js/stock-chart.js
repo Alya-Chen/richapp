@@ -34,7 +34,7 @@ class StockChart {
 		const lsrData = this.data.filter(i => i.lsr).map(i => [i.date.getTime(), i.lsr]);
 		const rsi = new Rsi(this.data).calculate();
 		const rsiData = rsi.filter(i => i && i.rsi).map(i => [i.time, i.rsi]);
-		console.log(rsi.filter(i => i && (i.bear || i.bull)).map(i => [i.time, i.bear, i.bull]))
+		//console.log(rsi.filter(i => i && (i.bear || i.bull)).map(i => [i.time, i.bear, i.bull]))
 		const kdj = new Kdj(this.data).calculate(); // { period: 9, k: 3, d: 3 }
 		const kData = kdj.filter(i => i.k).map(i => [i.time, i.k]);		
 		//const rsiFlags = rsi.filter(i => i && (i.golden || i.dead)).map(i => ({
@@ -102,13 +102,13 @@ class StockChart {
 				    tooltip: {
 						pointFormatter: function () {
 							const color = this.diff > 0 ? 'red' : (this.diff == 0 ? 'gray' : 'green');
-                                                        const diffRate = (this.diff * 100 / (this.close - this.diff)).scale(2);
-                                                        const diff = (this.diff > 0 ? ' ▲ ' : (this.diff == 0 ? ' ' : ' ▼ ')) + this.diff.scale(2) + `（${diffRate}%）`;
-                                                        const close = `<span style="color:${color}">${this.close.scale(2)} ${diff}</span>`;
+                            const diffRate = (this.diff * 100 / (this.close - this.diff)).scale(2);
+                            const diff = (this.diff > 0 ? ' ▲ ' : (this.diff == 0 ? ' ' : ' ▼ ')) + this.diff.scale(2) + `（${diffRate}%）`;
+                            const close = `<span style="color:${color}">${this.close.scale(2)} ${diff}</span>`;
 							const prevVolume = stockData[stockData.findIndex(d => d[0] == this.x) - 1][5];
 							const isVolumeUp = this.volume > (prevVolume || 0);
 							const volume = `<span style="color:green">${(this.diff > 0 && !isVolumeUp) ? '（價漲量縮）' : (this.diff < 0 && isVolumeUp ? '（價跌量漲）' : '')}</span>`;						
-                                                        this.series.chart.setTitle({ text: `${Highcharts.dateFormat('%Y-%m-%d', this.x)} | ${close} | 開 ${this.open.scale(2)} | 高 ${this.high.scale(2)} | 低 ${this.low.scale(2)} | 量 ${this.volume}${volume}`});
+                            this.series.chart.setTitle({ text: `${Highcharts.dateFormat('%Y-%m-%d', this.x)} | ${close} | 開 ${this.open.scale(2)} | 高 ${this.high.scale(2)} | 低 ${this.low.scale(2)} | 量 ${this.volume}${volume}`});
 							return false;
 						}
 				    },
@@ -364,6 +364,7 @@ class StockChart {
 		if (axes.find(a => a.id == '60MA')) this.addMa(60);
 		if (axes.find(a => a.id == '120MA')) this.addMa(120);
 		if (axes.find(a => a.id == '200MA')) this.addMa(200);
+		if (axes.find(a => a.id == 'Bollinger')) this.addBollingerBands();
 		return this;
 	}
 	get() {
@@ -376,9 +377,8 @@ class StockChart {
 		last.update([last.x, d.open, d.high, d.low, d.close, d.volume, d.diff]);
 	}
 	addMa(ma) {
-		//this.reset();
+		this.defaultMa = this.defaultMa || ma;
 		const colors = ['IndianRed', 'SeaGreen', 'RoyalBlue', 'Plum', 'LightSalmon', 'PeachPuff']
-		const candlestick = this.chart.get('candlestick');
 		const maData = this.calculate(ma);
 		this.chart.addSeries({
 			type: 'line',
@@ -389,16 +389,29 @@ class StockChart {
 			lineWidth: 1.5,
 			marker: {
 				enabled: false
-			}/*,
-			zones: [{
-				value: candlestick.data[candlestick.data.length - 1].y,
-				color: 'green' // 价格线下方的颜色
-			}, {
-				color: 'red' // 价格线上方的颜色
-			}]*/
+			}
 		});
 		return this;
 	}
+	addBollingerBands() {
+		const bb = new BollingerBands(this.data, this.defaultMa).calculate();
+		const upperData = bb.map(i => [i.time, i.upper]);
+		const lowerData = bb.map(i => [i.time, i.lower]);
+		this.chart.addSeries({
+			type: 'line',
+			name: `上軌`,
+			data: upperData,
+			color: 'LightPink',
+			tooltip: { valueDecimals: 2 }
+		});
+		this.chart.addSeries({
+			type: 'line',
+			name: `下軌`,
+			data: lowerData,
+			color: 'DeepSkyBlue',
+			tooltip: { valueDecimals: 2 }
+		});					
+	}	
 	reset() {
 		if (!this.chart.series) return;
 		this.addMa.count = 0;		

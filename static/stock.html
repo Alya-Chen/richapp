@@ -47,8 +47,8 @@
       <span class="date--stock-invest" ng-bind="(log.date || log.day.date) | date:'MM/dd'"></span>
       <span class="price--stock-invest" ng-bind="(log.price || log.day.close).scale(2)"></span>
       <div class="stock_invest-profit"><span ng-if="log.invested > 0">目前</span>損益
-        <span class="price--invest" ng-bind="log.profit"></span>（<span class="pct--invest"
-          ng-bind="log.profitRate"></span>）
+        <span class="price--invest" ng-bind="stock.trade.invest.netProfit"></span>
+		（<span class="pct--invest" ng-bind="stock.trade.invest.profitRate"></span>）
       </div>
     </div>
     <div class="stock_invest-detail">

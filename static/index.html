@@ -153,13 +153,14 @@
   <script src="/js/svg-dev-tools.js"></script>
 
   <script type="module">
-    import { Macd, Kdj, Cci, Rsi, BullBear, ExitAlert } from '/js/macd-kdj.js';
+    import { Macd, Kdj, Cci, Rsi, BullBear, ExitAlert, BollingerBands } from '/js/macd-kdj.js';
     window.Macd = Macd;
     window.Kdj = Kdj;
     window.Cci = Cci;
     window.Rsi = Rsi;
     window.BullBear = BullBear;
     window.ExitAlert = ExitAlert;
+    window.BollingerBands = BollingerBands;
     Number.prototype.scale = function (digits = 0) {
       return Number(this.toFixed(digits));
     }

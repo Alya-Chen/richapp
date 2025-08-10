@@ -1,3 +1,6 @@
+const FEE_RATE = 0.0008534;
+const TAX_RATE = 0.003;
+
 class TigerInvest {
 	constructor(data, ma) {
 		this.ma = ma;
@@ -70,14 +73,14 @@ class TigerInvest {
 	summary() {
 		if (!this.exitDate) { // 交易中
 			const lastDay = this.data[this.data.length - 1];
-			this.tax += lastDay.close * this.getTotalInvested() * 0.00385;
+			this.tax += lastDay.close * this.getTotalInvested() * FEE_RATE;
 			const avgCost = this.getAvgCost();
 			this.profit = lastDay.close - this.getAvgCost();
 			this.profitRate = this.profit / this.getAvgCost();
 		}
 		this.totalProfit = this.totalCapital * this.profit;
 		this.netProfit = this.totalProfit - this.tax;
-		this.netProfitRate = this.profitRate - 0.0047;
+		this.netProfitRate = this.profitRate - (FEE_RATE + TAX_RATE);
 		return {
 			stage: this.stage,
 			logs: this.logs,
@@ -169,7 +172,7 @@ class TigerInvest {
 			amount,
 			timestamp: Date.now()
 		});
-		this.tax += (price * amount * 0.00085).scale(2);
+		this.tax += (price * amount * FEE_RATE).scale(2);
 	}
 	// 階段撤退邏輯
 	handleSellStage(day, sellRatio) {
