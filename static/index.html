@@ -41,7 +41,7 @@
   <div class="navbar bg-base-100 shadow-sm">
     <div class="navbar-start text-primary" ng-click="home()">
       <div class="btn btn-ghost text-3xl font-bold text-primary hover:bg-base-100 font-title"> <svg fill="currentColor"
-          class="icon icon-investment size-[1em]">
+          class="icon-investment size-[1em]">
           <use xlink:href="css/symbol-defs.svg#icon-investment"></use>
         </svg> <span ng-bind="name"></span></div>
     </div>
@@ -147,7 +147,7 @@
           </svg>儲存
         </button>
         <button ng-if="note.model.id" ng-click="note.destroy()" class="btn btn-error">
-          <svg fill="currentColor" class="icon icon-crying size-[1em] mr-2">
+          <svg fill="currentColor" class="icon-crying size-[1em] mr-2">
             <use xlink:href="css/symbol-defs.svg#icon-crying"></use>
           </svg>刪除
         </button>
@@ -188,7 +188,7 @@
         </div>
       </div>
       <div ng-if="simulate.run.result" class="alert alert-success mt-4">
-        <svg fill="currentColor" class="icon icon-grin size-[1.5em]">
+        <svg fill="currentColor" class="icon-grin size-[1.5em]">
           <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
         </svg>
         <span ng-bind="simulate.run.result"></span>
