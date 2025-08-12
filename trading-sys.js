@@ -1,7 +1,3 @@
-function scale(num, digits) {
-        return num.scale(digits);
-}
-
 export class TradingSystem {
 	constructor(data, params) {
 		this.trades = [];
@@ -71,29 +67,30 @@ export class TradingSystem {
 		const exitStrategy = this.params.exitStrategy.map(strategy => new strategy(this.data, this.params));
 		const entryTime = Date.parse(this.params.entryDate);
 		const exitTime = Date.parse(this.params.exitDate || new Date()) + (8 * 3600 * 1000); // EIGHT_HOURS		
-		let position = { status: 'closed' };
+		let position = {
+			status: 'closed'
+		};
 		this.data.forEach((day, index) => {
 			const time = Date.parse(day.date);
-			if (time < entryTime || time > exitTime) return;			
+			if (time < entryTime || time > exitTime) return;
 			// 開倉檢查
 			if (position.status == 'closed') {
 				const entryCondition = entryStrategy.checkEntry(day, index, position);
 				if (entryCondition) {
-					position = this.openPosition(day, entryCondition.reason, index);
+					position = this.openPosition(day, entryCondition, index);
 					// MA 上出場後是否要重複入場
 					//position = (!this.params.reentry && position.reentry) ?  { status: 'closed' } : position;
 				}
 			}
 			// 平倉檢查
 			if (position.status != 'closed') {
-				//let exitCondition;
-				//for (let i=0; i<exitStrategy.length; i++) {
 				for (const strategy of exitStrategy) {
 					const exitCondition = strategy.checkExit(day, index, position);
-					if (exitCondition) {				
+					if (exitCondition) {
 						this.closePosition(position, day, exitCondition.reason);
-						position = { status: 'closed' };
-						break;
+						position = {
+							status: 'closed'
+						};
 					}
 				}
 			}
@@ -122,18 +119,18 @@ export class TradingSystem {
 		const pnl = profit / Math.abs(loss || 1); // 盈虧比：總獲利金額除以總虧損金額
 		const winRate = wins.length / closedTrades.length;
 		const expectation = (pnl * winRate) - (1 - winRate); // 期望值 =（盈虧比 x 勝率）–（1 - 勝率）
-                return {
-                        profit: scale(profit + loss),
-                        loss: scale(loss),
-                        profitRate: scale(closedTrades.reduce((sum, t) => sum + t.profitRate, 0)),
-                        breakoutRate: scale(breakouts / closedTrades.length),
-                        winRate: scale(winRate),
+		return {
+			profit: (profit + loss).scale(),
+			loss: loss.scale(),
+			profitRate: (closedTrades.reduce((sum, t) => sum + t.profitRate, 0)).scale(),
+			breakoutRate: (breakouts / closedTrades.length).scale(),
+			winRate: winRate.scale(),
 			reentry: reentry.length,
 			reentryWins: reentryWins.length,
-                        reentryWinRate: scale(reentryWins.length / reentry.length),
-                        reentryProfit: scale(reentryProfit),
-                        pnl: scale(pnl),
-                        expectation: scale(expectation),
+			reentryWinRate: (reentryWins.length / reentry.length).scale(),
+			reentryProfit: reentryProfit.scale(),
+			pnl: pnl.scale(),
+			expectation: expectation.scale(),
 			maxDrawdown: this.calculateMaxDrawdown(closedTrades)
 		};
 	}
@@ -148,26 +145,28 @@ export class TradingSystem {
 			if (equity > peak) peak = equity;
 			maxDrawdown = Math.min(maxDrawdown, equity - peak);
 		});
-                return scale(maxDrawdown);
+		return maxDrawdown.scale();
 	}
 
 	// 記錄開倉
-	openPosition(day, reason, index) {
+	openPosition(day, condition, index) {
 		const prev2 = this.data[index - 2]; // 前兩日的收盤價在 MA 下，才能作向上破線的金二日
 		const prev1 = this.data[index - 1];
-		const position = {
+		const position = Object.assign(condition, {
 			breakout: (prev2.close < prev2.ma) && (prev1.close > prev1.ma && day.close > prev1.close),
 			entryDate: day.date,
 			entryPrice: day.close,
-			entryReason: reason,
+			entryReason: condition.reason,
 			status: 'open'
-		};		
+		});
 		if (this.trades.length > 0) {
 			// 前次交易過熱出場，且前兩日的收盤價在 MA 上表示「返場」
 			position.reentry = this.trades[this.trades.length - 1].exitReason.includes('過熱') && (prev2.close > prev2.ma);
 		}
 		// 參數設定不返場就退出交易
-		if (!this.params.reentry && position.reentry) return { status: 'closed' };
+		if (!this.params.reentry && position.reentry) return {
+			status: 'closed'
+		};
 		this.trades.push(position);
 		return position;
 	}
@@ -175,11 +174,11 @@ export class TradingSystem {
 	// 記錄平倉
 	closePosition(position, day, reason) {
 		position.exitPrice = day.close;
-                position.pnl = scale((day.close / position.entryPrice - 1) * 100);
-                position.duration = scale((day.date - position.entryDate) / (1000 * 60 * 60 * 24));
+		position.pnl = ((day.close / position.entryPrice - 1) * 100).scale();
+		position.duration = ((day.date - position.entryDate) / (1000 * 60 * 60 * 24)).scale();
 		position.exitReason = reason;
-                position.profit = scale(position.exitPrice - position.entryPrice);
-                position.profitRate = scale(position.profit / position.entryPrice);
+		position.profit = (position.exitPrice - position.entryPrice).scale();
+		position.profitRate = (position.profit / position.entryPrice).scale();
 		position.entryDate = position.entryDate.toLocaleDateString();
 		position.exitDate = day.date.toLocaleDateString();
 		position.status = 'closed';

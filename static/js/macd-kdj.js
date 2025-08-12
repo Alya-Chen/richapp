@@ -402,16 +402,23 @@ export class BollingerBands {
 			throw new Error(`資料長度必須至少 ${this.period} 筆`);
 		}
 		let result = [];
-		for (let i = this.period - 1; i < this.data.length; i++) {
+		for (let i = 0; i < this.data.length; i++) {
+			if (i <= this.period - 1) {
+		        result.push({ middle: null, upper: null, lower: null, bandwidth: null });
+		        continue;				
+			}
 			const windowData = this.data.slice(i - this.period + 1, i + 1).map(d => d.close);
-			const mid = this.sma(windowData);
-			const sd = this.stdDev(windowData, mid);
-			const upper = mid + this.k * sd;
-			const lower = mid - this.k * sd;
+			const middle = this.sma(windowData);
+			const sd = this.stdDev(windowData, middle);
+			const upper = middle + this.k * sd;
+			const lower = middle - this.k * sd;
+			const bandwidth = (upper - lower) / middle;
 			result.push({
 				time: Date.parse(this.data[i].date),
+				middle,
 				upper,
-				lower
+				lower,
+				bandwidth
 			});
 		}
 		return result;

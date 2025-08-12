@@ -39,8 +39,8 @@ const params = {
     entryDate: new Date('2024-01-01'), //dateFns.addYears(dateFns.addMonths(new Date(), -6), -1), // 取前一年半資料
     exitDate: new Date(),
     //entryStrategy: st.BullTigerEntry,
-    entryStrategy: st.BullTigerEntry,
-    exitStrategy: [st.DynamicStopExit, st.RsiTigerExit], //st.DynamicStopExit, 
+    entryStrategy: st.BBEntryExit,
+    exitStrategy: [st.BBEntryExit], //[st.DynamicStopExit, st.RsiTigerExit],
     //exitStrategy: st.RsiTigerExit,
     //entryStrategy: st.MacdMaEntry,
     //exitStrategy: st.MacdMaExit,

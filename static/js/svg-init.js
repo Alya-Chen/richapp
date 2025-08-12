@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // 更新 href 為只包含 fragment identifier
         const iconId = href.replace('css/symbol-defs.svg#', '#');
         use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', iconId);
-        console.log('🔧 Updated SVG path:', href, '->', iconId);
+        //console.log('🔧 Updated SVG path:', href, '->', iconId);
       }
     });
   }
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function () {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === 1) { // Element node
-            console.log('🔍 新增節點:', node.tagName, node.className);
+            //console.log('🔍 新增節點:', node.tagName, node.className);
 
             // 檢查新添加的節點是否包含 SVG (更寬鬆的選擇器)
             const newSvgs = node.querySelectorAll ?
@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function () {
               if (href && href.includes('css/symbol-defs.svg')) {
                 const iconId = href.replace('css/symbol-defs.svg#', '#');
                 node.setAttributeNS('http://www.w3.org/1999/xlink', 'href', iconId);
-                console.log('🔧 Dynamic SVG updated (direct):', href, '->', iconId);
+                //console.log('🔧 Dynamic SVG updated (direct):', href, '->', iconId);
               }
             }
 
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (href && href.includes('css/symbol-defs.svg#')) {
                   const iconId = href.replace('css/symbol-defs.svg#', '#');
                   use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', iconId);
-                  console.log('🔧 Dynamic SVG updated (svg node):', href, '->', iconId);
+                  //console.log('🔧 Dynamic SVG updated (svg node):', href, '->', iconId);
                 }
               });
             }
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function () {
               if (href && href.includes('css/symbol-defs.svg#')) {
                 const iconId = href.replace('css/symbol-defs.svg#', '#');
                 use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', iconId);
-                console.log('🔧 Dynamic SVG updated (child):', href, '->', iconId);
+                //console.log('🔧 Dynamic SVG updated (child):', href, '->', iconId);
               }
             });
 
@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (href && href.includes('css/symbol-defs.svg#')) {
                   const iconId = href.replace('css/symbol-defs.svg#', '#');
                   use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', iconId);
-                  console.log('🔧 Dynamic SVG updated (delayed):', href, '->', iconId);
+                  //console.log('🔧 Dynamic SVG updated (delayed):', href, '->', iconId);
                 }
               });
             }, 100);
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function () {
       characterDataOldValue: false
     });
 
-    console.log('👁️ SVG MutationObserver started');
+    //console.log('👁️ SVG MutationObserver started');
   }  // 如果 SVG helper 已經載入，直接初始化
   if (window.svgHelper?.spriteLoaded) {
     initializeIcons();
@@ -173,17 +173,17 @@ window.createSvgIcon = function (iconId, size = 'sm') {
 
 // 為 AngularJS 控制器提供的函數
 window.updateSvgIcons = function () {
-  console.log('🔄 Manual SVG update called');
+  //console.log('🔄 Manual SVG update called');
   // 在 AngularJS 視圖更新後調用，確保新添加的 SVG 正確顯示
   setTimeout(() => {
     const existingSvgs = document.querySelectorAll('svg use[xlink\\:href*="css/symbol-defs.svg"]');
-    console.log('🔍 Found SVGs to update:', existingSvgs.length);
+    //console.log('🔍 Found SVGs to update:', existingSvgs.length);
     existingSvgs.forEach(use => {
       const href = use.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
       if (href && href.includes('css/symbol-defs.svg#')) {
         const iconId = href.replace('css/symbol-defs.svg#', '#');
         use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', iconId);
-        console.log('🔧 Manual update:', href, '->', iconId);
+        //console.log('🔧 Manual update:', href, '->', iconId);
       }
     });
   }, 100);

@@ -171,7 +171,7 @@ class Service {
 			const alerts = {
 				code,
 				date: last.date,
-                                ma: last.ma.scale(2),
+                ma: last.ma.scale(2),
 				close: last.close
 			};
 			if (!trade.exitDate) { // 開倉中

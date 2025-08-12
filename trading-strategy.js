@@ -1,5 +1,5 @@
 import * as dateFns from 'date-fns';
-import { Macd, Rsi, BullBear } from './static/js/macd-kdj.js';
+import { Macd, Rsi, BullBear, BollingerBands } from './static/js/macd-kdj.js';
 
 export class TwoDaysUpEntry {
 	constructor(data, params) {
@@ -232,7 +232,246 @@ export class MacdMaExit {
 	}	
 }
 ///////////////////////////////////////////////////////////////////////////////
+export class BBEntryExit {
+	constructor(data, params = {}) {
+		this.name = '布林帶策略';
+		this.data = data || [];
+		this.params = Object.assign({
+			period: params.ma ?? 20,
+			k:2, // 標準差倍數
+			bwLookback: 100, // 帶寬分位數的回看天數
+			bwPercentile: 20, // 低波動門檻：近 bwLookback 日的 20% 分位
+			shortHighLookback: 20, // 規則2「創短期新高」的回看天數
+			atrMul: 1 // 停損 ATR 倍數（規則1）
+		}, params);
+		
+		const bb = new BollingerBands(this.data, this.params.period, this.params.k).calculate();
+		this.data.forEach((d, i) => d.bb = bb[i]);
+		
+		const atrs = this.calcATR(this.data, this.params.period);
+		this.data.forEach((d, i) => d.atr = atrs[i]);
+	}
 
+	calcATR(data, period) {
+		let atrValues = [];
+		let prevATR = null;
+		for (let i = 0; i < data.length; i++) {
+			if (i === 0) {
+				atrValues.push(null);
+				continue;
+			}
+			const prev = data[i - 1];
+			const day = data[i];
+			const tr = Math.max(
+				day.high - day.low,
+				Math.abs(day.high - prev.close),
+				Math.abs(day.low - prev.close)
+			);
+			if (i < period) {
+				atrValues.push(null);
+			} else if (i === period) {
+				// 初始化 ATR：用前 period 根的 TR 平均
+				const trs = [];
+				for (let j = 1; j <= period; j++) {
+					const p = data[j - 1];
+					const c = data[j];
+					trs.push(Math.max(
+						c.high - c.low,
+						Math.abs(c.high - p.close),
+						Math.abs(c.low - p.close)
+					));
+				}
+				prevATR = trs.reduce((a, b) => a + b, 0) / period;
+				atrValues.push(prevATR);
+			} else {
+				prevATR = ((prevATR * (period - 1)) + tr) / period;
+				atrValues.push(prevATR);
+			}
+		}
+		return atrValues;
+	}
+	
+	// 取得近N日中第q(%)分位的帶寬門檻
+	getBandwidthPercentile(index) {
+		const n = this.params.bwLookback;
+		if (index + 1 < n) return null;
+		const slice = this.data.slice(index - n + 1, index + 1)
+			.map(d => d.bb.bandwidth)
+			.filter(v => v != null);
+		if (slice.length < n * 0.8) return null; // 資料不足保守跳過
+		slice.sort((a, b) => a - b);
+		const pos = Math.floor((this.params.bwPercentile / 100) * (slice.length - 1));
+		return slice[pos];
+	}
+
+	// 近N日最高價（含當日）
+	rollingHigh(index, lookback) {
+		const s = Math.max(0, index - lookback + 1);
+		let h = -Infinity;
+		for (let i = s; i <= index; i++) h = Math.max(h, this.data[i].high);
+		return h;
+	}
+
+	// ========= 規則 1：反轉多 =========
+	// Day1 收盤 < 下軌；Day2 收盤 > 下軌 且 > Day1 高點 → 開盤買
+	checkRule1Long(day, index) {
+		if (index < 1) return null;
+		const d1 = this.data[index - 1];
+		if ([d1.close, d1.bb.lower, day.close, day.bb.lower, d1.high].some(v => v == null)) return null;
+		const condDay1 = d1.close < d1.bb.lower;
+		const condDay2 = (day.close > day.bb.lower) && (day.close > d1.high);
+		if (condDay1 && condDay2) {
+			// 進場價：次日開盤（交給外部撮合）；這裡回傳停損/分批出場邏輯bb.lower
+			const stopByDay2Low = (day.low != null) ? day.low : null;
+			const atrStop = (day.atr != null) ? day.close - this.params.atrMul * day.atr : null;
+			return {
+				rule: '布林帶反轉多',
+				reason: `布林帶反轉多：前日收破下軌，隔日反彈且過前日高點`,
+				day2Low: day.low,
+				// 停損兩種策略擇一或外部擇優
+				stopLossCandidates: {
+					byDay2Low: stopByDay2Low,
+					byATR: atrStop
+				},
+				// 止盈：中軌出50%、上軌全出（給外部引擎執行）
+				takeProfitPlan: {
+					scale1At: day.bb.middle ?? null,
+					scale1Ratio: 0.5,
+					scale2At: day.bb.upper ?? null,
+					scale2Ratio: 0.5
+				}
+			};
+		}
+		return null;
+	}
+
+	// ========= 規則 2：突破多 =========
+	// 帶寬 < 近100日20%分位；Day1 收盤 > 上軌；Day2 不回帶(收>上軌) 且 創短期新高 → 買
+	checkRule2Long(day, index) {
+		if (index < 1) return null;
+		const d1 = this.data[index - 1];
+		if ([d1.close, d1.bb.upper, day.close, day.bb.upper, day.high].some(v => v == null)) return null;
+		const bwThresh = this.getBandwidthPercentile(index);
+		if (bwThresh == null || day.bb.bandwidth == null) return null;
+		const lowVol = day.bb.bandwidth <= bwThresh;
+		const d1Break = d1.close > d1.bb.upper;
+		const d2Hold = day.close > day.bb.upper; // 不回帶：收盤仍在上軌之上
+		const shortHigh = this.rollingHigh(index, this.params.shortHighLookback);
+		const d2NewHigh = day.high >= shortHigh;
+		if (lowVol && d1Break && d2Hold && d2NewHigh) {
+			return {
+				rule: '布林帶突破多',
+				reason: `布林帶突破多：低帶寬 + 二日上軌外且創短期新高`
+			};
+		}
+		return null;
+	}
+
+	/**
+	 * 開倉條件檢查（回傳第一個符合的訊號）
+	 * @param {*} day   當日K
+	 * @param {*} index 當日索引
+	 * @param {*} position 當前部位 { status: 'closed' | 'long' | 'short', ... }
+	 */
+	checkEntry(day, index, position) {
+		if (!position || position.status !== 'closed') return null;
+		// 先檢查規則1（反轉），再檢查規則2（突破）
+		const r1 = this.checkRule1Long(day, index);
+		if (r1) return r1;
+		const r2 = this.checkRule2Long(day, index);
+		if (r2) return r2;
+		return null;
+	}
+
+	/**
+	 * 加碼（僅針對規則2：沿上軌行進期間，回踩不破中軌再轉強可加碼）
+	 * 判斷條件（簡化版）：
+	 *  - 昨日或更早已在多頭持倉
+	 *  - 今日最低觸到/接近中軌，但收盤重新站回中軌之上且高於昨日收盤
+	 */
+	checkPyramid(day, index, position) {
+		if (!position || position.status !== 'long') return null;
+		if (index < 1) return null;
+		const prev = this.data[index - 1];
+		if ([day.low, day.close, day.bb.middle, prev.close].some(v => v == null)) return null;
+		const touchedMiddle = day.low <= day.bb.middle * 1.001; // 允許一點誤差
+		const reclaimedMiddle = day.close > day.bb.middle;
+		const momentumUp = day.close > prev.close;
+		if (touchedMiddle && reclaimedMiddle && momentumUp) {
+			return {
+				action: 'pyramid',
+				reason: '沿上軌行進中回踩不破中軌且轉強，加碼'
+			};
+		}
+		return null;
+	}
+
+	/**
+	 * 出場 / 停損
+	 * - 規則1：可採用 Day2 低點 或 ATR×1 作為止損（在入場時已提供候選，這裡做動態防守）
+	 * - 規則2：跌破中軌連續兩日 → 出清
+	 * - 同時提供：到達中軌/上軌的分批止盈（由撮合層執行）
+	 */
+	checkExit(day, index, position) {
+		if (position.status !== 'open') return null;
+		if (index < 1) return null;
+		if (day.close > day.bb.middle) position.seenAboveMiddle = true;
+		const prev = this.data[index - 1];
+		// 規則2的出場：連續兩日收盤 < 中軌
+		if (position.seenAboveMiddle && day.bb.middle != null && prev.bb.middle != null) {
+			const twoDaysBelowMiddle = (prev.close < prev.bb.middle) && (day.close < day.bb.middle);
+			if (twoDaysBelowMiddle) {
+				return {
+					action: 'exit',
+					reason: '規則2：已上中軌後，連兩日收盤跌破中軌，出清'
+				};
+			}
+		}
+		// 動態防守（適用規則1）：收盤 < (入場價 - ATR×1) 或 跌破最近關鍵低點
+		if (position.reason.startsWith('布林帶反轉多') && day.atr != null && position.entryPrice != null) {
+			const atrStop = position.entryPrice - this.params.atrMul * day.atr;
+			if (day.close < atrStop) {
+				return {
+					action: 'stop',
+					reason: `規則1：跌破 ATR×${this.params.atrMul} 動態停損`
+				};
+			}
+			if (position.day2Low != null && day.close < position.day2Low) {
+				return {
+					action: 'stop',
+					reason: '規則1：跌破Day2低點停損'
+				};
+			}
+		}
+		// 分批止盈的執行通常在撮合層根據目標價位觸發，這裡僅提供判斷參考：
+		//   若尚未出 50%，且當日高點 >= 中軌：觸發 scale1
+		//   若尚未全出，且當日高點 >= 上軌：觸發 scale2
+		if (position.takeProfitPlan) {
+			const {
+				scale1At,
+				scale2At
+			} = position.takeProfitPlan;
+			if (!position.tookScale1 && scale1At != null && day.high >= scale1At) {
+				return {
+					action: 'scale1',
+					reason: '到達中軌，先出50%'
+				};
+			}
+			if (!position.tookScale2 && scale2At != null && day.high >= scale2At) {
+				return {
+					action: 'scale2',
+					reason: '到達上軌，全數出清'
+				};
+			}
+		}
+		return null;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////////////////////
 // 比例法則（適合慢牛市場）分批進場：資金分為 25%, 40%, 35%
 // 第一次投入 25% 每上漲超過 3% 再投入下一筆資金
 // 動態調整停損：
