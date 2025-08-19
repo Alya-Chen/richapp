@@ -451,7 +451,8 @@
 				});
 			}, 350);
 			$$.resort = service.debounce(() => {
-				$$.stareds = $$.stareds.sort((a, b) => Date.parse(b.trade.entryDate) - Date.parse(a.trade.entryDate));
+				const INVESTED = 10000000000;
+				$$.stareds = $$.stareds.sort((a, b) => (Date.parse(b.trade.entryDate) + (b.trade.invest ? INVESTED : 0)) - (Date.parse(a.trade.entryDate) + (a.trade.invest ? INVESTED : 0)));
 				$$.openeds = $$.openeds.sort((a, b) => Date.parse(b.trade.entryDate) - Date.parse(a.trade.entryDate));
 			}, 1.5 * SEC);
 			$$.$on('testLoaded', function(_, test) {
