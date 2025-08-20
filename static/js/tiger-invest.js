@@ -71,7 +71,7 @@ class TigerInvest {
 		return this.summary();
 	}
 	summary() {
-		if (!this.exitDate) { // 交易中
+		if (!this.exitDate && this.getTotalInvested()) { // 交易中
 			const lastDay = this.data[this.data.length - 1];
 			this.tax += lastDay.close * this.getTotalInvested() * FEE_RATE;
 			const avgCost = this.getAvgCost();
@@ -96,7 +96,7 @@ class TigerInvest {
 			netProfit: this.netProfit.scale(2),
 			netProfitRate: this.netProfitRate.scale(3),
 			totalInvested: this.getTotalInvested(),
-			tax: this.tax
+			tax: this.tax.scale(2)
 		};		
 	}
 	withMacd(data) {

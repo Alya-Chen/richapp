@@ -48,6 +48,7 @@ class RsiInvest extends TigerInvest {
 	}
 	// 動態止損規則
 	updateStopLoss(day) {
+		if (!this.getAvgCost()) return;
 		// 停利點設定為 5%
 		this.stopProfitPrice = this.getAvgCost() * 1.05;
 		// 帳上獲利 3% 時，停損點必須設定在損益兩平位置
