@@ -4,6 +4,7 @@
 	const SEC = 1000;
 	const EIGHT_HOURS = 8 * 3600 * SEC;
 	const ONE_DAY = 3 * EIGHT_HOURS;
+	const TOTAL_CAPITAL = 555022;
 
 	const app = angular.module('rich-app', [
 		'ngRoute',
@@ -17,6 +18,9 @@
 		}).when('/stock/:code?', {
 			templateUrl: 'stock.html',
 			controller: 'stockCtrl'
+		}).when('/simulate/:codes?', {
+			templateUrl: 'simulate.html',
+			controller: 'simulateCtrl'
 		}).otherwise({
 			redirectTo: '/'
 		});
@@ -131,6 +135,17 @@
 				day.lsr = parseFloat([(day.ma20 - day.ma60), (day.ma60 - day.ma120)].reduce((sum, diff) => sum + (diff > 0 ? diff : -diff), 0).scale(2));
 				day.lsr = (day.ma20 > day.ma60 && day.ma60 > day.ma120 && day.ma20 > day.ma120) ? day.lsr : -day.lsr;
 			});			
+		}
+		simulate(codes, money, params, callback) {
+			const data = { codes, money, params };
+			this.$http.post('/simulate', data).then((res) => {
+				if (callback) callback(res.data);
+			});
+		}
+		strategies(callback) {
+			this.$http.get('/simulate/strategies').then((res) => {
+				if (callback) callback(res.data);
+			});
 		}
 		notes(owner, callback) {
 			owner = owner.replaceAll('/', '／');
@@ -304,6 +319,13 @@
 				}
 			};
 			$$.simulate = {
+				open: function() {
+					const url = $location.url();
+					if (url.startsWith('/stock/')) return $location.url(url.replace('/stock/', '/simulate/'));
+					const codes = $$.stocks.filter(s => s.checked).map(s => s.code).join('&');
+					if (!codes) return $.growlUI('', `請選擇至少一支股票！`);;
+					$location.url(`/simulate/${codes}`);
+				},
 				setup: function(model) {
 					this.model = model || {};
 					$.blockUI({
@@ -322,6 +344,9 @@
 			});
 			$$.$on('stockLoaded', function(_, code) {
 				$$.stock = $$.stocks.find(s => s.code == code);			
+			});
+			$$.$on('stockChecked', function(_, stock) {
+				$$.stocks.find(s => s.code == stock.code).checked = stock.checked;
 			});
 			$$.$on('noteEditing', function(_, note) {
 				$$.note.model = note;
@@ -344,12 +369,11 @@
 			$$.bulls = [];
 			$$.invested = {  // 已經購買的股票紀錄
 				date: new Date(),
-				totalCapital: 555022,
+				totalCapital: TOTAL_CAPITAL,
 				cost: 0,
 				stocks: []
 			};	
 			$$.changeTo = function(code) {
-				//$location.url('/stock/' + code);
 				window.open(`/stock/${code}`, `_stock_${code}`);
 			};
 			$$.edit = function(note) {
@@ -439,22 +463,22 @@
 				const stareds = (user.settings || {
 					stared: []
 				}).stared;
-				service.stocks((stocks) => {
-					$$.stocks = stocks;
-					$$.stareds = stocks.filter(s => stareds.find(ss => ss == s.code));
-					$timeout($$.realtime, 3 * SEC);
-					$$.blocks['❤️ 我的關注'] = $$.stareds;
-					$$.blocks['🧨 今日清倉'] = $$.todays;
-					$$.blocks['📣 可交易'] = $$.openeds;
-					$$.blocks['🧹 近兩週已清倉'] = $$.closeds;
-					$$.blocks['🐮 牛氣沖天'] = $$.bulls;
-				});
+				$$.stareds = $$.stocks.filter(s => stareds.find(ss => ss == s.code));
+				$timeout($$.realtime, 3 * SEC);
+				$$.blocks['❤️ 我的關注'] = $$.stareds;
+				$$.blocks['🧨 今日清倉'] = $$.todays;
+				$$.blocks['📣 可交易'] = $$.openeds;
+				$$.blocks['🧹 近兩週已清倉'] = $$.closeds;
+				$$.blocks['🐮 牛氣沖天'] = $$.bulls;
 			}, 350);
 			$$.resort = service.debounce(() => {
 				const INVESTED = 10000000000;
 				$$.stareds = $$.stareds.sort((a, b) => (Date.parse(b.trade.entryDate) + (b.trade.invest ? INVESTED : 0)) - (Date.parse(a.trade.entryDate) + (a.trade.invest ? INVESTED : 0)));
 				$$.openeds = $$.openeds.sort((a, b) => Date.parse(b.trade.entryDate) - Date.parse(a.trade.entryDate));
 			}, 1.5 * SEC);
+			$$.checked = function(stock) {
+				$$.$emit('stockChecked', stock);
+			};
 			$$.$on('testLoaded', function(_, test) {
 				if (!test.code || !test.trades) return;
 				const stock = $$.stocks.find(s => s.code == test.code);
@@ -495,7 +519,7 @@
 				$$.logs = logs;
 				$timeout(service.logs.bind(service), 30 * SEC);
 			});			
-			$$.$emit('stockLoaded');
+			//$$.$emit('stockLoaded');
 			service.notes(location.pathname);
 			service.logs();
 			if (service.user) $$.showStareds(service.user);
@@ -736,11 +760,64 @@
 				$$.notes = notes;
 			});
 			service.notes(location.pathname);			
-		}
+		},
+		simulate: function($$, $location, $params, $timeout, service) {
+			if (!$params.codes) return $location.path('/');
+			$params.codes.split('&').forEach(code => {
+				$$.stocks.find(s => s.code == code).checked = true;
+			});			
+			const today = new Date();
+			const twoYearsAgo = new Date(today.getFullYear() - 2, today.getMonth(), today.getDate());
+			$$.money = TOTAL_CAPITAL;
+			$$.takeProfitPcts = [0.05, 0.075, 0.1, 0.125, 0.15];
+			$$.params = {
+				breakout: true, // 入場需符合二日法則
+				reentry: true, // 出場後是否要重複入場
+				entryDate: twoYearsAgo,
+				exitDate: today,
+				entryStrategy: '',
+				exitStrategy: [],
+				takeProfitPct: 0.05, // 固定止盈大於入場價格的 10%
+			};
+			$$.start = function() {
+				$$.params.exitStrategy = $$.exitStrategies.filter(s => s.checked).map(s => s.key);
+				if (!$$.params.entryStrategy || !$$.params.exitStrategy.length) return $.growlUI('', `請選擇入場策略和出場策略`);
+				$$.simulated = null;
+				const codes = $$.stocks.filter(s => s.checked).map(s => s.code);
+				service.simulate(codes, $$.money, $$.params, (simulated) => {
+					$$.simulated = simulated.data;
+					console.log(simulated.data);
+					const pres = {};
+					$$.simulated.events.forEach(event => {
+						if (event.type == 'buy') {
+							event.entryDate = new Date(event.date);
+							event.entryPrice = event.price;
+							event.entryReason = event.reason;
+							pres[event.code] = event;
+						}
+						else if (event.type == 'sell') {
+							const pre = pres[event.code];
+							event.entryDate = pre.entryDate;
+							event.exitDate = new Date(event.date);
+							event.entryPrice = pre.entryPrice;
+							event.exitPrice = event.price;
+							event.duration = (event.exitDate - pre.entryDate) / ONE_DAY;
+							event.profitRate = (event.exitPrice - event.entryPrice) / event.entryPrice;
+							event.exitReason = event.reason;
+						}
+					});
+				});				
+			};
+			service.strategies((strategies) => {
+				$$.entryStrategies = strategies.entryStrategies;
+				$$.exitStrategies = strategies.exitStrategies;
+			});
+		},
 	};
 
 	app.controller('indexCtrl', ['$scope', '$location', '$timeout', 'service', controllers.index]);
 	app.controller('homeCtrl', ['$scope', '$location', '$timeout', 'service', controllers.home]);
 	app.controller('stockCtrl', ['$scope', '$routeParams', '$timeout', 'service', controllers.stock]);
+	app.controller('simulateCtrl', ['$scope', '$location', '$routeParams', '$timeout', 'service', controllers.simulate]);
 	///////////////////////////////////////////////////////////////////////////////
 })(window, jQuery, angular);

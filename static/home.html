@@ -55,11 +55,12 @@
     <div class="tab-content bg-base-100 border-base-300 rounded-[0]" ng-repeat-end>
       <div class="grid grid-cols-3 gap-4 p-10 max-w-7xl mx-auto">
         <div class="cursor-pointer shadow-sm grid grid-cols-2 gap-2 p-2 rounded-2xl h-fit" ng-if="stocks.length"
-          ng-repeat="stock in stocks" ng-click="changeTo(stock.code)" ng-class="{'stock_usa': stock.country == 'us'}">
+          ng-repeat="stock in stocks" ng-class="{'stock_usa': stock.country == 'us'}">
 
           <div class="grid grid-cols-2 gap-2">
-            <span class="text-success text-lg h-fit pt-2" ng-bind="stock.code"></span><span class="h-fit"
-              ng-if="stock.otc">🌱</span>
+            <span class="text-success text-lg h-fit pt-2" ng-bind="stock.code"></span>
+            <input type="checkbox" ng-model="stock.checked" ng-change="checked(stock)" />
+            <span class="h-fit" ng-if="stock.otc">🌱</span>
             <span ng-if="stock.financial" ng-mouseover="financial(stock, $event)"
               class="row-start-2 col-span-2 text-2xl">
               <span class="" ng-bind="stock.financial.bullscore"></span>
@@ -67,7 +68,7 @@
             </span>
           </div>
 
-          <div class="bg-success card text-center">
+          <div class="bg-success card text-center" ng-click="changeTo(stock.code)">
             <div class="text-2xl grid pt-2">
               <span class="before:content-['MA'] text-base-100" ng-bind="stock.defaultMa"></span>
               <span ng-if="stock.tigerMa" class="text-lg row-start-2 text-base-200">
@@ -96,7 +97,7 @@
             </figure>
           </div>
 
-          <div class="col-span-2 text-3xl font-bold text-primary font-title">
+          <div class="col-span-2 text-3xl font-bold text-primary font-title" ng-click="changeTo(stock.code)">
             <span ng-bind="stock.name"></span>
           </div>
 

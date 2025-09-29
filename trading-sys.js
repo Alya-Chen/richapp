@@ -87,10 +87,20 @@ export class TradingSystem {
 				for (const strategy of exitStrategy) {
 					const exitCondition = strategy.checkExit(day, index, position);
 					if (exitCondition) {
-						this.closePosition(position, day, exitCondition.reason);
-						position = {
-							status: 'closed'
-						};
+						const status = exitCondition.status || 'closed';
+						if (status == 'closed') {
+							this.closePosition(position, day, exitCondition.reason);
+						}
+						else {
+							// 部分止盈：標記並記錄，不關閉部位
+							position.partialExits = position.partialExits || [];
+							position.partialExits.push({
+                                date: day.date,
+                                price: day.close,
+                                ratio: exitCondition.ratio,
+                                reason: exitCondition.reason
+                            });
+						}
 					}
 				}
 			}
@@ -174,13 +184,31 @@ export class TradingSystem {
 	// 記錄平倉
 	closePosition(position, day, reason) {
 		position.exitPrice = day.close;
-		position.pnl = ((day.close / position.entryPrice - 1) * 100).scale();
 		position.duration = ((day.date - position.entryDate) / (1000 * 60 * 60 * 24)).scale();
-		position.exitReason = reason;
-		position.profit = (position.exitPrice - position.entryPrice).scale();
-		position.profitRate = (position.profit / position.entryPrice).scale();
-		position.entryDate = position.entryDate.toLocaleDateString();
-		position.exitDate = day.date.toLocaleDateString();
+		const reasons = [];
+		// 若有分批出場，使用加權方式計算總損益（單位部位）
+		if (position.partialExits && position.partialExits.length > 0) {
+			const entryPrice = position.entryPrice;
+			const partialRatio = Math.min(1, Math.max(0, position.partialExits.reduce((s, p) => s + (p.ratio || 0), 0)));
+			const partialProfit = position.partialExits.reduce((acc, p) => acc + ((p.ratio || 0) * ((p.price ?? day.close) - entryPrice)), 0);
+			const finalRatio = Math.max(0, 1 - partialRatio);
+			const finalProfit = finalRatio * (day.close - entryPrice);
+			position.profit = (partialProfit + finalProfit).scale();
+			position.profitRate = (position.profit / entryPrice).scale();
+			position.pnl = (position.profitRate * 100).scale();
+			for (const p of position.partialExits) {
+				reasons.push(`${p.date.toLocaleDateString()}：${p.price.scale()} 元分批出場：${p.reason}`);
+			}
+		} else {
+			// 全數出清一次性計算
+			position.profit = (position.exitPrice - position.entryPrice).scale();
+			position.profitRate = (position.profit / position.entryPrice).scale();
+			position.pnl = ((day.close / position.entryPrice - 1) * 100).scale();
+		}
+		//position.entryDate = position.entryDate.toLocaleDateString();
+		position.exitDate = day.date; //.toLocaleDateString();
+		reasons.push(reason);
+		position.exitReason = reasons.join('\n');
 		position.status = 'closed';
 	}
 }

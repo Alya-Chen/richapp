@@ -255,68 +255,7 @@ class Service {
 		};
 		return results.join('\r\n');	
 	}
-	
-	invest(tests, money, entryDate, exitDate) {
-	    tests = Array.from(
-	        tests.reduce((map, test) => {
-	            const existing = map.get(test.code);
-	            if (!existing || new Date(test.endDate) > new Date(existing.endDate)) {
-	                map.set(test.code, test);
-	            }
-	            return map;
-	        }, new Map()).values()
-	    );
-		money = money || (200 * 10000)
-	    entryDate = entryDate || new Date(new Date().getFullYear() + '/01/01');
-	    exitDate = exitDate || new Date();
-	    const trades = [];
-	    const invest = {
-	        money: money,
-	        profit: 0
-	    };
-	    const csv = [];
-	    csv.push(`"代號","公司","購入日期","購入價格","剩餘本金","賣出日期","賣出價格","單筆收益","累積收益","期末本金","出場原因"`);
-	    while (true) {
-	        if (entryDate.isSameDay(exitDate)) break;
-	        for (let i = 0; i < tests.length; i++) {
-	            const test = tests[i];
-				test.trades = test.trades || test.result.trades;
-	            let trade = test.trades.find(t => t.status == 'closed' && exitDate.isAfter(t.exitDate) && entryDate.isSameDay(t.entryDate));
-	            if (trade) {
-	                const price = 1000 * trade.entryPrice;
-	                if (invest.money > price) {
-	                    invest.money -= price;
-	                    //console.log(`買 ${test.code} ${test.name} ${trade.entryDate} ${trade.entryPrice} ${invest.money}`);
-	                    trades.push({
-	                        code: test.code,
-	                        name: test.name,
-	                        ma: test.ma,
-							entryRemain: invest.money,
-	                        ...trade
-	                    });
-	                }
-	            }
-	            trade = trades.find(t => t.code == test.code && t.status == 'closed' && entryDate.isSameDay(t.exitDate));
-	            if (trade) {
-	                const price = 1000 * trade.exitPrice;
-	                invest.money += price;
-	                trade.profit = (1000 * trade.profit).scale();
-	                invest.profit += trade.profit;
-	                trades.find(t => t.code == trade.code).status = 'done';
-					const reason = trade.exitReason + (trade.reentry ? '（返場）' : '');
-	                csv.push(`"${trade.code}","${trade.name}（${trade.ma}）","${trade.entryDate}",${trade.entryPrice.scale()},${trade.entryRemain.scale()},"${trade.exitDate}",${trade.exitPrice.scale()},${trade.profit.scale()},${invest.profit.scale()},${invest.money.scale()},"${reason}"`);
-	            }
-	        };
-	        entryDate.addDays(1);
-	    }
-	    return {
-	        csv: csv.join('\r\n'),
-	        money: invest.money.scale(),
-	        profit: invest.profit.scale(),
-	        trades
-	    };	
-	}
-	
+
 	async getUser(id) {
 		const user = await db.User.findOne({
 			where: {

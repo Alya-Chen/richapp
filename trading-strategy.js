@@ -153,8 +153,9 @@ export class TigerExit {
 export class BullTigerEntry {
 	constructor(data, params) {
 		this.name = '牛市金唬男均線突破進場策略';
-		this.data = data;
+		this.data = data || [];
 		this.params = params;
+		if (!this.data.length) return;
 		this.tigerEntry = new TigerEntry(data, params);
 		this.trendTurns = new BullBear(this.data).calculate();
 	}
@@ -245,6 +246,8 @@ export class BBEntryExit {
 			atrMul: 1 // 停損 ATR 倍數（規則1）
 		}, params);
 		
+		if (this.data.length < this.params.period) return;
+
 		const bb = new BollingerBands(this.data, this.params.period, this.params.k).calculate();
 		this.data.forEach((d, i) => d.bb = bb[i]);
 		
@@ -335,9 +338,9 @@ export class BBEntryExit {
 				},
 				// 止盈：中軌出50%、上軌全出（給外部引擎執行）
 				takeProfitPlan: {
-					scale1At: day.bb.middle ?? null,
+					profit1At: day.bb.middle ?? null,
 					scale1Ratio: 0.5,
-					scale2At: day.bb.upper ?? null,
+					profit2At: day.bb.upper ?? null,
 					scale2Ratio: 0.5
 				}
 			};
@@ -346,7 +349,7 @@ export class BBEntryExit {
 	}
 
 	// ========= 規則 2：突破多 =========
-	// 帶寬 < 近100日20%分位；Day1 收盤 > 上軌；Day2 不回帶(收>上軌) 且 創短期新高 → 買
+	// 帶寬 < 近 100 日 20% 分位；Day1 收盤 > 上軌；Day2 不回帶(收>上軌) 且 創短期新高 → 買
 	checkRule2Long(day, index) {
 		if (index < 1) return null;
 		const d1 = this.data[index - 1];
@@ -413,7 +416,7 @@ export class BBEntryExit {
 	 * - 同時提供：到達中軌/上軌的分批止盈（由撮合層執行）
 	 */
 	checkExit(day, index, position) {
-		if (position.status !== 'open') return null;
+		if (position.status == 'closed') return null;
 		if (index < 1) return null;
 		if (day.close > day.bb.middle) position.seenAboveMiddle = true;
 		const prev = this.data[index - 1];
@@ -422,7 +425,6 @@ export class BBEntryExit {
 			const twoDaysBelowMiddle = (prev.close < prev.bb.middle) && (day.close < day.bb.middle);
 			if (twoDaysBelowMiddle) {
 				return {
-					action: 'exit',
 					reason: '規則2：已上中軌後，連兩日收盤跌破中軌，出清'
 				};
 			}
@@ -432,35 +434,37 @@ export class BBEntryExit {
 			const atrStop = position.entryPrice - this.params.atrMul * day.atr;
 			if (day.close < atrStop) {
 				return {
-					action: 'stop',
-					reason: `規則1：跌破 ATR×${this.params.atrMul} 動態停損`
+					reason: `規則1：跌破 ATR×${this.params.atrMul} 動態停損，出清`
 				};
 			}
 			if (position.day2Low != null && day.close < position.day2Low) {
 				return {
-					action: 'stop',
-					reason: '規則1：跌破Day2低點停損'
+					reason: '規則1：跌破 Day2 低點停損，出清'
 				};
 			}
 		}
 		// 分批止盈的執行通常在撮合層根據目標價位觸發，這裡僅提供判斷參考：
-		//   若尚未出 50%，且當日高點 >= 中軌：觸發 scale1
-		//   若尚未全出，且當日高點 >= 上軌：觸發 scale2
+		// 若尚未出 50%，且當日高點 >= 中軌：觸發 profit1
+		// 若尚未全出，且當日高點 >= 上軌：觸發 profit2
 		if (position.takeProfitPlan) {
 			const {
-				scale1At,
-				scale2At
+				profit1At,
+				profit2At
 			} = position.takeProfitPlan;
-			if (!position.tookScale1 && scale1At != null && day.high >= scale1At) {
+			if (!position.tookProfit1 && profit1At != null && day.high >= profit1At) {
+				position.tookProfit1 = true;
 				return {
-					action: 'scale1',
-					reason: '到達中軌，先出50%'
+					ratio: 0.5,
+					reason: '到達中軌，先出 50%',
+					status: 'closed-50%'
 				};
 			}
-			if (!position.tookScale2 && scale2At != null && day.high >= scale2At) {
+			if (!position.tookProfit2 && profit2At != null && day.high >= profit2At) {
+				position.tookProfit2 = true;
 				return {
-					action: 'scale2',
-					reason: '到達上軌，全數出清'
+					ratio: position.tookProfit1 ? 0.5 : 1,
+					reason: '到達上軌，全數出清',
+					status: 'closed'
 				};
 			}
 		}

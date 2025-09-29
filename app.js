@@ -4,6 +4,9 @@ import { dirname } from 'path';
 import {
 	stockService
 } from './stock-service.js';
+import {
+	Investor
+} from './stock-investor.js';
 import * as st from './trading-strategy.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -166,6 +169,32 @@ app.get('/backtest/:code{/:ma}', async (req, res) => {
 	else {
 		res.json(result.length ? result.reduce((t1, t2) => t1.profit > t2.profit ? t1 : t2) : {});		
 	}
+});
+
+app.get('/simulate{/:codes}', async (req, res) => {
+	const codes = req.params.codes;
+	if (codes == 'strategies') {
+		const strategies = { entryStrategies: [], exitStrategies: [] };
+		Object.keys(st).forEach(key => {
+			const strategy = new st[key]([], {});
+			if (strategy.checkEntry) strategies.entryStrategies.push({ key, name: strategy.name });
+			if (strategy.checkExit) strategies.exitStrategies.push({ key, name: strategy.name });
+		});
+		return res.json(strategies);
+	}
+	res.sendFile('static/index.html', { root: __dirname });
+});
+
+app.post('/simulate', async (req, res) => {
+	const codes = req.body.codes;
+	const money = req.body.money;
+	const params = req.body.params;
+	params.entryDate = new Date(params.entryDate);
+	params.exitDate = new Date(params.exitDate);
+	params.entryStrategy = st[params.entryStrategy];
+	params.exitStrategy = params.exitStrategy.map(strategy => st[strategy]);
+	const result = await new Investor(codes, money, params).invest();
+  	res.json(result);
 });
 
 app.get('/dailies/check', async (req, res) => {
