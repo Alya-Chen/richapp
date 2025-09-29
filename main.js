@@ -11,6 +11,9 @@ import {
     stockService as service
 } from './stock-service.js';
 import {
+    Investor
+} from './stock-investor.js';
+import {
     Op
 } from 'sequelize';
 import {
@@ -140,15 +143,18 @@ async function main() {
 		}
     }
     if (STOCK_CODE == 'invest') {
-		for (const year of [2023, 2024, 2025]) {
-			params.entryDate = new Date(year + '-01-01');
-			params.exitDate = new Date(year + '-12-31');
-			params.transient = true;
-			let	tests = await service.backtest(TOP10, params);	
-	        let result = service.invest(tests, null, params.entryDate, params.exitDate);
-	        console.log(result);
+		for (const year of [2023]) { //, 2024, 2025
+			params.entryDate = new Date(year + '-09-28');
+			params.exitDate = new Date(year + 2 + '-09-28');
+			//params.transient = true;
+			//let	tests = await service.backtest(TOP10, params);	
+	        //let result = service.invest(tests, null, params.entryDate, params.exitDate);
+            const investor = new Investor(['2382', '2317'], 555022, params);
+            const result = await investor.invest(TOP10, params);
+	        //console.log(result);
+            console.log(JSON.stringify(result.data));
 	        console.log('==========');
-	        fs.writeFileSync(`${TODAY}-${year}-TOP10-返場不止盈不止損-invest.csv`, result.csv);
+	        //fs.writeFileSync(`${TODAY}-${year}-TOP10-布林策略返場不止盈不止損-invest.csv`, result.csv);
 
 	        /*const stocks = await service.stocks();
 			codes = stocks.map(s => s.code);

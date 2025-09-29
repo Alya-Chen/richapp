@@ -60,7 +60,7 @@
       <div class="text-center">
         <div class="text-4xl font-bold mb-2"
           ng-class="{'text-rich-red': (stock.realtime.diff > 0), 'text-rich-green': (stock.realtime.diff < 0), 'text-base-content': (stock.realtime.diff == 0)}">
-          <span ng-bind="stock.realtime.close.scale(2)"></span>
+          <span class="font-price" ng-bind="stock.realtime.close.scale(2)"></span>
         </div>
         <div class="flex items-center justify-center gap-2 text-lg font-semibold"
           ng-class="{'text-rich-red': (stock.realtime.diff > 0), 'text-rich-green': (stock.realtime.diff < 0)}">
@@ -113,137 +113,139 @@
 <div ng-if="stock.trade.invest" class="mb-6 w-[85%] mx-auto max-w-6xl"
   ng-class="{'border-2 border-warning': stock.trade.invest.rsiHot}">
   <h3 class="text-2xl font-bold text-primary mb-4 flex items-center gap-2">
-    <svg fill="currentColor" class="icon-investment size-[1.5em]">
-      <use xlink:href="css/symbol-defs.svg#icon-investment"></use>
-    </svg>
     投資紀錄
     <span ng-if="stock.trade.invest.rsiHot" class="badge badge-warning">過熱</span>
   </h3>
 
   <!-- 投資交易列表 -->
   <div ng-class="{'bg-warning/10 border border-warning rounded-xl p-2': !log.id}" ng-if="log.act"
-    ng-repeat="log in stock.trade.invest.logs"
-    class="grid grid-cols-3 gap-4 p-4 border-b border-base-200 last:border-b-0">
+    ng-repeat="log in stock.trade.invest.logs" class="stats shadow bg-white w-full">
 
     <!-- 交易基本資訊 -->
-    <div class="bg-success rounded-xl p-4 text-center">
-      <div class="text-xs text-success-content opacity-70" ng-bind="(log.date || log.day.date) | date:'MM/dd'"></div>
-      <div class="text-2xl font-bold text-success-content" ng-bind="(log.price || log.day.close).scale(2)"></div>
-      <div class="text-sm text-success-content font-semibold" ng-bind="log.act"></div>
-    </div>
+    <div class="stat">
 
-    <!-- 持倉詳情 -->
-    <div class="bg-neutral rounded-xl p-4">
-      <div class="grid grid-cols-2 gap-2 text-neutral-content">
-        <div class="text-center">
-          <div class="text-xs opacity-70">交易</div>
-          <div class="text-lg font-bold" ng-bind="log.amount"></div>
-          <div class="text-xs">股</div>
-        </div>
-        <div class="text-center">
-          <div class="text-xs opacity-70">持倉</div>
-          <div class="text-lg font-bold" ng-bind="log.totalInvested"></div>
-          <div class="text-xs">股</div>
-        </div>
-        <div class="text-center col-span-2">
-          <div class="text-xs opacity-70">平均成本</div>
-          <div class="text-lg font-bold" ng-bind="log.avgCost"></div>
-        </div>
+      <div class="stat-figure text-secondary">
+        <svg fill="currentColor" class="icon-add-cart h-8 w-8">
+          <use xlink:href="css/symbol-defs.svg#icon-add-cart"></use>
+        </svg>
+      </div>
+      <div class="stat-title">
+        <span ng-bind="(log.date || log.day.date) | date:'MM/dd'"></span>
+        <span class="badge badge-ghost ml-6" ng-bind="log.act"></span>
+      </div>
+      <div class="stat-value font-price text-4xl" ng-bind="(log.price || log.day.close).scale(2)"></div>
+      <div class="stat-desc"></div>
+      <!-- 操作按鈕 -->
+      <div class="stat-actions">
+        <button ng-if="log.id" class="btn btn-xs btn-success" ng-click="invest.edit(log)">
+          <svg fill="currentColor" class="icon-pencil size-[1em]">
+            <use xlink:href="css/symbol-defs.svg#icon-pencil"></use>
+          </svg>
+          編輯
+        </button>
+        <button ng-if="log.act == '買入'" class="btn btn-xs btn-success" ng-click="invest.edit({ act: '賣出' })">
+          <svg fill="currentColor" class="icon-arrow-down size-[1em]">
+            <use xlink:href="css/symbol-defs.svg#icon-arrow-down"></use>
+          </svg>
+          賣出
+        </button>
       </div>
     </div>
 
     <!-- 損益與控制 -->
-    <div class="bg-info rounded-xl p-4 text-center">
-      <div ng-if="log.invested > 0" class="text-xs text-info-content opacity-70">目前損益</div>
-      <div ng-if="log.invested == 0" class="text-xs text-info-content opacity-70">實現損益</div>
-      <div class="text-2xl font-bold text-info-content flex items-center justify-center gap-1">
-        <svg fill="currentColor" ng-if="stock.trade.invest.netProfit < 0" class="icon-crying size-[1em]">
+    <div class="stat">
+      <div class="stat-figure"
+        ng-class="{'text-rich-green': stock.trade.invest.netProfit < 0, 'text-rich-red': stock.trade.invest.netProfit > 0}">
+        <svg fill="currentColor" ng-if="stock.trade.invest.netProfit < 0" class="icon-crying h-8 w-8">
           <use xlink:href="css/symbol-defs.svg#icon-crying"></use>
         </svg>
-        <svg fill="currentColor" ng-if="stock.trade.invest.netProfit > 0" class="icon-grin size-[1em]">
+        <svg fill="currentColor" ng-if="stock.trade.invest.netProfit > 0" class="icon-grin h-8 w-8">
           <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
         </svg>
-        <span ng-bind="stock.trade.invest.netProfit"></span>
       </div>
-      <div class="text-sm text-info-content font-semibold">（<span ng-bind="stock.trade.invest.profitRate"></span>）</div>
+      <div class="stat-title">
+        <span ng-if="log.invested > 0">目前損益</span>
+        <span ng-if="log.invested == 0">實現損益</span>
+      </div>
+      <div class="stat-value font-price text-4xl" ng-bind="stock.trade.invest.netProfit"></div>
+      <div class="stat-desc font-pct" ng-bind="stock.trade.invest.profitRate"></div>
     </div>
 
     <!-- 停損停利資訊 -->
-    <div class="col-span-3 bg-secondary rounded-xl p-4">
-      <div class="grid grid-cols-3 gap-4 text-secondary-content text-center">
-        <div>
-          <div class="text-xs opacity-70">停損價</div>
-          <div class="text-lg font-bold text-rich-green" ng-bind="stock.trade.invest.stopLossPrice.scale(2)"></div>
-        </div>
-        <div>
-          <div class="text-xs opacity-70">停利價</div>
-          <div class="text-lg font-bold text-rich-red" ng-bind="stock.trade.invest.stopProfitPrice.scale(2)"></div>
-        </div>
-        <div>
-          <div class="text-xs opacity-70">稅費</div>
-          <div class="text-lg font-bold" ng-bind="stock.trade.invest.tax.scale(2)"></div>
-        </div>
+    <div class="stat">
+      <div class="stat-title">停損價</div>
+      <div class="stat-value font-price text-lg text-rich-green" ng-bind="stock.trade.invest.stopLossPrice.scale(2)">
       </div>
+      <div class="stat-title">停利價</div>
+      <div class="stat-value font-price text-lg text-rich-red" ng-bind="stock.trade.invest.stopProfitPrice.scale(2)">
+      </div>
+      <div class="stat-title">稅費</div>
+      <div class="stat-value font-price text-lg text-rich-green" ng-bind="stock.trade.invest.tax.scale(2)"></div>
     </div>
 
-    <!-- 操作按鈕 -->
-    <div class="col-span-3 flex justify-end gap-2">
-      <button ng-if="log.id" class="btn btn-primary btn-sm" ng-click="invest.edit(log)">
-        <svg fill="currentColor" class="icon-edit size-[1em]">
-          <use xlink:href="css/symbol-defs.svg#icon-edit"></use>
-        </svg>
-        編輯
-      </button>
-      <button ng-if="log.act == '買入'" class="btn btn-error btn-sm" ng-click="invest.edit({ act: '賣出' })">
-        <svg fill="currentColor" class="icon-arrow-down size-[1em]">
-          <use xlink:href="css/symbol-defs.svg#icon-arrow-down"></use>
-        </svg>
-        賣出
-      </button>
+    <!-- 持倉詳情 -->
+    <div class="stat">
+      <div class="stat-title">交易</div>
+      <div class="stat-value text-lg after:content-['股']" ng-bind="log.amount"></div>
+      <div class="stat-title">持倉</div>
+      <div class="stat-value text-lg after:content-['股']" ng-bind="log.totalInvested"></div>
+      <div class="stat-title">平均成本</div>
+      <div class="stat-value font-price text-lg" ng-bind="log.avgCost"></div>
     </div>
+
+
+
+
   </div>
 </div>
 
-<div ng-if="notes.length" class="bg-base-100 rounded-2xl p-6 shadow-lg mb-6">
-  <h3 class="text-2xl font-bold text-primary mb-4 flex items-center gap-2">
-    <svg fill="currentColor" class="icon-addnote size-[1.5em]">
-      <use xlink:href="css/symbol-defs.svg#icon-addnote"></use>
-    </svg>
+<div class="mb-4 w-[85%] mx-auto max-w-6xl flex justify-between">
+  <h3 class="text-2xl font-bold text-primary">
     相關筆記
   </h3>
-  <div class="space-y-2">
-    <div class="list-row cursor-pointer hover:bg-base-200 rounded-xl p-3" ng-repeat="note in notes"
-      ng-click="edit(note)">
+  <button class="btn btn-primary" ng-click="note.edit()"><svg fill="currentColor" class="icon-addnote size-[1.5em]">
+      <use xlink:href="css/symbol-defs.svg#icon-addnote"></use>
+    </svg></button>
+</div>
+
+
+<div class="list w-[85%] mx-auto max-w-6xl">
+
+  <ng-container ng-if="notes.length">
+    <div class="list-row cursor-pointer hover:bg-base-100" ng-repeat="note in notes" ng-click="edit(note)">
       <span ng-bind="note.date | date:'MM/dd'" class="font-date text-xl text-accent mr-4"></span>
       <span ng-bind="note.title" class="text-base-content"></span>
     </div>
-  </div>
-</div>
-<div ng-if="dividends.length" class="notes_block">
-  <div style="cursor:pointer" ng-repeat="d in dividends" ng-click="dividend.edit(d)">
-    <span class="date--note" ng-bind="d.date | date:'MM/dd'"></span>
-    每股 <span ng-bind="d.price"></span> 元
-    × <span ng-bind="d.amount"></span> 股
-    ＝ 獲利 <span ng-bind="d.payment | number"></span> 元
-  </div>
+  </ng-container>
+  <ng-container ng-if="dividends.length">
+    <div ng-repeat="d in dividends" ng-click="dividend.edit(d)" class="list-row cursor-pointer hover:bg-base-100">
+      <span class="font-date text-xl text-info mr-4" ng-bind="d.date | date:'MM/dd'"></span>
+      <span>
+        每股 <span ng-bind="d.price"></span> 元
+        × <span ng-bind="d.amount"></span> 股
+        ＝ 獲利 <span ng-bind="d.payment | number"></span> 元
+      </span>
+    </div>
+  </ng-container>
+
+  <ng-container ng-if="stock.done.length">
+    <div class="list-row cursor-pointer hover:bg-base-100 bg-secondary/10" ng-repeat="trade in stock.done">
+      <span class="font-date text-xl text-info mr-4" ng-bind="trade.exitDate | date:'MM/dd'"></span>
+      <div class="list-col-grow">
+        <span class="font-price text-2xl" ng-bind="trade.netProfit | number"></span>
+        （<span class="font-price" ng-bind="trade.netProfitRate | pct"></span>）<br />
+        <span class="font-price" ng-bind="trade.entryPrice"></span> 買入
+        <span class="font-price" ng-bind="trade.exitPrice"></span> 賣出
+        稅費 <span class="font-price" ng-bind="trade.tax | number"></span>
+      </div>
+    </div>
+  </ng-container>
 </div>
 
-<div ng-if="stock.done.length" class="stock_result">
-  <div ng-repeat="trade in stock.done">
-    <span class="date--result" ng-bind="trade.entryDate | date:'MM/dd'"></span>
-    <span class="price--result" ng-bind="trade.entryPrice"></span> 買入
-    <span class="date--result" ng-bind="trade.exitDate | date:'MM/dd'"></span>
-    <span class="price--result" ng-bind="trade.exitPrice"></span> 賣出
-    稅金 <span class="price--result" ng-bind="trade.tax | number"></span>
-    已實現損益 <span class="price--result" ng-bind="trade.netProfit | number"></span>
-    （<span class="pct--result" ng-bind="trade.netProfitRate | pct"></span>）
-  </div>
-</div>
-
-<div class="stock_trades">
+<div class="stock_trades w-[85%] mx-auto max-w-6xl mt-6">
   <ng-container ng-repeat="test in tests">
     <input type="radio" name="tabset" id="tab{{$index}}" ng-checked="$index === 0">
-    <label for="tab{{$index}}" id="label{{$index}}">
+    <label for="tab{{$index}}" id="label{{$index}}" class="bg-base-100">
       <span class="ma--label" ng-bind="test.ma"></span>
       <span class="date--label"><span ng-bind="test.startDate | dt"></span> ~
         <span ng-bind="test.endDate | dt"></span></span>
@@ -252,6 +254,7 @@
         <span class="pct--label rate" ng-bind="test.profitRate | pct" ng-click="allBand(test)"></span>
       </div>
     </label>
+
     <div class="stock_trades-info" id="info{{$index}}">
       <div>
         <a href="https://t.ly/TgoWR" target="_faq">盈虧比</a> <span ng-bind="test.pnl"></span>

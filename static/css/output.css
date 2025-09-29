@@ -8,6 +8,7 @@
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
     --color-black: #000;
+    --color-white: #fff;
     --spacing: 0.25rem;
     --container-xs: 20rem;
     --container-md: 28rem;
@@ -15,8 +16,6 @@
     --container-3xl: 48rem;
     --container-6xl: 72rem;
     --container-7xl: 80rem;
-    --text-xs: 0.75rem;
-    --text-xs--line-height: calc(1 / 0.75);
     --text-sm: 0.875rem;
     --text-sm--line-height: calc(1.25 / 0.875);
     --text-lg: 1.125rem;
@@ -1295,9 +1294,6 @@
   .col-span-2 {
     grid-column: span 2 / span 2;
   }
-  .col-span-3 {
-    grid-column: span 3 / span 3;
-  }
   .stat-figure {
     grid-column-start: 2;
     grid-row: span 3 / span 3;
@@ -1311,6 +1307,15 @@
     font-size: 2rem;
     font-weight: 800;
   }
+  .stat-desc {
+    grid-column-start: 1;
+    white-space: nowrap;
+    color: var(--color-base-content);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    }
+    font-size: 0.75rem;
+  }
   .stat-title {
     grid-column-start: 1;
     white-space: nowrap;
@@ -1319,6 +1324,10 @@
       color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
     }
     font-size: 0.75rem;
+  }
+  .stat-actions {
+    grid-column-start: 1;
+    white-space: nowrap;
   }
   .col-start-2 {
     grid-column-start: 2;
@@ -1342,34 +1351,6 @@
     }
     @media (width >= 96rem) {
       max-width: 96rem;
-    }
-  }
-  .divider {
-    display: flex;
-    height: calc(0.25rem * 4);
-    flex-direction: row;
-    align-items: center;
-    align-self: stretch;
-    white-space: nowrap;
-    margin: var(--divider-m, 1rem 0);
-    --divider-color: var(--color-base-content);
-    @supports (color: color-mix(in lab, red, red)) {
-      --divider-color: color-mix(in oklab, var(--color-base-content) 10%, transparent);
-    }
-    &:before, &:after {
-      content: "";
-      height: calc(0.25rem * 0.5);
-      width: 100%;
-      flex-grow: 1;
-      background-color: var(--divider-color);
-    }
-    @media print {
-      &:before, &:after {
-        border: 0.5px solid;
-      }
-    }
-    &:not(:empty) {
-      gap: calc(0.25rem * 4);
     }
   }
   .mx-auto {
@@ -1459,6 +1440,9 @@
   }
   .ml-3 {
     margin-left: calc(var(--spacing) * 3);
+  }
+  .ml-6 {
+    margin-left: calc(var(--spacing) * 6);
   }
   .ml-auto {
     margin-left: auto;
@@ -1672,9 +1656,6 @@
       }
     }
   }
-  .block {
-    display: block;
-  }
   .flex {
     display: flex;
   }
@@ -1701,6 +1682,9 @@
     width: 3em;
     height: 3em;
   }
+  .h-8 {
+    height: calc(var(--spacing) * 8);
+  }
   .h-32 {
     height: calc(var(--spacing) * 32);
   }
@@ -1709,6 +1693,9 @@
   }
   .h-full {
     height: 100%;
+  }
+  .w-8 {
+    width: calc(var(--spacing) * 8);
   }
   .w-\[85\%\] {
     width: 85%;
@@ -1746,9 +1733,6 @@
   .grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .grid-cols-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
   .grid-cols-\[50px_auto_auto\] {
     grid-template-columns: 50px auto auto;
   }
@@ -1773,21 +1757,11 @@
   .justify-start {
     justify-content: flex-start;
   }
-  .gap-1 {
-    gap: calc(var(--spacing) * 1);
-  }
   .gap-2 {
     gap: calc(var(--spacing) * 2);
   }
   .gap-4 {
     gap: calc(var(--spacing) * 4);
-  }
-  .space-y-2 {
-    :where(& > :not(:last-child)) {
-      --tw-space-y-reverse: 0;
-      margin-block-start: calc(calc(var(--spacing) * 2) * var(--tw-space-y-reverse));
-      margin-block-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-y-reverse)));
-    }
   }
   .self-end {
     align-self: flex-end;
@@ -1883,12 +1857,6 @@
   .bg-base-200 {
     background-color: var(--color-base-200);
   }
-  .bg-base-content {
-    background-color: var(--color-base-content);
-  }
-  .bg-info {
-    background-color: var(--color-info);
-  }
   .bg-neutral {
     background-color: var(--color-neutral);
   }
@@ -1907,9 +1875,6 @@
       background-color: color-mix(in oklab, var(--color-rich-green) 10%, transparent);
     }
   }
-  .bg-rich-red {
-    background-color: var(--color-rich-red);
-  }
   .bg-rich-red\/10 {
     background-color: color-mix(in srgb, #ff7777 10%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -1919,17 +1884,23 @@
   .bg-secondary {
     background-color: var(--color-secondary);
   }
+  .bg-secondary\/10 {
+    background-color: var(--color-secondary);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-secondary) 10%, transparent);
+    }
+  }
   .bg-success {
     background-color: var(--color-success);
-  }
-  .bg-warning {
-    background-color: var(--color-warning);
   }
   .bg-warning\/10 {
     background-color: var(--color-warning);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-warning) 10%, transparent);
     }
+  }
+  .bg-white {
+    background-color: var(--color-white);
   }
   .bg-\[linear-gradient\(to_right\,_theme\(colors\.rich-green\)\,_theme\(colors\.base-100\)_30\%\)\] {
     background-image: linear-gradient(to right, #98d7a4, var(--color-base-100) 30%);
@@ -2009,10 +1980,6 @@
     font-size: var(--text-xl);
     line-height: var(--tw-leading, var(--text-xl--line-height));
   }
-  .text-xs {
-    font-size: var(--text-xs);
-    line-height: var(--tw-leading, var(--text-xs--line-height));
-  }
   .select-sm {
     --size: calc(var(--size-field, 0.25rem) * 8);
     font-size: 0.75rem;
@@ -2046,12 +2013,6 @@
   .text-info {
     color: var(--color-info);
   }
-  .text-info-content {
-    color: var(--color-info-content);
-  }
-  .text-neutral-content {
-    color: var(--color-neutral-content);
-  }
   .text-primary {
     color: var(--color-primary);
   }
@@ -2070,12 +2031,6 @@
   .text-success {
     color: var(--color-success);
   }
-  .text-success-content {
-    color: var(--color-success-content);
-  }
-  .text-warning-content {
-    color: var(--color-warning-content);
-  }
   .italic {
     font-style: italic;
   }
@@ -2084,9 +2039,6 @@
   }
   .opacity-30 {
     opacity: 30%;
-  }
-  .opacity-70 {
-    opacity: 70%;
   }
   .shadow {
     --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
@@ -2165,6 +2117,10 @@
     --btn-color: var(--color-secondary);
     --btn-fg: var(--color-secondary-content);
   }
+  .btn-success {
+    --btn-color: var(--color-success);
+    --btn-fg: var(--color-success-content);
+  }
   .before\:content-\[\'MA\'\] {
     &::before {
       content: var(--tw-content);
@@ -2186,12 +2142,6 @@
       content: var(--tw-content);
     }
   }
-  .last\:border-b-0 {
-    &:last-child {
-      border-bottom-style: var(--tw-border-style);
-      border-bottom-width: 0px;
-    }
-  }
   .hover\:bg-base-100 {
     &:hover {
       @media (hover: hover) {
@@ -2199,35 +2149,10 @@
       }
     }
   }
-  .hover\:bg-base-200 {
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-base-200);
-      }
-    }
-  }
   .hover\:text-error {
     &:hover {
       @media (hover: hover) {
         color: var(--color-error);
-      }
-    }
-  }
-  .lg\:divider-horizontal {
-    @media (width >= 64rem) {
-      --divider-m: 0 1rem;
-      &.divider {
-        height: auto;
-        width: calc(0.25rem * 4);
-        flex-direction: column;
-        &:before {
-          height: 100%;
-          width: calc(0.25rem * 0.5);
-        }
-        &:after {
-          height: 100%;
-          width: calc(0.25rem * 0.5);
-        }
       }
     }
   }
@@ -2272,6 +2197,46 @@
 .blockMsg {
   border-radius: 2em;
   overflow: hidden;
+}
+.stock_trades {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+.stock_trades input[type=radio] {
+  position: absolute;
+  left: -200vw;
+}
+.stock_trades label {
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+.stock_trades [id^=trade] {
+  grid-column: 1/-1;
+  grid-row: 3;
+  display: none;
+}
+.stock_trades [id^=info] {
+  grid-column: 1/-1;
+  grid-row: 2;
+  display: none;
+}
+.stock_trades [id^=tab]:checked~[id^=label] {
+  background-color: rgb(from currentColor r g b / 1);
+  border-bottom: 0;
+}
+.stock_trades [id^=tab]:not(:checked)~[id^=label] {
+  background-color: rgb(from currentColor r g b / 0.5);
+}
+.stock_trades [id^=tab]:checked~[id^=trade] {
+  display: block;
+}
+.stock_trades [id^=tab]:checked~[id^=info] {
+  display: grid;
+}
+ng-container {
+  display: contents;
 }
 @layer base {
   :where(:root),:root:has(input.theme-controller[value=light]:checked),[data-theme=light] {
@@ -3582,11 +3547,6 @@
     background-position: -50%;
   }
 }
-@property --tw-space-y-reverse {
-  syntax: "*";
-  inherits: false;
-  initial-value: 0;
-}
 @property --tw-border-style {
   syntax: "*";
   inherits: false;
@@ -3669,7 +3629,6 @@
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     *, ::before, ::after, ::backdrop {
-      --tw-space-y-reverse: 0;
       --tw-border-style: solid;
       --tw-font-weight: initial;
       --tw-shadow: 0 0 #0000;
