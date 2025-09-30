@@ -245,81 +245,129 @@
 <div class="stock_trades w-[85%] mx-auto max-w-6xl mt-6">
   <ng-container ng-repeat="test in tests">
     <input type="radio" name="tabset" id="tab{{$index}}" ng-checked="$index === 0">
-    <label for="tab{{$index}}" id="label{{$index}}" class="bg-base-100">
-      <span class="ma--label" ng-bind="test.ma"></span>
-      <span class="date--label"><span ng-bind="test.startDate | dt"></span> ~
+    <label for="tab{{$index}}" id="label{{$index}}" class="text-center">
+      <span class="text-4xl text-primary before:content-['MA'] before:text-sm" ng-bind="test.ma"></span>
+      <span class="font-date text-xxs bg-primary/50"><span ng-bind="test.startDate | dt"></span> ~
         <span ng-bind="test.endDate | dt"></span></span>
       <div class="stock_trades-price">
-        <span class="price--label" ng-bind="test.profit"></span>
-        <span class="pct--label rate" ng-bind="test.profitRate | pct" ng-click="allBand(test)"></span>
+        <span class="font-price text-sm" ng-bind="test.profit"></span>
+        <span class="font-pct" ng-bind="test.profitRate | pct" ng-click="allBand(test)"></span>
       </div>
     </label>
 
-    <div class="stock_trades-info" id="info{{$index}}">
+    <div class="border-l-2 border-primary border-r-2 bg-primary grid grid-cols-3 gap-4 p-4 text-center"
+      id="info{{$index}}">
       <div>
-        <a href="https://t.ly/TgoWR" target="_faq">盈虧比</a> <span ng-bind="test.pnl"></span>
-        期望值 <span class="price--label" ng-bind="test.expectation"></span>
-        <span ng-if="test.expectation > 1">👍</span>
+        <a href="https://t.ly/TgoWR" target="_faq">盈虧比</a> <span class="text-2xl" ng-bind="test.pnl"></span>
+        期望值 <span class="font-price text-2xl" ng-bind="test.expectation"></span>
+        <span ng-if="test.expectation > 1"> 👍</span>
       </div>
       <div>
-        二日有效率 <span class="pct--breakoutRate" ng-bind="test.breakoutRate | pct"></span>
-        總勝率 <span class="pct--winRate" ng-bind="test.winRate | pct"></span>
+        二日有效率 <span class="font-pct text-2xl" ng-bind="test.breakoutRate | pct"></span>
+        總勝率 <span class="font-pct text-2xl" ng-bind="test.winRate | pct"></span>
       </div>
 
       <div>
-        返場 <span ng-bind="test.reentry"></span> 次
-        成功 <span ng-bind="test.reentryWins"></span> 次
-        勝率 <span class="pct--reentryWinRate" ng-bind="test.reentryWinRate | pct"></span><br />
-        返場損益 <span class="price--label" ng-bind="test.reentryProfit"></span>
-        <span class="pct--reentryProfit" ng-bind="(test.reentryProfit / test.profit) | pct"></span>
+        返場 <span class="text-2xl" ng-bind="test.reentry"></span> 次
+        成功 <span class="text-2xl" ng-bind="test.reentryWins"></span> 次
+        勝率 <span class="font-2xl font-pct" ng-bind="test.reentryWinRate | pct"></span><br />
+        返場損益 <span class="text-2xl font-price" ng-bind="test.reentryProfit"></span>
+        <span class="font-pct text-2xl" ng-bind="(test.reentryProfit / test.profit) | pct"></span>
       </div>
       <!--<div>最大回撤 <span ng-bind="test.maxDrawdown"></span></div>-->
     </div>
     <div id="trade{{$index}}">
-      <div class="stock_trades_row" ng-repeat="trade in test.trades" style="cursor:pointer" ng-click="jump(trade)">
-        <div class="date--dates">
-          <div>🗓️ <span ng-bind="trade.entryDate | dt"></span> ~
-            <span ng-bind="trade.exitDate | dt"></span>
-            <span ng-if="trade.duration" ng-bind="trade.duration"></span>
+      <div class="bg-white pl-5 pr-5 grid grid-cols-[auto_350px]" ng-repeat="trade in test.trades"
+        style="cursor:pointer" ng-click="jump(trade)">
+        <ul class="timeline timeline-vertical">
+          <li>
+            <div class="timeline-start text-base-content/50" ng-bind="trade.entryDate | dt"></div>
+            <div class="timeline-middle">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" />
+              </svg>
+
+            </div>
+            <div class="timeline-end flex">
+              <span class="font-price text-xl timeline-box mr-1.5 h-fit" ng-bind="trade.entryPrice.scale(2)"></span>
+              <span>
+                <span class="badge badge-secondary" ng-if="trade.breakout">二日法則</span>
+                <span class="badge badge-secondary" ng-if="trade.reentry">重新入場</span>
+                <span class="text-sm/6 text-success" ng-bind="trade.entryReason"></span>
+              </span>
+
+            </div>
+            <hr class="pt-11" />
+          </li>
+          <li ng-if="trade.exitPrice">
+            <hr />
+            <div class="timeline-start text-base-content/50" ng-bind="trade.exitDate | dt"></div>
+            <div class="timeline-middle">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+              </svg>
+            </div>
+            <div class="timeline-end">
+              <span class="font-price text-xl timeline-box mr-1.5 h-fit" ng-bind="trade.exitPrice.scale(2)"></span>
+              <span>
+
+                <span class="badge badge-primary" ng-if="trade.exitReason.includes('過熱')">過熱</span>
+                <span class="text-sm/6 text-success" ng-bind="trade.exitReason"></span>
+              </span>
+
+            </div>
+            <hr />
+          </li>
+          <li ng-if="trade.duration">
+            <hr class="pt-11" />
+            <div class="after:content-['days'] after:text-xs badge badge-ghost timeline-start" ng-bind="trade.duration">
+            </div>
+          </li>
+        </ul>
+
+        <div ng-if="trade.duration" class="border-l-2 border-primary">
+          <div class="flex mt-8 items-end">
+            <div
+              class="w-0 h-0  border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[10px] border-l-primary">
+            </div>
+            🧧 <span class="font-price text-4xl" ng-bind="trade.profit"
+              ng-class="{'text-rich-green': trade.profit < 0, 'text-rich-red': trade.profit > 0}"></span>
+            <span class="font-pct" ng-bind="trade.profitRate | pct"></span>
           </div>
-          <span class="rt-badge" ng-if="trade.breakout">二日法則</span>
-          <span class="rt-badge" ng-if="trade.reentry">重新入場</span>
-        </div>
-        <div>
-          <div class="info-banner">💰📈 <span class="price--inout" ng-bind="trade.entryPrice.scale(2)"></span></div>
-          <div class="info-banner" ng-if="trade.exitPrice">🏃📉 <span class="price--inout"
-              ng-bind="trade.exitPrice.scale(2)"></span></div>
-        </div>
-        <div class="profit" ng-if="trade.duration">
-          <div>🧧 <span class="price--profit" ng-bind="trade.profit"></span></div>
-          <span class="pct--profit" ng-bind="trade.profitRate | pct"></span>
         </div>
 
-        <div ng-if="trade.invest" class="profit">
-          <div ng-if="trade.invest.profit != 0" class="price--profit">🤑 <span ng-bind="trade.invest.profit"></span>
+        <div ng-if="trade.invest" class="border-l-2 border-primary">
+          <div ng-if="trade.invest.profit != 0" class="flex mt-8 items-end">
+            <div
+              class="w-0 h-0  border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[10px] border-l-primary">
+            </div>
+            🤑 <span class="font-price text-4xl" ng-bind="trade.invest.profit"
+              ng-class="{'text-rich-green': trade.invest.profit < 0, 'text-rich-red': trade.invest.profit > 0}"></span>
+            <span ng-if="trade.invest.profit != 0" class="font-pct" ng-bind="trade.invest.profitRate | pct"></span>
           </div>
-          <span ng-if="trade.invest.profit != 0" class="pct--profit" ng-bind="trade.invest.profitRate | pct"></span>
         </div>
 
-        <div class="reason">
-          <span ng-bind="trade.entryReason"></span>
-          <span ng-bind="trade.exitReason"></span>
-          <span class="rt-badge" ng-if="trade.exitReason.includes('過熱')">過熱</span>
-        </div>
-        <div ng-if="trade.invest" class="investstock" ng-class="{'rich-stock-trade-rsi-hot': trade.invest.rsiHot}">
+        <div class="col-start-2 border-l-2 border-primary pl-2 pd-5" ng-if="trade.invest"
+          ng-class="{'rich-stock-trade-rsi-hot': trade.invest.rsiHot}">
           <div ng-if="log.act" ng-repeat="log in trade.invest.logs">
-            <span class="date" ng-bind="log.day.date.toLocaleDateString()"></span>
-            <span class="price" ng-bind="log.day.close.scale(2)"></span>
-            <span ng-bind="log.act"></span>：<span class="percent" ng-bind="log.amount"></span>
-            持倉：<span class="percent" ng-bind="log.invested"></span>
-            成本：<span class="price" ng-bind="log.avgCost"></span>
-            停損價：<span class="price" ng-bind="(log.stopLossPrice || 0).scale(2)"></span>
-            <span class="result" ng-if="log.profit != 0">
+            <span class="font-date" ng-bind="log.day.date.toLocaleDateString()"></span>
+            <span class="font-price" ng-bind="log.day.close.scale(2)"></span>
+            <span ng-bind="log.act"></span>：<span class="" ng-bind="log.amount"></span>
+            持倉：<span class="" ng-bind="log.invested"></span><br />
+            成本：<span class="font-price" ng-bind="log.avgCost"></span>
+            停損價：<span class="font-price" ng-bind="(log.stopLossPrice || 0).scale(2)"></span>
+            <span class="block" ng-if="log.profit != 0">
               <span ng-if="log.invested > 0">當前</span>損益
-              <span class="price" ng-bind="log.profit"></span>（<span class="percent" ng-bind="log.profitRate"></span>）
+              <span class="font-price text-2xl" ng-bind="log.profit"></span>（<span class="font-pct"
+                ng-bind="log.profitRate"></span>）
             </span>
           </div>
         </div>
+
       </div>
     </div>
   </ng-container>
