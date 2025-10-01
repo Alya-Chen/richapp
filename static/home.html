@@ -57,13 +57,14 @@
         <div class="cursor-pointer shadow-sm grid grid-cols-2 gap-2 p-2 rounded-2xl h-fit" ng-if="stocks.length"
           ng-repeat="stock in stocks" ng-class="{'stock_usa': stock.country == 'us'}">
 
-          <div class="grid grid-cols-2 gap-2">
+          <div class="flex flex-row items-end flex-wrap gap-2">
+            <span class="w-fit"><input type="checkbox" ng-model="stock.checked" ng-change="checked(stock)"
+                class="checkbox checkbox-primary" /></span>
             <span class="text-success text-lg h-fit pt-2" ng-bind="stock.code"></span>
-            <input type="checkbox" ng-model="stock.checked" ng-change="checked(stock)" />
+
             <span class="h-fit" ng-if="stock.otc">🌱</span>
-            <span ng-if="stock.financial" ng-mouseover="financial(stock, $event)"
-              class="row-start-2 col-span-2 text-2xl">
-              <span class="" ng-bind="stock.financial.bullscore"></span>
+            <span ng-if="stock.financial" ng-mouseover="financial(stock, $event)" class="col-span-2 text-2xl w-full">
+              <span ng-bind="stock.financial.bullscore"></span>
               <!-- <span class="locks_cell_ranking" ng-bind="stock.financial['排名']"></span> -->
             </span>
           </div>

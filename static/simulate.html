@@ -1,76 +1,111 @@
-<div style="margin: 20px;">
-  股票清單：
-  <div ng-repeat="stock in stocks" ng-if="stock.checked" class="stock">
-    {{stock.code}} - {{stock.name}}
+<div class="mb-6 w-[85%] mx-auto max-w-6xl">
+  <div class="text-2xl font-bold text-primary mt-6">股票清單</div>
+  <div class="stats shadow">
+    <div ng-repeat="stock in stocks" ng-if="stock.checked" class="stat">
+      <div class="stat-title">{{stock.code}}</div>
+      <div class="stat-value">{{stock.name}}</div>
+    </div>
   </div>
-  <br/>
-  投入資金：
-  <input type="number" ng-model="money" /><br/>
-  <input type="checkbox" ng-model="params.breakout" />二日法則
-  <input type="checkbox" ng-model="params.reentry" />重新入場<br/>
-  入場日期：<input type="date" ng-model="params.entryDate" />
-  出場日期：<input type="date" ng-model="params.exitDate" /><br/>
-  入場策略：<span ng-repeat="strategy in entryStrategies">
-    <input type="radio" name="entryStrategy" ng-model="params.entryStrategy" value="{{strategy.key}}" />
-    <label ng-bind="strategy.name"></label>
-  </span><br/>
-  出場策略：<span ng-repeat="strategy in exitStrategies">
-    <input type="checkbox" ng-model="strategy.checked" />
-    <label ng-bind="strategy.name"></label>
-  </span><br/>
-  止盈百分比：<select ng-model="params.takeProfitPct" ng-options="pct for pct in takeProfitPcts"></select><br/>
+  <div class="flex gap-4 mt-4 text-xl text-success mb-4">
+    <svg fill="currentColor" class="icon-salary size-[1.5em]">
+      <use xlink:href="#icon-salary"></use>
+    </svg>
+    <label class="input">
+      <span class="label">投入資金 $</span><input type="number" ng-model="money" />
+    </label>
+  </div>
+
+  <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
+    <input type="checkbox" ng-model="params.breakout" class="checkbox" />二日法則
+    <input type="checkbox" ng-model="params.reentry" class="checkbox" />重新入場<br />
+  </div>
+  <div class="border-t-base-content/5 flex border-t border-dashed py-2 p-2">
+    <label class="input">
+      <span class="label">入場日期</span><input type="date" ng-model="params.entryDate" class="input" />
+    </label>
+    <label class="input ml-6">
+      <span class="label">出場日期</span><input type="date" ng-model="params.exitDate" class="input" />
+    </label>
+  </div>
+  <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
+    <span class="text-lg font-bold text-nowrap">入場策略</span>
+    <div>
+      <label ng-repeat="strategy in entryStrategies" class="text-nowrap p">
+        <input type="radio" name="entryStrategy" ng-model="params.entryStrategy" value="{{strategy.key}}"
+          class="radio" />
+        <span ng-bind="strategy.name"></span>
+      </label>
+    </div>
+  </div>
+  <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
+    <span class="text-lg font-bold text-nowrap p">出場策略</span>
+    <div>
+      <span ng-repeat="strategy in exitStrategies">
+        <input type="checkbox" ng-model="strategy.checked" class="checkbox" />
+        <label ng-bind="strategy.name"></label>
+      </span>
+    </div>
+
+  </div>
+  <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
+    止盈百分比：<select ng-model="params.takeProfitPct" ng-options="pct for pct in takeProfitPcts"></select>
+  </div>
+  <br />
   <button ng-click="start()">開始投資模擬</button>
 </div>
+
 <div ng-if="simulated" class="simulated-summary" style="margin: 20px;">
   <h2>投資模擬結果</h2>
   模擬日期區間：
-  <span ng-bind="simulated.summary.entryDate | dt"></span> ~ <span ng-bind="simulated.summary.exitDate | dt"></span><br/>
-  初始資金：<span ng-bind="simulated.summary.initialMoney"></span><br/>
-  最終資金：<span ng-bind="simulated.summary.finalMoney.scale()"></span><br/>
-  總損益：<span ng-bind="simulated.summary.totalProfit.scale()"></span><br/>
-  總損益率：<span ng-bind="(simulated.summary.totalProfit) / simulated.summary.initialMoney | pct"></span><br/>
+  <span ng-bind="simulated.summary.entryDate | dt"></span> ~ <span
+    ng-bind="simulated.summary.exitDate | dt"></span><br />
+  初始資金：<span ng-bind="simulated.summary.initialMoney"></span><br />
+  最終資金：<span ng-bind="simulated.summary.finalMoney.scale()"></span><br />
+  總損益：<span ng-bind="simulated.summary.totalProfit.scale()"></span><br />
+  總損益率：<span ng-bind="(simulated.summary.totalProfit) / simulated.summary.initialMoney | pct"></span><br />
   模擬股數：<span ng-bind="simulated.summary.stockCount"></span>
 </div>
 <div class="stock_events">
-  <div class="stock_events_row" ng-repeat="event in simulated.events" style="cursor:pointer; margin: 20px;" ng-click="jump(event)">
-     <div class="date--dates">
-        <div>
-          <span ng-bind="event.code"></span>
-          <span ng-bind="event.name"></span>
-          MA：<span ng-bind="event.ma"></span>
-          🗓️ <span ng-bind="event.entryDate | dt"></span> ~
-           <span ng-bind="event.exitDate | dt"></span>         
-           <span ng-if="event.duration" ng-bind="event.duration + '天'"></span>
-        </div>
-        <span class="rt-badge" ng-if="event.breakout">二日法則</span>
-        <span class="rt-badge" ng-if="event.reentry">重新入場</span>
-     </div>
-     <div>
-        <div class="info-banner">
-          💰📈 
-          <span class="price--inout" ng-bind="event.entryPrice.scale(2)"></span>
-          （<span ng-bind="event.amount"></span>股）
-        </div>
-        <div class="info-banner" ng-if="event.exitPrice">
-          🏃📉 
-          <span class="price--inout" ng-bind="event.exitPrice.scale(2)"></span>
-          （<span ng-bind="event.amount"></span>股）
-        </div>
-     </div>
-     <div class="profit" ng-if="event.duration">
-        <div>🧧 <span class="price--profit" ng-bind="event.profit"></span></div>
-        <span class="pct--profit" ng-bind="event.profitRate | pct"></span>
-     </div>
-     <div ng-if="event.invest" class="profit">
-        <div ng-if="event.invest.profit != 0" class="price--profit">🤑 <span ng-bind="event.invest.profit"></span>
-        </div>
-        <span ng-if="event.invest.profit != 0" class="pct--profit" ng-bind="event.invest.profitRate | pct"></span>
-     </div>
-     <div class="reason">
-        <span ng-bind="event.entryReason"></span>
-        <span ng-bind="event.exitReason"></span>
-        <span class="rt-badge" ng-if="event.exitReason.includes('過熱')">過熱</span>
-     </div>
-     <hr/>
+  <div class="stock_events_row" ng-repeat="event in simulated.events" style="cursor:pointer; margin: 20px;"
+    ng-click="jump(event)">
+    <div class="date--dates">
+      <div>
+        <span ng-bind="event.code"></span>
+        <span ng-bind="event.name"></span>
+        MA：<span ng-bind="event.ma"></span>
+        🗓️ <span ng-bind="event.entryDate | dt"></span> ~
+        <span ng-bind="event.exitDate | dt"></span>
+        <span ng-if="event.duration" ng-bind="event.duration + '天'"></span>
+      </div>
+      <span class="rt-badge" ng-if="event.breakout">二日法則</span>
+      <span class="rt-badge" ng-if="event.reentry">重新入場</span>
+    </div>
+    <div>
+      <div class="info-banner">
+        💰📈
+        <span class="price--inout" ng-bind="event.entryPrice.scale(2)"></span>
+        （<span ng-bind="event.amount"></span>股）
+      </div>
+      <div class="info-banner" ng-if="event.exitPrice">
+        🏃📉
+        <span class="price--inout" ng-bind="event.exitPrice.scale(2)"></span>
+        （<span ng-bind="event.amount"></span>股）
+      </div>
+    </div>
+    <div class="profit" ng-if="event.duration">
+      <div>🧧 <span class="price--profit" ng-bind="event.profit"></span></div>
+      <span class="pct--profit" ng-bind="event.profitRate | pct"></span>
+    </div>
+    <div ng-if="event.invest" class="profit">
+      <div ng-if="event.invest.profit != 0" class="price--profit">🤑 <span ng-bind="event.invest.profit"></span>
+      </div>
+      <span ng-if="event.invest.profit != 0" class="pct--profit" ng-bind="event.invest.profitRate | pct"></span>
+    </div>
+    <div class="reason">
+      <span ng-bind="event.entryReason"></span>
+      <span ng-bind="event.exitReason"></span>
+      <span class="rt-badge" ng-if="event.exitReason.includes('過熱')">過熱</span>
+    </div>
+    <hr />
   </div>
 </div>
