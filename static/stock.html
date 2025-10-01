@@ -277,7 +277,7 @@
       <!--<div>最大回撤 <span ng-bind="test.maxDrawdown"></span></div>-->
     </div>
     <div id="trade{{$index}}">
-      <div class="bg-white pl-5 pr-5 grid grid-cols-[auto_350px]" ng-repeat="trade in test.trades"
+      <div class="bg-white pl-5 pr-5 grid grid-cols-[auto_350px] hover:bg-base-200" ng-repeat="trade in test.trades"
         style="cursor:pointer" ng-click="jump(trade)">
         <ul class="timeline timeline-vertical">
           <li>

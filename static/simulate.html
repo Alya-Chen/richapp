@@ -1,60 +1,66 @@
 <div class="mb-6 w-[85%] mx-auto max-w-6xl pb-2">
+
+  <details class="collapse collapse-arrow">
+    <summary class="collapse-title font-semibold">
+      <div class="flex gap-4 mt-4 text-xl text-success mb-4">
+        <svg fill="currentColor" class="icon-salary size-[1.5em]">
+          <use xlink:href="#icon-salary"></use>
+        </svg>
+        <label class="input">
+          <span class="label">投入資金 $</span><input type="number" ng-model="money" />
+        </label>
+      </div>
+    </summary>
+    <div class="collapse-content text-sm">
+      <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
+        <input type="checkbox" ng-model="params.breakout" class="checkbox" />二日法則
+        <input type="checkbox" ng-model="params.reentry" class="checkbox" />重新入場<br />
+      </div>
+    </div>
+    <div class="border-t-base-content/5 flex border-t border-dashed py-2 p-2">
+      <label class="input">
+        <span class="label">入場日期</span><input type="date" ng-model="params.entryDate" class="input" />
+      </label>
+      <label class="input ml-6">
+        <span class="label">出場日期</span><input type="date" ng-model="params.exitDate" class="input" />
+      </label>
+    </div>
+    <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
+      <span class="text-lg font-bold text-nowrap mr-4">入場策略</span>
+      <div class="flex gap-2 flex-wrap">
+        <label ng-repeat="strategy in entryStrategies" class="text-nowrap">
+          <input type="radio" name="entryStrategy" ng-model="params.entryStrategy" value="{{strategy.key}}"
+            class="radio" />
+          <span ng-bind="strategy.name"></span>
+        </label>
+      </div>
+    </div>
+    <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
+      <span class="text-lg font-bold text-nowrap mr-4">出場策略</span>
+      <div class="flex gap-2 flex-wrap">
+        <span ng-repeat="strategy in exitStrategies" class="text-nowrap">
+          <input type="checkbox" ng-model="strategy.checked" class="checkbox" />
+          <label ng-bind="strategy.name"></label>
+        </span>
+      </div>
+    </div>
+    <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
+      止盈百分比：<select ng-model="params.takeProfitPct" ng-options="pct for pct in takeProfitPcts"></select>
+    </div>
+  </details>
+  <button class="btn btn-primary btn-lg" ng-click="start()">
+    <svg fill="currentColor" class="icon-spinner9 size-[1em]">
+      <use xlink:href="css/symbol-defs.svg#icon-spinner9"></use>
+    </svg> 開始投資模擬</button>
   <div class="text-2xl font-bold text-primary mt-6">股票清單</div>
   <div class="stats shadow">
     <div ng-repeat="stock in stocks" ng-if="stock.checked" class="stat">
       <div class="stat-title">{{stock.code}}</div>
       <div class="stat-value">{{stock.name}}</div>
+      <div class="stat-desc">$200000</div>
+      <div class="stat-desc"><input type="checkbox" checked="checked" class="toggle" /></div>
     </div>
   </div>
-  <div class="flex gap-4 mt-4 text-xl text-success mb-4">
-    <svg fill="currentColor" class="icon-salary size-[1.5em]">
-      <use xlink:href="#icon-salary"></use>
-    </svg>
-    <label class="input">
-      <span class="label">投入資金 $</span><input type="number" ng-model="money" />
-    </label>
-  </div>
-
-  <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
-    <input type="checkbox" ng-model="params.breakout" class="checkbox" />二日法則
-    <input type="checkbox" ng-model="params.reentry" class="checkbox" />重新入場<br />
-  </div>
-  <div class="border-t-base-content/5 flex border-t border-dashed py-2 p-2">
-    <label class="input">
-      <span class="label">入場日期</span><input type="date" ng-model="params.entryDate" class="input" />
-    </label>
-    <label class="input ml-6">
-      <span class="label">出場日期</span><input type="date" ng-model="params.exitDate" class="input" />
-    </label>
-  </div>
-  <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
-    <span class="text-lg font-bold text-nowrap mr-4">入場策略</span>
-    <div class="flex gap-2 flex-wrap">
-      <label ng-repeat="strategy in entryStrategies" class="text-nowrap">
-        <input type="radio" name="entryStrategy" ng-model="params.entryStrategy" value="{{strategy.key}}"
-          class="radio" />
-        <span ng-bind="strategy.name"></span>
-      </label>
-    </div>
-  </div>
-  <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
-    <span class="text-lg font-bold text-nowrap mr-4">出場策略</span>
-    <div class="flex gap-2 flex-wrap">
-      <span ng-repeat="strategy in exitStrategies" class="text-nowrap">
-        <input type="checkbox" ng-model="strategy.checked" class="checkbox" />
-        <label ng-bind="strategy.name"></label>
-      </span>
-    </div>
-
-  </div>
-  <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
-    止盈百分比：<select ng-model="params.takeProfitPct" ng-options="pct for pct in takeProfitPcts"></select>
-  </div>
-  <br />
-  <button class="btn btn-primary btn-lg" ng-click="start()">
-    <svg fill="currentColor" class="icon-spinner9 size-[1em]">
-      <use xlink:href="css/symbol-defs.svg#icon-spinner9"></use>
-    </svg> 開始投資模擬</button>
 </div>
 <div ng-if="simulated" class="stock_trades w-[85%] mx-auto max-w-6xl mt-6 bg-success rounded-t-lg">
   <div class="stat bg-base-100 rounded-tl-lg">模擬日期區間
@@ -104,13 +110,14 @@
 </div>
 
 <div class="w-[85%] mx-auto max-w-6xl bg-base-100">
-  <div class="pl-5 pr-5 grid grid-cols-[200px_auto_350px]" ng-repeat="event in simulated.events">
-    <div class="">
-      <span ng-bind="event.code"></span>
-      <span ng-bind="event.name"></span>
-      MA：<span ng-bind="event.ma"></span>
+  <div class="pl-5 pr-5 grid grid-cols-[200px_auto_250px] hover:bg-base-200" ng-repeat="event in simulated.events"
+    ng-Class="'item_' + event.code">
+    <div class="stat grid-rows-[20px_40px_auto]">
+      <span ng-bind="event.code" class="stat-title"></span>
+      <span ng-bind="event.name" class="stat-value"></span>
+      <span ng-bind="event.ma" class="stat-desc before:content-['MA']"></span>
     </div>
-    <ul class="timeline timeline-vertical">
+    <ul class="timeline timeline-vertical" ng-class="{'italic': !event.duration && !event.invest}">
       <li>
         <div class="timeline-start text-base-content/50" ng-bind="event.entryDate | dt"></div>
         <div class="timeline-middle">
