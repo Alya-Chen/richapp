@@ -2327,6 +2327,29 @@
       }
     }
   }
+  .steps-vertical {
+    grid-auto-rows: 1fr;
+    grid-auto-flow: row;
+    .step {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 40px 1fr;
+      grid-template-rows: repeat(1, minmax(0, 1fr));
+      grid-template-rows: auto;
+      gap: 0.5rem;
+      min-height: 4rem;
+      justify-items: start;
+      &:before {
+        height: 100%;
+        width: calc(0.25rem * 2);
+        translate: -50% -50%;
+        margin-inline-start: 50%;
+      }
+      [dir="rtl"] &:before {
+        translate: 50% -50%;
+      }
+    }
+  }
   .join-item {
     &:where(*:not(:first-child, :disabled, [disabled], .btn-disabled)) {
       margin-inline-start: calc(var(--border, 1px) * -1);
@@ -2359,6 +2382,9 @@
   }
   .mr-4 {
     margin-right: calc(var(--spacing) * 4);
+  }
+  .mr-42 {
+    margin-right: calc(var(--spacing) * 42);
   }
   .mb-2 {
     margin-bottom: calc(var(--spacing) * 2);
@@ -2807,8 +2833,20 @@
   .grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  .grid-cols-\[2auto_350px\] {
+    grid-template-columns: 2auto 350px;
+  }
   .grid-cols-\[50px_auto_auto\] {
     grid-template-columns: 50px auto auto;
+  }
+  .grid-cols-\[150px_auto_250px\] {
+    grid-template-columns: 150px auto 250px;
+  }
+  .grid-cols-\[200px_auto_250px\] {
+    grid-template-columns: 200px auto 250px;
+  }
+  .grid-cols-\[200px_auto_350px\] {
+    grid-template-columns: 200px auto 350px;
   }
   .grid-cols-\[auto_350px\] {
     grid-template-columns: auto 350px;
@@ -2882,6 +2920,13 @@
   }
   .rounded-xl {
     border-radius: var(--radius-xl);
+  }
+  .rounded-t-lg {
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+  }
+  .rounded-tl-lg {
+    border-top-left-radius: var(--radius-lg);
   }
   .border {
     border-style: var(--tw-border-style);
@@ -3107,6 +3152,9 @@
   .pr-5 {
     padding-right: calc(var(--spacing) * 5);
   }
+  .pb-2 {
+    padding-bottom: calc(var(--spacing) * 2);
+  }
   .pb-4 {
     padding-bottom: calc(var(--spacing) * 4);
   }
@@ -3218,6 +3266,9 @@
   }
   .text-success {
     color: var(--color-success);
+  }
+  .text-white {
+    color: var(--color-white);
   }
   .italic {
     font-style: italic;
@@ -3334,6 +3385,25 @@
       line-height: var(--tw-leading, var(--text-sm--line-height));
     }
   }
+  .before\:text-xs {
+    &::before {
+      content: var(--tw-content);
+      font-size: var(--text-xs);
+      line-height: var(--tw-leading, var(--text-xs--line-height));
+    }
+  }
+  .before\:content-\[\'\$\'\] {
+    &::before {
+      --tw-content: '$';
+      content: var(--tw-content);
+    }
+  }
+  .before\:content-\[\'\%\'\] {
+    &::before {
+      --tw-content: '%';
+      content: var(--tw-content);
+    }
+  }
   .before\:content-\[\'MA\'\] {
     &::before {
       --tw-content: 'MA';
@@ -3347,9 +3417,21 @@
       line-height: var(--tw-leading, var(--text-xs--line-height));
     }
   }
+  .after\:content-\[\'\%\'\] {
+    &::after {
+      --tw-content: '%';
+      content: var(--tw-content);
+    }
+  }
   .after\:content-\[\'days\'\] {
     &::after {
       --tw-content: 'days';
+      content: var(--tw-content);
+    }
+  }
+  .after\:content-\[\'天\'\] {
+    &::after {
+      --tw-content: '天';
       content: var(--tw-content);
     }
   }
