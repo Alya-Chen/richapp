@@ -1,6 +1,6 @@
 <div class="mb-6 w-[85%] mx-auto max-w-6xl pb-2">
 
-  <details class="collapse collapse-arrow">
+  <details class="collapse collapse-arrow" open>
     <summary class="collapse-title font-semibold">
       <div class="flex gap-4 mt-4 text-xl text-success mb-4">
         <svg fill="currentColor" class="icon-salary size-[1.5em]">
@@ -11,12 +11,6 @@
         </label>
       </div>
     </summary>
-    <div class="collapse-content text-sm">
-      <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
-        <input type="checkbox" ng-model="params.breakout" class="checkbox" />二日法則
-        <input type="checkbox" ng-model="params.reentry" class="checkbox" />重新入場<br />
-      </div>
-    </div>
     <div class="border-t-base-content/5 flex border-t border-dashed py-2 p-2">
       <label class="input">
         <span class="label">入場日期</span><input type="date" ng-model="params.entryDate" class="input" />
@@ -29,7 +23,7 @@
       <span class="text-lg font-bold text-nowrap mr-4">入場策略</span>
       <div class="flex gap-2 flex-wrap">
         <label ng-repeat="strategy in entryStrategies" class="text-nowrap">
-          <input type="radio" name="entryStrategy" ng-model="params.entryStrategy" value="{{strategy.key}}"
+          <input type="radio" name="entryStrategy" ng-model="params.entryStrategy" ng-change="entryStrategyCheck()" value="{{strategy.key}}"
             class="radio" />
           <span ng-bind="strategy.name"></span>
         </label>
@@ -39,13 +33,26 @@
       <span class="text-lg font-bold text-nowrap mr-4">出場策略</span>
       <div class="flex gap-2 flex-wrap">
         <span ng-repeat="strategy in exitStrategies" class="text-nowrap">
-          <input type="checkbox" ng-model="strategy.checked" class="checkbox" />
+          <input type="checkbox" ng-model="strategy.checked" ng-change="exitStrategyCheck()" class="checkbox" />
           <label ng-bind="strategy.name"></label>
         </span>
       </div>
     </div>
+    <div class="collapse-content text-sm">
+      <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
+        <div class="flex gap-2" ng-if="tigerChecked">
+          <input type="checkbox" ng-model="params.breakout" class="checkbox" />二日法則
+        </div>
+        <div class="flex gap-2" ng-if="tigerChecked">
+          <input type="checkbox" ng-model="params.reentry" class="checkbox" />重新入場
+        </div>
+        <div class="ml-4" ng-if="dynamicExitChecked">
+          止盈百分比（<span ng-bind="takeProfitPct"></span>）：
+          <input type="number" ng-model="params.takeProfitPct" step="0.01" />
+        </div>
+      </div>
+    </div>    
     <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
-      止盈百分比：<select ng-model="params.takeProfitPct" ng-options="pct for pct in takeProfitPcts"></select>
     </div>
   </details>
   <button class="btn btn-primary btn-lg" ng-click="start()">
@@ -54,11 +61,11 @@
     </svg> 開始投資模擬</button>
   <div class="text-2xl font-bold text-primary mt-6">股票清單</div>
   <div class="stats shadow">
-    <div ng-repeat="stock in stocks" ng-if="stock.checked" class="stat">
+    <div ng-repeat="stock in testers" class="stat">
       <div class="stat-title">{{stock.code}}</div>
       <div class="stat-value">{{stock.name}}</div>
       <div class="stat-desc">$200000</div>
-      <div class="stat-desc"><input type="checkbox" checked="checked" class="toggle" /></div>
+      <div class="stat-desc"><input type="checkbox" ng-model="stock.checked" ng-click="stock.checked = !stock.checked" class="toggle" /></div>
     </div>
   </div>
 </div>
@@ -201,50 +208,5 @@
         <span ng-if="event.invest.profit != 0" class="font-pct" ng-bind="event.invest.profitRate | pct"></span>
       </div>
     </div>
-
-  </div>
-
-
-  <div class="" ng-repeat="event in simulated.events">
-    <div class="date--dates">
-      <div>
-        <span ng-bind="event.code"></span>
-        <span ng-bind="event.name"></span>
-        MA：<span ng-bind="event.ma"></span>
-        🗓️ <span ng-bind="event.entryDate | dt"></span> ~
-        <span ng-bind="event.exitDate | dt"></span>
-        <span ng-if="event.duration" ng-bind="event.duration + '天'"></span>
-      </div>
-      <span class="rt-badge" ng-if="event.breakout">二日法則</span>
-      <span class="rt-badge" ng-if="event.reentry">重新入場</span>
-    </div>
-
-    <div>
-      <div class="info-banner">
-        💰📈
-        <span class="price--inout" ng-bind="event.entryPrice.scale(2)"></span>
-        （<span ng-bind="event.amount"></span>股）
-      </div>
-      <div class="info-banner" ng-if="event.exitPrice">
-        🏃📉
-        <span class="price--inout" ng-bind="event.exitPrice.scale(2)"></span>
-        （<span ng-bind="event.amount"></span>股）
-      </div>
-    </div>
-    <div class="profit" ng-if="event.duration">
-      <div>🧧 <span class="price--profit" ng-bind="event.profit"></span></div>
-      <span class="pct--profit" ng-bind="event.profitRate | pct"></span>
-    </div>
-    <div ng-if="event.invest" class="profit">
-      <div ng-if="event.invest.profit != 0" class="price--profit">🤑 <span ng-bind="event.invest.profit"></span>
-      </div>
-      <span ng-if="event.invest.profit != 0" class="pct--profit" ng-bind="event.invest.profitRate | pct"></span>
-    </div>
-    <div class="reason">
-      <span ng-bind="event.entryReason"></span>
-      <span ng-bind="event.exitReason"></span>
-      <span class="rt-badge" ng-if="event.exitReason.includes('過熱')">過熱</span>
-    </div>
-    <hr />
   </div>
 </div>

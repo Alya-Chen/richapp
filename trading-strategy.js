@@ -4,6 +4,7 @@ import { Macd, Rsi, BullBear, BollingerBands } from './static/js/macd-kdj.js';
 export class TwoDaysUpEntry {
 	constructor(data, params) {
 		this.name = '連兩日走高進場策略';
+		this.enabled = true;
 		this.data = data;
 		this.params = params;
 		this.params.threshold = this.params.threshold || 0.005; // 收盤價與 MA 的漲幅需超過 0.05%
@@ -28,6 +29,7 @@ export class TwoDaysUpEntry {
 export class DynamicStopExit {
 	constructor(data, params) {
 		this.name = '動態止盈止損出場策略';
+		this.enabled = true;
 		this.params = params;
 	}
 
@@ -91,6 +93,7 @@ export class TigerEntry {
 		this.params = params;
 		this.params.volumeRate = params.volumeRate || 1.2; // 交易增量倍數
 		this.name = `金唬男均線突破${ this.params.breakout ? '二日法則' : '' }進場策略`;
+		this.enabled = true;
 	}
 		
 	// 開倉條件檢查
@@ -130,6 +133,7 @@ export class TigerEntry {
 export class TigerExit {
 	constructor(data, params) {
 		this.name = '金唬男均線出場場策略';
+		this.enabled = true;
 		this.data = data;
 		this.params = params;
 	}
@@ -153,6 +157,7 @@ export class TigerExit {
 export class BullTigerEntry {
 	constructor(data, params) {
 		this.name = '牛市金唬男均線突破進場策略';
+		this.enabled = true;
 		this.data = data || [];
 		this.params = params;
 		if (!this.data.length) return;
@@ -180,6 +185,7 @@ export class RsiTigerExit {
 			console.log(`＃＃＃＃＃＃＃ ${RsiTigerExit.CACHE.date} 初始化 RsiTigerExit.CACHE ＃＃＃＃＃＃＃`);
 		}
 		this.name = 'RSI＋金唬男均線出場場策略';
+		this.enabled = true;
 		this.data = data;
 		this.params = params;
 		this.tigerExit = new TigerExit(data, params);
@@ -203,7 +209,8 @@ export class RsiTigerExit {
 ///////////////////////////////////////////////////////////////////////////////
 export class MacdMaEntry {
 	constructor(data, params) {
-		this.name = 'MACD MA 進場策略';
+		this.name = 'MACD 進場策略';
+		this.enabled = false;
 		this.data = data;
 		this.params = params;
 		this.macd = new Macd(this.data).calculate();
@@ -219,7 +226,8 @@ export class MacdMaEntry {
 
 export class MacdMaExit {
 	constructor(data, params) {
-		this.name = 'MACD MA 出場策略';
+		this.name = 'MACD 出場策略';
+		this.enabled = false;
 		this.data = data;
 		this.params = params;
 		this.macd = new Macd(this.data).calculate();
@@ -236,6 +244,7 @@ export class MacdMaExit {
 export class BBEntryExit {
 	constructor(data, params = {}) {
 		this.name = '布林帶策略';
+		this.enabled = true;
 		this.data = data || [];
 		this.params = Object.assign({
 			period: params.ma ?? 20,
@@ -489,6 +498,7 @@ export class BBEntryExit {
 export class TigerPartialEntryExit {
 	constructor(data, params) {
 		this.name = '金唬男均線分批進出場策略';
+		this.enabled = false;
 		this.data = data;
 		this.cost = []; // 已經投入的資金
 		this.params = params;

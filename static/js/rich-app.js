@@ -98,6 +98,7 @@
 				const stocks = res.data;
 				stocks.forEach(stock => this.backtest(stock));
 				if (callback) callback(stocks);
+				this.$timeout(() => { this.$root.$broadcast('stocksLoaded', stocks) }, 175);
 			});
 		}
 		users(callback) {
@@ -459,7 +460,7 @@
 					css: { width: '70%', height: '60%', left: '15%', top: '20%' }
 				});
 			}
-			$$.showStareds = service.debounce((user) => {
+			$$.showStareds = function(user) {
 				const stareds = (user.settings || {
 					stared: []
 				}).stared;
@@ -470,7 +471,7 @@
 				$$.blocks['📣 可交易'] = $$.openeds;
 				$$.blocks['🧹 近兩週已清倉'] = $$.closeds;
 				$$.blocks['🐮 牛氣沖天'] = $$.bulls;
-			}, 350);
+			};
 			$$.resort = service.debounce(() => {
 				const INVESTED = 10000000000;
 				$$.stareds = $$.stareds.sort((a, b) => (Date.parse(b.trade.entryDate) + (b.trade.invest ? INVESTED : 0)) - (Date.parse(a.trade.entryDate) + (a.trade.invest ? INVESTED : 0)));
@@ -518,11 +519,16 @@
 			$$.$on('logsLoaded', function(_, logs) {
 				$$.logs = logs;
 				$timeout(service.logs.bind(service), 30 * SEC);
-			});			
-			//$$.$emit('stockLoaded');
+			});
+			$$.$on('stocksLoaded', function(_, stocks) {
+				$$.stocks = stocks;
+				if (service.user) $$.showStareds(service.user);
+			});
 			service.notes(location.pathname);
 			service.logs();
-			if (service.user) $$.showStareds(service.user);
+			$timeout(() => {
+				if (!$$.stareds.length) service.stocks();
+			}, 750);
 		},
 		stock: function($$, $params, $timeout, service) {
 			$$.tests = [];
@@ -762,24 +768,29 @@
 			service.notes(location.pathname);			
 		},
 		simulate: function($$, $location, $params, $timeout, service) {
-			if (!$params.codes) return $location.path('/');
-			$params.codes.split('&').forEach(code => {
-				$$.stocks.find(s => s.code == code).checked = true;
-			});			
+			if (!$params.codes) return $location.path('/');		
 			const today = new Date();
 			const twoYearsAgo = new Date(today.getFullYear() - 2, today.getMonth(), today.getDate());
 			$$.money = TOTAL_CAPITAL;
-			$$.takeProfitPcts = [0.05, 0.075, 0.1, 0.125, 0.15];
+			$$.testers = []; 
 			$$.params = {
-				breakout: true, // 入場需符合二日法則
-				reentry: true, // 出場後是否要重複入場
+				breakout: false, // 入場需符合二日法則
+				reentry: false, // 出場後是否要重複入場
 				entryDate: twoYearsAgo,
 				exitDate: today,
 				entryStrategy: '',
 				exitStrategy: [],
-				takeProfitPct: 0.05, // 固定止盈大於入場價格的 10%
+				takeProfitPct: 0.05, // 止盈大於入場價格的 5%
+			};
+			$$.entryStrategyCheck = function() {
+				$$.tigerChecked = $$.params.entryStrategy.includes('Tiger') || $$.exitStrategies.find(s => s.key.includes('Tiger') && s.checked);
+			};
+			$$.exitStrategyCheck = function() {
+				$$.entryStrategyCheck();
+				$$.dynamicExitChecked = $$.exitStrategies.find(s => s.key == 'DynamicStopExit').checked;
 			};
 			$$.start = function() {
+				$$.params.codes = $$.testers.filter(s => s.checked).map(s => s.code).join('&');
 				$$.params.exitStrategy = $$.exitStrategies.filter(s => s.checked).map(s => s.key);
 				if (!$$.params.entryStrategy || !$$.params.exitStrategy.length) return $.growlUI('', `請選擇入場策略和出場策略`);
 				$$.simulated = null;
@@ -808,6 +819,15 @@
 					});
 				});				
 			};
+			$$.$watch('params.takeProfitPct', (takeProfitPct) => {
+				$$.takeProfitPct = (takeProfitPct * 100).toFixed() + '%';
+			});
+			$$.$on('stocksLoaded', function(_, stocks) {
+				$params.codes.split('&').forEach(code => {
+					stocks.find(s => s.code == code).checked = true;
+					$$.testers.push(stocks.find(s => s.code == code));
+				});
+			});			
 			service.strategies((strategies) => {
 				$$.entryStrategies = strategies.entryStrategies;
 				$$.exitStrategies = strategies.exitStrategies;

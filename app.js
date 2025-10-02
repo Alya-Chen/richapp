@@ -177,8 +177,8 @@ app.get('/simulate{/:codes}', async (req, res) => {
 		const strategies = { entryStrategies: [], exitStrategies: [] };
 		Object.keys(st).forEach(key => {
 			const strategy = new st[key]([], {});
-			if (strategy.checkEntry) strategies.entryStrategies.push({ key, name: strategy.name });
-			if (strategy.checkExit) strategies.exitStrategies.push({ key, name: strategy.name });
+			if (strategy.checkEntry && strategy.enabled) strategies.entryStrategies.push({ key, name: strategy.name });
+			if (strategy.checkExit && strategy.enabled) strategies.exitStrategies.push({ key, name: strategy.name });
 		});
 		return res.json(strategies);
 	}
