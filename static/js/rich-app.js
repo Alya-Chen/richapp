@@ -322,10 +322,13 @@
 			$$.simulate = {
 				open: function() {
 					const url = $location.url();
-					if (url.startsWith('/stock/')) return $location.url(url.replace('/stock/', '/simulate/'));
+					if (url.startsWith('/stock/')) {
+						const code = url.split('/').pop();
+						return window.open(`/simulate/${code}`, `_simulate_${code}`);
+					}
 					const codes = $$.stocks.filter(s => s.checked).map(s => s.code).join('&');
 					if (!codes) return $.growlUI('', `請選擇至少一支股票！`);;
-					$location.url(`/simulate/${codes}`);
+					window.open(`/simulate/${codes}`, `_simulate_${codes}`);
 				},
 				setup: function(model) {
 					this.model = model || {};
@@ -522,7 +525,7 @@
 			});
 			$$.$on('stocksLoaded', function(_, stocks) {
 				$$.stocks = stocks;
-				if (service.user) $$.showStareds(service.user);
+				if (service.user && !$$.stareds.length) $$.showStareds(service.user);
 			});
 			service.notes(location.pathname);
 			service.logs();
