@@ -10,12 +10,13 @@
 		'ngRoute',
 	]);
 	///////////////////////////////////////////////////////////////////////////////
-	app.config(['$locationProvider', '$routeProvider', function($locationProvider, $router) {
+	app.config(['$locationProvider', '$sceProvider', '$routeProvider', function($locationProvider, $sceProvider, $router) {
 		$locationProvider.html5Mode(true);
+		$sceProvider.enabled(false);
 		$router.when('/', {
 			templateUrl: 'home.html',
 			controller: 'homeCtrl'
-		}).when('/stock/:code?', {
+		}).when('/stock/:code?/:ma?', {
 			templateUrl: 'stock.html',
 			controller: 'stockCtrl'
 		}).when('/simulate/:codes?', {
@@ -324,11 +325,11 @@
 					const url = $location.url();
 					if (url.startsWith('/stock/')) {
 						const code = url.split('/').pop();
-						return window.open(`/simulate/${code}`, `_simulate_${code}`);
+						return window.open(`/simulate/${code}`, `_simulate/${code}`);
 					}
 					const codes = $$.stocks.filter(s => s.checked).map(s => s.code).join('&');
 					if (!codes) return $.growlUI('', `請選擇至少一支股票！`);;
-					window.open(`/simulate/${codes}`, `_simulate_${codes}`);
+					window.open(`/simulate/${codes}`, `_simulate/${codes}`);
 				},
 				setup: function(model) {
 					this.model = model || {};
@@ -378,7 +379,7 @@
 				stocks: []
 			};	
 			$$.changeTo = function(code) {
-				window.open(`/stock/${code}`, `_stock_${code}`);
+				window.open(`/stock/${code}`, `_stock/${code}`);
 			};
 			$$.edit = function(note) {
 				$$.$emit('noteEditing', note);
@@ -735,7 +736,7 @@
 				service.dailies($$.stock, (dailies) => {
 					if (!dailies.length) return;
 					$$.stock.dailies = dailies;
-					$$.chart = new StockChart('stock-chart', dailies).draw($$.chartAxis.all); //.addMa($$.stock.defaultMa);
+					$$.chart = new StockChart('stock-chart', dailies).draw($$.chartAxis.all);
 					$$.backtest($$.stock.defaultMa);
 					if ($$.stock.trades) {
 						$$.stock.trade = $$.stock.trades.find(t => t.entryDate && !t.exitDate);
@@ -755,7 +756,7 @@
 			};			
 			service.stock($params.code, (stock) => {
 				$$.stock = stock;
-				//$$.stock.tigerMa = tigerMa.split(/[\/,]/).map(Number);
+				$$.stock.defaultMa = $params.ma || stock.defaultMa;
 				if (service.user) {
 					const stareds = (service.user.settings || {
 						stared: []
@@ -783,7 +784,9 @@
 				exitDate: today,
 				entryStrategy: '',
 				exitStrategy: [],
-				takeProfitPct: 0.05, // 止盈大於入場價格的 5%
+				stopLossPct: 0.03, // 止損小於入場價格的 3%
+				takeProfitPct: 0.05, // 固定止盈大於入場價格的 5%
+				dynamicStopPct: 0 // 動態止損小於入場後曾經最高價格的 0%
 			};
 			$$.entryStrategyCheck = function() {
 				$$.tigerChecked = $$.params.entryStrategy.includes('Tiger') || $$.exitStrategies.find(s => s.key.includes('Tiger') && s.checked);
@@ -817,13 +820,18 @@
 							event.exitPrice = event.price;
 							event.duration = (event.exitDate - pre.entryDate) / ONE_DAY;
 							event.profitRate = (event.exitPrice - event.entryPrice) / event.entryPrice;
-							event.exitReason = event.reason;
+							event.exitReason = event.reason.replace('\n', '<br/>');
 						}
 					});
 				});				
 			};
-			$$.$watch('params.takeProfitPct', (takeProfitPct) => {
-				$$.takeProfitPct = (takeProfitPct * 100).toFixed() + '%';
+			$$.open = function(event) {
+				window.open(`/stock/${event.code}/${event.ma}`, `_stock/${event.code}/${event.ma}`);
+			};
+			$$.$watchGroup(['params.takeProfitPct', 'params.stopLossPct', 'params.dynamicStopPct'], () => {
+				$$.takeProfitPct = ($$.params.takeProfitPct * 100).toFixed() + '%';
+				$$.stopLossPct = ($$.params.stopLossPct * 100).toFixed() + '%';
+				$$.dynamicStopPct = ($$.params.dynamicStopPct * 100).toFixed() + '%';
 			});
 			$$.$on('stocksLoaded', function(_, stocks) {
 				$params.codes.split('&').forEach(code => {

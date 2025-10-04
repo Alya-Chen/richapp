@@ -49,9 +49,10 @@ app.get('/dividends', async (req, res) => {
   	res.json(trades.filter(t => t.payDate));
 });
 
-app.get('/stock/:code', async (req, res) => {
+app.get('/stock/:code{/:ma}', async (req, res) => {
 	if (req.headers.accept.includes('application/json')) {
 		const stock = await stockService.getStock(req.params.code);
+		stock.defaultMa = req.params.ma || stock.defaultMa;
 		return res.json(stock);
 	}
 	res.sendFile('static/index.html', { root: __dirname });

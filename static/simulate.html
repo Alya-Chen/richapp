@@ -47,8 +47,14 @@
           <input type="checkbox" ng-model="params.reentry" class="checkbox" />重新入場
         </div>
         <div class="ml-4" ng-if="dynamicExitChecked">
+          止損百分比（<span ng-bind="stopLossPct"></span>）：
+          <input type="number" ng-model="params.stopLossPct" step="0.01" />
           止盈百分比（<span ng-bind="takeProfitPct"></span>）：
           <input type="number" ng-model="params.takeProfitPct" step="0.01" />
+          <!--
+          動態止損百分比（<span ng-bind="dynamicStopPct"></span>）：
+          <input type="number" ng-model="params.dynamicStopPct" step="0.01" />
+          -->
         </div>
       </div>
     </div>    
@@ -114,12 +120,36 @@
     <span class="stat-title">模擬股數</span>
     <span class="stat-value text-white" ng-bind="simulated.summary.stockCount"></span>
   </div>
+  <div class="stat">
+    <span class="stat-title">盈虧比</span>
+    <span class="stat-value text-white" ng-bind="simulated.summary.pnl"></span>
+  </div>
+  <div class="stat">
+    <span class="stat-title">期望值</span>
+    <span class="stat-value text-white" ng-bind="simulated.summary.expectation"></span>
+  </div>
+  <div class="stat">
+    <span class="stat-title">勝率</span>
+    <span class="stat-value text-white" ng-bind="simulated.summary.winRate | pct"></span>
+  </div>
+  <div class="stat">
+    <span class="stat-title">二日有效率</span>
+    <span class="stat-value text-white" ng-bind="simulated.summary.breakoutRate | pct"></span>
+  </div>
+  <div class="stat" ng-if="simulated.summary.reentry">
+    <span class="stat-title">返場</span>
+    <span class="stat-value text-white" ng-bind="simulated.summary.reentry"></span> 次
+    成功 <span class="stat-value text-white" ng-bind="simulated.summary.reentryWins"></span> 次
+    勝率 <span class="stat-value text-white" ng-bind="simulated.summary.reentryWinRate | pct"></span></span>
+    損益 <span class="stat-value text-white" ng-bind="simulated.summary.reentryProfit"></span>
+    占比 <span class="stat-value text-white" ng-bind="(simulated.summary.reentryProfit / simulated.summary.profit) | pct"></span></span>
+  </div>
 </div>
 
 <div class="w-[85%] mx-auto max-w-6xl bg-base-100">
   <div class="pl-5 pr-5 grid grid-cols-[200px_auto_250px] hover:bg-base-200" ng-repeat="event in simulated.events"
     ng-Class="'item_' + event.code">
-    <div class="stat grid-rows-[20px_40px_auto]">
+    <div class="stat grid-rows-[20px_40px_auto]" style="cursor: pointer;" ng-click="open(event)">
       <span ng-bind="event.code" class="stat-title"></span>
       <span ng-bind="event.name" class="stat-value"></span>
       <span ng-bind="event.ma" class="stat-desc before:content-['MA']"></span>
@@ -169,7 +199,7 @@
 
 
           <span class="badge badge-primary" ng-if="event.exitReason.includes('過熱')">過熱</span>
-          <span class="text-sm/6 text-success" ng-bind="event.exitReason"></span>
+          <span class="text-sm/6 text-success" ng-bind-html="event.exitReason"></span>
           </span>
 
         </div>

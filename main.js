@@ -41,15 +41,15 @@ const params = {
     reentry: true, // 出場後是否要重複入場
     entryDate: new Date('2024-01-01'), //dateFns.addYears(dateFns.addMonths(new Date(), -6), -1), // 取前一年半資料
     exitDate: new Date(),
-    //entryStrategy: st.BullTigerEntry,
-    entryStrategy: st.BBEntryExit,
-    exitStrategy: [st.BBEntryExit], //[st.DynamicStopExit, st.RsiTigerExit],
+    //entryStrategy: st.BullTigerEntry, BBEntryExit, TwoDaysUpEntry
+    entryStrategy: st.BullTigerEntry,
+    exitStrategy: [st.DynamicStopExit], //[st.DynamicStopExit, st.RsiTigerExit],
     //exitStrategy: st.RsiTigerExit,
     //entryStrategy: st.MacdMaEntry,
     //exitStrategy: st.MacdMaExit,
-    //stopLossPct: 0.03, // 止損小於入場價格的 3%
-    takeProfitPct: 0.05, // 固定止盈大於入場價格的 10%
-    //dynamicStopPct: 0.05, // 動態止損小於曾經最高價格的 5%
+    stopLossPct: 0.03, // 止損小於入場價格的 3%
+    takeProfitPct: 0.05, // 固定止盈大於入場價格的 5%
+    dynamicStopPct: 0.07, // 動態止損小於曾經最高價格的 7%
     //maxHoldPeriod: 30 // 最大持倉周期 30 天
 };
 
@@ -143,13 +143,13 @@ async function main() {
 		}
     }
     if (STOCK_CODE == 'invest') {
-		for (const year of [2023]) { //, 2024, 2025
-			params.entryDate = new Date(year + '-09-28');
-			params.exitDate = new Date(year + 2 + '-09-28');
+		for (const year of [2024]) { //, 2024, 2025
+			params.entryDate = new Date(year + '-10-04');
+			params.exitDate = new Date(year + 2 + '-10-04');
 			//params.transient = true;
 			//let	tests = await service.backtest(TOP10, params);	
 	        //let result = service.invest(tests, null, params.entryDate, params.exitDate);
-            const investor = new Investor(['2382', '2317'], 555022, params);
+            const investor = new Investor(['2324'], 555022, params);
             const result = await investor.invest(TOP10, params);
 	        //console.log(result);
             console.log(JSON.stringify(result.data));

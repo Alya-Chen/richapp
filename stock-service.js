@@ -145,7 +145,7 @@ class Service {
 	async backtest(code, params) {
 		//const now = new Date().getTime();
 		params = Object.assign({
-			entryDate: dateFns.addYears(dateFns.addMonths(new Date(), -6), -1),  // 取前一年半資料 new Date('2024/01/01')
+			entryDate: dateFns.addYears(new Date(), -2),  // 取前兩年資料
 			exitDate: new Date(),
 			threshold: 0.005, // MA 需增量 0.5%
 			volumeRate: 1.2, // 交易需增量倍數
@@ -394,7 +394,7 @@ class Service {
 	}
 	
 	async dailies(code, startDate) {
-		startDate = startDate || dateFns.addYears(dateFns.addMonths(new Date(), -6), -3); // 取前兩年半資料
+		startDate = startDate || dateFns.addYears(new Date(), -3); // 取前三年前資料
 		let result = await db.StockDaily.query(code, startDate, new Date());
 		if (!result.length) {
 			const stock = await this.getStock(code);

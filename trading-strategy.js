@@ -62,7 +62,7 @@ export class DynamicStopExit {
 		if (dynamicStopPct) {
 			const dynamicStop = this.getDynamicStop(day);
 			exitConditions.push({
-				reason: `止盈觸發：${day.close.scale()} 小於曾經最高價格 ${dynamicStop.scale()} 的 ${dynamicStopPct * 100}%`,
+				reason: `止損觸發：${day.close.scale()} 小於曾經最高價格 ${dynamicStop.scale()} 的 ${dynamicStopPct * 100}%`,
 				condition: day.close <= dynamicStop
 			});
 		}
@@ -73,8 +73,11 @@ export class DynamicStopExit {
 				condition: day.date - position.entryDate > maxHoldPeriod * 24 * 60 * 60 * 1000
 			});
 		}
-		
-		return exitConditions.find(c => c.condition);
+		const condition = exitConditions.find(c => c.condition);
+		if (condition) {
+			this.dynamicStop = 0; // reset
+		}
+		return condition;
 	}
 	
 	// 更新動態止損，交易日最高價格的 xx%
@@ -373,7 +376,7 @@ export class BBEntryExit {
 		if (lowVol && d1Break && d2Hold && d2NewHigh) {
 			return {
 				rule: '布林帶突破多',
-				reason: `布林帶突破多：低帶寬 + 二日上軌外且創短期新高`
+				reason: `布林帶突破多：低帶寬 ${day.bb.bandwidth.scale(2)} + 二日上軌外 ${day.bb.upper.scale(2)} 且創短期新高 ${shortHigh.scale(2)}`
 			};
 		}
 		return null;
@@ -412,7 +415,7 @@ export class BBEntryExit {
 		if (touchedMiddle && reclaimedMiddle && momentumUp) {
 			return {
 				action: 'pyramid',
-				reason: '沿上軌行進中回踩不破中軌且轉強，加碼'
+				reason: `沿上軌行進中回踩不破中軌 ${day.bb.middle.scale(2)} 且轉強，加碼`
 			};
 		}
 		return null;
@@ -434,7 +437,7 @@ export class BBEntryExit {
 			const twoDaysBelowMiddle = (prev.close < prev.bb.middle) && (day.close < day.bb.middle);
 			if (twoDaysBelowMiddle) {
 				return {
-					reason: '規則2：已上中軌後，連兩日收盤跌破中軌，出清'
+					reason: `出清：已上中軌後，連兩日收盤跌破中軌 ${day.bb.middle.scale(2)}`
 				};
 			}
 		}
@@ -443,12 +446,12 @@ export class BBEntryExit {
 			const atrStop = position.entryPrice - this.params.atrMul * day.atr;
 			if (day.close < atrStop) {
 				return {
-					reason: `規則1：跌破 ATR×${this.params.atrMul} 動態停損，出清`
+					reason: `出清：跌破 ATR×${this.params.atrMul} ${atrStop.scale(2)} 動態停損`
 				};
 			}
 			if (position.day2Low != null && day.close < position.day2Low) {
 				return {
-					reason: '規則1：跌破 Day2 低點停損，出清'
+					reason: `出清：跌破 Day2 低點 ${position.day2Low.scale(2)} 停損`
 				};
 			}
 		}
@@ -464,7 +467,7 @@ export class BBEntryExit {
 				position.tookProfit1 = true;
 				return {
 					ratio: 0.5,
-					reason: '到達中軌，先出 50%',
+					reason: `先出 50%：到達入場中軌 ${profit1At.scale(2)}`,
 					status: 'closed-50%'
 				};
 			}
@@ -472,7 +475,7 @@ export class BBEntryExit {
 				position.tookProfit2 = true;
 				return {
 					ratio: position.tookProfit1 ? 0.5 : 1,
-					reason: '到達上軌，全數出清',
+					reason: `出清：到達入場上軌 ${profit2At.scale(2)}`,
 					status: 'closed'
 				};
 			}

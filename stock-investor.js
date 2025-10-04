@@ -40,7 +40,8 @@ class Investor {
 				initialMoney: this.money,
 				finalMoney: null,
 				totalProfit: null,
-				stockCount: tests.length
+				stockCount: tests.length,
+				...this.calculateMetrics(tests)
 			},
 			//timeline: [], // 每日資金/累積損益快照
 			events: [],   // 交易事件：buy/sell
@@ -112,6 +113,33 @@ class Investor {
 			trades
 		};
 	}
+	// 績效指標計算
+	calculateMetrics(tests) {
+		const trades = tests.map(t => t.trades).flat().filter(t => t.status === 'closed');
+		const wins = trades.filter(t => t.profit > 0); // 有獲利的交易數
+		const reentry = trades.filter(t => t.reentry); // 返場的交易數
+		const reentryWins = trades.filter(t => (t.reentry && t.profit > 0)); // 返場有獲利的交易數
+		const reentryProfit = trades.reduce((sum, t) => sum + (t.reentry ? t.profit : 0), 0); // 返場的獲利金額
+		const profit = trades.reduce((sum, t) => sum + (t.profit > 0 ? t.profit : 0), 0); // 總獲利金額
+		const loss = trades.reduce((sum, t) => sum + (t.profit < 0 ? t.profit : 0), 0); // 總虧損金額
+		const breakouts = trades.reduce((sum, t) => sum + (t.breakout || 0), 0);
+		const pnl = profit / Math.abs(loss || 1); // 盈虧比：總獲利金額除以總虧損金額
+		const winRate = wins.length / trades.length;
+		const expectation = (pnl * winRate) - (1 - winRate); // 期望值 =（盈虧比 x 勝率）–（1 - 勝率）
+		return {
+			profit: (profit + loss).scale(),
+			loss: loss.scale(),
+			profitRate: (trades.reduce((sum, t) => sum + t.profitRate, 0)).scale(),
+			breakoutRate: (breakouts / trades.length).scale(),
+			winRate: winRate.scale(),
+			reentry: reentry.length,
+			reentryWins: reentryWins.length,
+			reentryWinRate: (reentryWins.length / reentry.length).scale(),
+			reentryProfit: reentryProfit.scale(),
+			pnl: pnl.scale(),
+			expectation: expectation.scale()
+		};
+	}	
 }
 
 
