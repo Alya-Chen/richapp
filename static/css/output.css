@@ -2457,6 +2457,9 @@
   .col-start-2 {
     grid-column-start: 2;
   }
+  .row-span-2 {
+    grid-row: span 2 / span 2;
+  }
   .row-start-2 {
     grid-row-start: 2;
   }
@@ -2591,6 +2594,9 @@
     &:where(*:is(:disabled, [disabled], .btn-disabled)) {
       border-width: var(--border, 1px) 0 var(--border, 1px) var(--border, 1px);
     }
+  }
+  .mt-2 {
+    margin-top: calc(var(--spacing) * 2);
   }
   .mt-4 {
     margin-top: calc(var(--spacing) * 4);
@@ -3069,6 +3075,12 @@
   .grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  .grid-cols-6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .grid-cols-8 {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
   .grid-cols-\[00px_auto_350px\] {
     grid-template-columns: 00px auto 350px;
   }
@@ -3479,6 +3491,9 @@
     color: var(--color-primary-content);
     --input-color: var(--color-primary);
   }
+  .progress-success {
+    color: var(--color-success);
+  }
   .text-accent {
     color: var(--color-accent);
   }
@@ -3680,6 +3695,36 @@
   .before\:content-\[\'MA\'\] {
     &::before {
       --tw-content: 'MA';
+      content: var(--tw-content);
+    }
+  }
+  .before\:content-\[\'佔比\'\] {
+    &::before {
+      --tw-content: '佔比';
+      content: var(--tw-content);
+    }
+  }
+  .before\:content-\[\'勝率\%\'\] {
+    &::before {
+      --tw-content: '勝率%';
+      content: var(--tw-content);
+    }
+  }
+  .before\:content-\[\'勝率\'\] {
+    &::before {
+      --tw-content: '勝率';
+      content: var(--tw-content);
+    }
+  }
+  .before\:content-\[\'損益\$\'\] {
+    &::before {
+      --tw-content: '損益$';
+      content: var(--tw-content);
+    }
+  }
+  .before\:content-\[\'損益\'\] {
+    &::before {
+      --tw-content: '損益';
       content: var(--tw-content);
     }
   }
