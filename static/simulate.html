@@ -1,5 +1,4 @@
 <div class="mb-6 w-[85%] mx-auto max-w-6xl pb-2">
-
   <details class="collapse collapse-arrow" open>
     <summary class="collapse-title font-semibold">
       <div class="flex gap-4 mt-4 text-xl text-success mb-4">
@@ -121,6 +120,10 @@
     <span class="stat-value text-white" ng-bind="simulated.summary.stockCount"></span>
   </div>
   <div class="stat">
+    <span class="stat-title">交易次數</span>
+    <span class="stat-value text-white" ng-bind="simulated.summary.totalTrades"></span>
+  </div>
+  <div class="stat">
     <span class="stat-title">盈虧比</span>
     <span class="stat-value text-white" ng-bind="simulated.summary.pnl"></span>
   </div>
@@ -145,8 +148,10 @@
     占比 <span class="stat-value text-white" ng-bind="(simulated.summary.reentryProfit / simulated.summary.profit) | pct"></span></span>
   </div>
 </div>
-
 <div class="w-[85%] mx-auto max-w-6xl bg-base-100">
+  <div class="pl-5 pr-5 grid grid-cols-[200px_auto_250px] hover:bg-base-200" ng-if="simulating">
+    正在模擬試算中...
+  </div>
   <div class="pl-5 pr-5 grid grid-cols-[200px_auto_250px] hover:bg-base-200" ng-repeat="event in simulated.events"
     ng-Class="'item_' + event.code">
     <div class="stat grid-rows-[20px_40px_auto]" style="cursor: pointer;" ng-click="open(event)">
@@ -163,20 +168,17 @@
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" />
           </svg>
-
         </div>
         <div class="timeline-end flex">
           <div class="timeline-box mr-1.5 h-fit flex flex-col text-right whitespace-nowrap">
             <span class="font-price text-xl" ng-bind="event.entryPrice.scale(2)"></span>
             <span class="text-sm after:content-['股'] after:text-xs" ng-bind="event.amount"></span>
           </div>
-
           <span>
             <span class="badge badge-secondary" ng-if="event.breakout">二日法則</span>
             <span class="badge badge-secondary" ng-if="event.reentry">重新入場</span>
             <span class="text-sm/6 text-success" ng-bind="event.entryReason"></span>
           </span>
-
         </div>
         <hr class="pt-11" />
       </li>
@@ -196,12 +198,9 @@
             <span class="text-sm after:content-['股'] after:text-xs" ng-bind="event.amount"></span>
             <span>
           </div>
-
-
           <span class="badge badge-primary" ng-if="event.exitReason.includes('過熱')">過熱</span>
           <span class="text-sm/6 text-success" ng-bind-html="event.exitReason"></span>
           </span>
-
         </div>
         <hr />
       </li>
@@ -211,11 +210,8 @@
         </div>
       </li>
     </ul>
-
     <div ng-if="!event.duration && !event.invest" class="border-l-2 border-primary border-dashed">
-
     </div>
-
     <div ng-if="event.duration" class="border-l-2 border-primary">
       <div class="flex mt-8 items-end">
         <div
@@ -226,8 +222,6 @@
         <span class="font-pct" ng-bind="event.profitRate | pct"></span>
       </div>
     </div>
-
-
     <div ng-if="event.invest" class="border-l-2 border-primary">
       <div ng-if="event.invest.profit != 0" class="flex mt-8 items-end">
         <div

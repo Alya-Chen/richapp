@@ -321,18 +321,21 @@
 				}
 			};
 			$$.simulate = {
+				stockGroups: ['我選的股票', '我的關注','可交易','全部台股','全部上市台股','全部上櫃台股','全部美股'],
 				open: function() {
 					const url = $location.url();
 					if (url.startsWith('/stock/')) {
 						const code = url.split('/').pop();
 						return window.open(`/simulate/${code}`, `_simulate/${code}`);
 					}
-					const codes = $$.stocks.filter(s => s.checked).map(s => s.code).join('&');
-					if (!codes) return $.growlUI('', `請選擇至少一支股票！`);;
+					let codes = $$.stocks.filter(s => s.checked).map(s => s.code).join('&');
+					if ($$.simulate.stockGroup == '我選的股票' && !codes) return $.growlUI('', `請選擇至少一支股票！`);
+					codes = codes || $$.simulate.stockGroup;
 					window.open(`/simulate/${codes}`, `_simulate/${codes}`);
 				},
-				setup: function(model) {
-					this.model = model || {};
+				setup: function() {
+					const stocks = $$.stocks.filter(s => s.checked);
+					$$.simulate.stockGroup = stocks.length ? '我選的股票' : '我的關注';
 					$.blockUI({
 						message: $('#simulate-form'),
 						onOverlayClick: $.unblockUI
@@ -772,9 +775,9 @@
 			service.notes(location.pathname);			
 		},
 		simulate: function($$, $location, $params, $timeout, service) {
-			if (!$params.codes) return $location.path('/');		
+			if (!$params.codes) return $location.path('/');
 			const today = new Date();
-			const twoYearsAgo = new Date(today.getFullYear() - 2, today.getMonth(), today.getDate());
+			const twoYearsAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
 			$$.money = TOTAL_CAPITAL;
 			$$.testers = []; 
 			$$.params = {
@@ -799,11 +802,12 @@
 				$$.params.codes = $$.testers.filter(s => s.checked).map(s => s.code).join('&');
 				$$.params.exitStrategy = $$.exitStrategies.filter(s => s.checked).map(s => s.key);
 				if (!$$.params.entryStrategy || !$$.params.exitStrategy.length) return $.growlUI('', `請選擇入場策略和出場策略`);
+				$$.simulating = true;
 				$$.simulated = null;
 				const codes = $$.stocks.filter(s => s.checked).map(s => s.code);
 				service.simulate(codes, $$.money, $$.params, (simulated) => {
 					$$.simulated = simulated.data;
-					console.log(simulated.data);
+					//console.log(simulated.data);
 					const pres = {};
 					$$.simulated.events.forEach(event => {
 						if (event.type == 'buy') {
@@ -823,6 +827,7 @@
 							event.exitReason = event.reason.replace('\n', '<br/>');
 						}
 					});
+					$$.simulating = false;
 				});				
 			};
 			$$.open = function(event) {
@@ -834,6 +839,10 @@
 				$$.dynamicStopPct = ($$.params.dynamicStopPct * 100).toFixed() + '%';
 			});
 			$$.$on('stocksLoaded', function(_, stocks) {
+				if ($params.codes == '我的關注') {
+					const stareds = service.user.settings.stared;
+					$params.codes = $$.stocks.filter(s => stareds.find(ss => ss == s.code)).map(s => s.code).join('&');
+				}				
 				$params.codes.split('&').forEach(code => {
 					stocks.find(s => s.code == code).checked = true;
 					$$.testers.push(stocks.find(s => s.code == code));

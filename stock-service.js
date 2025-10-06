@@ -73,7 +73,7 @@ class Service {
 			//if (!stock.otc) continue;
 			//if (stock.id < 264) continue;
 			if (code && stock.code != code) continue;
-			const last = { date: new Date('2025-06-20') };//forced ? null : await db.StockDaily.last(stock.code);
+			const last = forced ? null : await db.StockDaily.last(stock.code);
 			const result = await new Crawler(stock).fetchAll(last ? new Date(last.date) : null);
 			for (let i = 0; i < result.length; i++) {
 				const daily = result[i];
@@ -145,7 +145,7 @@ class Service {
 	async backtest(code, params) {
 		//const now = new Date().getTime();
 		params = Object.assign({
-			entryDate: dateFns.addYears(new Date(), -2),  // 取前兩年資料
+			entryDate: dateFns.addYears(new Date(), -1),  // 取前一年資料
 			exitDate: new Date(),
 			threshold: 0.005, // MA 需增量 0.5%
 			volumeRate: 1.2, // 交易需增量倍數
@@ -153,8 +153,8 @@ class Service {
 			reentry: true, // 過熱出場後是否要重複入場
 			entryStrategy: st.BullTigerEntry,
 			exitStrategy: [st.RsiTigerExit],
-			//stopLossPct: 0.03, // 止損小於入場價格的 3%
-			//takeProfitPct: 0.1, // 固定止盈大於入場價格的 10%
+			stopLossPct: 0.03, // 止損小於入場價格的 3%
+			takeProfitPct: 0.1, // 固定止盈大於入場價格的 10%
 			//dynamicStopPct: 0.05, // 動態止損小於曾經最高價格的 5%
 			//maxHoldPeriod: 30 // 最大持倉周期 30 天
 		}, params || {});
@@ -212,7 +212,7 @@ class Service {
 				)[0];
 				stock.defaultMa = best.ma;				
 			}
-                        const profitRate = (best.profitRate * 100).scale(0) + '%';
+            const profitRate = (best.profitRate * 100).scale(0) + '%';
 			best.code = stock.code;
 			best.name = stock.name;
 			best.opened = best.trades.find(trade => trade.status != 'closed') !== undefined;
@@ -394,7 +394,7 @@ class Service {
 	}
 	
 	async dailies(code, startDate) {
-		startDate = startDate || dateFns.addYears(new Date(), -3); // 取前三年前資料
+		startDate = startDate || dateFns.addYears(new Date(), -2); // 取前兩年前資料
 		let result = await db.StockDaily.query(code, startDate, new Date());
 		if (!result.length) {
 			const stock = await this.getStock(code);

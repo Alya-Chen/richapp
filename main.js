@@ -145,7 +145,7 @@ async function main() {
     if (STOCK_CODE == 'invest') {
 		for (const year of [2024]) { //, 2024, 2025
 			params.entryDate = new Date(year + '-10-04');
-			params.exitDate = new Date(year + 2 + '-10-04');
+			params.exitDate = new Date(year + 1 + '-10-04');
 			//params.transient = true;
 			//let	tests = await service.backtest(TOP10, params);	
 	        //let result = service.invest(tests, null, params.entryDate, params.exitDate);

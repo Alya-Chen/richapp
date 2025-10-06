@@ -47,14 +47,14 @@ export class DynamicStopExit {
 		// 固定止損
 		if (stopLossPct) {
 			exitConditions.push({
-				reason: `止損觸發：${day.close.scale()} 小於入場價格 ${position.entryPrice.scale()} 的 ${stopLossPct * 100}%`,
+				reason: `止損觸發：${day.close.scale()} 小於入場價格 ${position.entryPrice.scale()} 的 ${(stopLossPct * 100).scale()}%`,
 				condition: day.close <= position.entryPrice * (1 - stopLossPct)
 			});
 		}
 		// 固定止盈
 		if (takeProfitPct) {
 			exitConditions.push({
-				reason: `止盈觸發：${day.close.scale()} 大於入場價格 ${position.entryPrice.scale()} 的 ${takeProfitPct * 100}%`,
+				reason: `止盈觸發：${day.close.scale()} 大於入場價格 ${position.entryPrice.scale()} 的 ${(takeProfitPct * 100).scale()}%`,
 				condition: day.close >= position.entryPrice * (1 + takeProfitPct)
 			});
 		}
@@ -62,7 +62,7 @@ export class DynamicStopExit {
 		if (dynamicStopPct) {
 			const dynamicStop = this.getDynamicStop(day);
 			exitConditions.push({
-				reason: `止損觸發：${day.close.scale()} 小於曾經最高價格 ${dynamicStop.scale()} 的 ${dynamicStopPct * 100}%`,
+				reason: `止損觸發：${day.close.scale()} 小於曾經最高價格 ${dynamicStop.scale()} 的 ${(dynamicStopPct * 100).scale()}%`,
 				condition: day.close <= dynamicStop
 			});
 		}

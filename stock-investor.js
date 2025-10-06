@@ -40,8 +40,7 @@ class Investor {
 				initialMoney: this.money,
 				finalMoney: null,
 				totalProfit: null,
-				stockCount: tests.length,
-				...this.calculateMetrics(tests)
+				stockCount: tests.length
 			},
 			//timeline: [], // 每日資金/累積損益快照
 			events: [],   // 交易事件：buy/sell
@@ -55,13 +54,12 @@ class Investor {
 				test.trades = test.trades || test.result.trades;
 				let trade = test.trades.find(t => t.status == 'closed' && exitDate.isAfter(t.exitDate) && entryDate.isSameDay(t.entryDate));
 				if (trade) {
-					let amount = parseInt(invested.money / trade.entryPrice);
-					amount = amount > 1000 ? 1000 : amount;
-					if (amount > 0) {
-						const money = amount * trade.entryPrice;
+					trade.amount = parseInt(invested.money / trade.entryPrice);
+					trade.amount = trade.amount > 1000 ? 1000 : trade.amount;
+					if (trade.amount > 0) {
+						const money = trade.amount * trade.entryPrice;
 						invested.money -= money;
 						trades.push({
-							amount,
 							code: test.code,
 							name: test.name,
 							ma: test.ma,
@@ -69,10 +67,10 @@ class Investor {
 							...trade
 						});
 						// 事件與分組
-						data.events.push({ type: 'buy', date: trade.entryDate, code: test.code, name: test.name, ma: test.ma, price: trade.entryPrice, amount, cashAfter: invested.money, reason: trade.entryReason });
+						data.events.push({ type: 'buy', date: trade.entryDate, code: test.code, name: test.name, ma: test.ma, price: trade.entryPrice, amount: trade.amount, cashAfter: invested.money, reason: trade.entryReason });
 						if (!data.byCode[test.code]) data.byCode[test.code] = { code: test.code, name: test.name, ma: test.ma, trades: [] };
 						data.byCode[test.code].trades.push({
-							amount,
+							amount: trade.amount,
 							status: trade.status,
 							entryDate: trade.entryDate,
 							entryPrice: trade.entryPrice,
@@ -80,7 +78,7 @@ class Investor {
 							exitDate: trade.exitDate,
 							exitPrice: trade.exitPrice,
 							exitReason: trade.exitReason,
-							profit: (amount * trade.profit).scale(),
+							profit: (trade.amount * trade.profit).scale(),
 							reentry: trade.reentry || false
 						});
 					}
@@ -105,6 +103,7 @@ class Investor {
 		// 完成摘要
 		data.summary.finalMoney = invested.money;
 		data.summary.totalProfit = invested.profit;
+		data.summary = Object.assign(data.summary, this.calculateMetrics(tests));
 		return {
 			csv: csv.join('\r\n'),
 			data,
@@ -120,13 +119,14 @@ class Investor {
 		const reentry = trades.filter(t => t.reentry); // 返場的交易數
 		const reentryWins = trades.filter(t => (t.reentry && t.profit > 0)); // 返場有獲利的交易數
 		const reentryProfit = trades.reduce((sum, t) => sum + (t.reentry ? t.profit : 0), 0); // 返場的獲利金額
-		const profit = trades.reduce((sum, t) => sum + (t.profit > 0 ? t.profit : 0), 0); // 總獲利金額
-		const loss = trades.reduce((sum, t) => sum + (t.profit < 0 ? t.profit : 0), 0); // 總虧損金額
+		const profit = trades.reduce((sum, t) => sum + (t.profit > 0 ? t.profit : 0) * t.amount, 0); // 總獲利金額
+		const loss = trades.reduce((sum, t) => sum + (t.profit < 0 ? t.profit : 0) * t.amount, 0); // 總虧損金額
 		const breakouts = trades.reduce((sum, t) => sum + (t.breakout || 0), 0);
 		const pnl = profit / Math.abs(loss || 1); // 盈虧比：總獲利金額除以總虧損金額
 		const winRate = wins.length / trades.length;
 		const expectation = (pnl * winRate) - (1 - winRate); // 期望值 =（盈虧比 x 勝率）–（1 - 勝率）
 		return {
+			totalTrades: trades.length,
 			profit: (profit + loss).scale(),
 			loss: loss.scale(),
 			profitRate: (trades.reduce((sum, t) => sum + t.profitRate, 0)).scale(),

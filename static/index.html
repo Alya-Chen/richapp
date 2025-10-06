@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="zh-TW" data-theme="rosewood">
-
 <head>
   <base href="/">
   <link rel="icon" href="gold.ico">
@@ -13,11 +12,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"
     rel="stylesheet">
-
   <link rel="stylesheet" href="/css/output.css?date=20251001" />
   <!-- 自定義樣式 --><!-- 自定義主題 CSS -->
   <link href="css/themes.css" rel="stylesheet" type="text/css" />
-
   <script src="https://code.highcharts.com/stock/highstock.js"></script>
   <script src="https://code.highcharts.com/stock/modules/data.js"></script>
   <script src="https://code.highcharts.com/modules/accessibility.js"></script>
@@ -34,7 +31,6 @@
   <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js" crossorigin="anonymous"
     referrerpolicy="no-referrer"></script>
 </head>
-
 <body ng-app="rich-app" ng-controller="indexCtrl" class="bg-base-200 text-base-content font-rich">
   <!-- 使用 DaisyUI 的 navbar 組件 -->
   <div class="navbar bg-base-100 shadow-sm">
@@ -53,7 +49,6 @@
           <option value="">-- 請選擇股票 --</option>
         </select>
       </div>
-
       <!-- MA 選擇器 -->
       <div class="form-control">
         <select class="select select-bordered select-sm w-full max-w-xs" ng-model="stock.defaultMa"
@@ -61,7 +56,6 @@
           <option value="">-- MA設定 --</option>
         </select>
       </div>
-
       <!-- 用戶選擇器 -->
       <div class="form-control">
         <select class="select select-bordered select-sm w-full max-w-xs" ng-model="user" ng-change="switch()"
@@ -78,7 +72,7 @@
             <use xlink:href="css/symbol-defs.svg#icon-eye-plus"></use>
           </svg> 股票
         </button>
-        <button class="btn btn-primary join-item" ng-click="simulate.open()" data-tip="模擬回測">
+        <button class="btn btn-primary join-item" ng-click="simulate.setup()" data-tip="模擬回測">
           <svg fill="currentColor" class="icon-spinner9 size-[1em]">
             <use xlink:href="css/symbol-defs.svg#icon-spinner9"></use>
           </svg> 回測
@@ -86,8 +80,6 @@
       </div>
     </div>
   </div>
-
-
   <div id="stock-form" class="rounded-2xl grid gap-4 p-6 bg-base-100 max-w-md mx-auto shadow-lg" style="display: none">
     <div class="text-left">
       <h3 class="text-2xl text-primary font-bold mb-4">新增股票</h3>
@@ -117,7 +109,6 @@
       </div>
     </div>
   </div>
-
   <div id="note-form" class="rounded-2xl grid gap-4 p-6 bg-base-100 max-w-2xl mx-auto shadow-lg" style="display: none">
     <div class="text-left">
       <h3 class="text-2xl text-primary font-bold mb-4">筆記編輯</h3>
@@ -153,7 +144,6 @@
       </div>
     </div>
   </div>
-
   <div id="simulate-form" class="rounded-2xl grid gap-4 p-6 bg-base-100 max-w-3xl mx-auto shadow-lg"
     style="display: none">
     <div class="text-left">
@@ -164,36 +154,19 @@
           <div class="grid grid-cols-2 gap-4 text-base-100">
             <div class="list">
               <span class="text-sm text-base-200">回測股票</span>
-              <span class="text-lg font-bold">我的關注，可交易，全部台股，全部上市台股，全部上櫃台股，全部美股</span>
-            </div>
-            <div class="list">
-              <span class="text-sm text-base-200">回測區間</span>
-              <span class="text-lg font-bold font-date">2024/01/01～今天</span>
-            </div>
-          </div>
-        </div>
-        <div class="bg-secondary rounded-2xl p-4">
-          <h4 class="text-lg text-base-100 font-bold mb-3">策略設定</h4>
-          <div class="grid grid-cols-2 gap-4 text-base-100">
-            <div class="list">
-              <span class="text-sm text-secondary-content">入場策略</span>
-              <span class="text-lg font-bold">金唬男</span>
-            </div>
-            <div class="list">
-              <span class="text-sm text-secondary-content">出場策略</span>
-              <span class="text-lg font-bold">金唬男＋金牛＋停損</span>
+
+              <span class="text-lg font-bold">
+                <span ng-repeat="group in simulate.stockGroups">
+                  <input type="radio" ng-model="simulate.stockGroup" value="{{group}}" class="radio" />
+                  <span ng-bind="group"></span><br/>
+                </span>
+              </span>
             </div>
           </div>
         </div>
-      </div>
-      <div ng-if="simulate.run.result" class="alert alert-success mt-4">
-        <svg fill="currentColor" class="icon-grin size-[1.5em]">
-          <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
-        </svg>
-        <span ng-bind="simulate.run.result"></span>
       </div>
       <div class="flex justify-end mt-6">
-        <button ng-click="simulate.run()" class="btn btn-primary btn-lg">
+        <button ng-click="simulate.open()" class="btn btn-primary btn-lg">
           <svg fill="currentColor" class="icon-spinner9 size-[1em] mr-2">
             <use xlink:href="css/symbol-defs.svg#icon-spinner9"></use>
           </svg>開始回測
@@ -201,16 +174,12 @@
       </div>
     </div>
   </div>
-
   <div ng-view class=""></div>
-
   <script src="/js/lang.js"></script>
-
   <script src="/js/svg-helper.js"></script>
   <script src="/js/svg-init.js"></script>
   <!-- SVG 開發工具 - 開發階段使用 -->
   <script src="/js/svg-dev-tools.js"></script>
-
   <script type="module">
     import { Macd, Kdj, Cci, Rsi, BullBear, ExitAlert, BollingerBands } from '/js/macd-kdj.js';
     window.Macd = Macd;
@@ -229,5 +198,4 @@
   <script src="/js/stock-chart.js"></script>
   <script src="/js/rich-app.js"></script>
 </body>
-
 </html>
