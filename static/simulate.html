@@ -126,6 +126,10 @@
     <span class="stat-value text-white" ng-bind="simulated.summary.stockCount"></span>
   </div>
   <div class="stat">
+    <span class="stat-title text-base-200">交易次數</span>
+    <span class="stat-value text-white" ng-bind="simulated.summary.tradeCount"></span>
+  </div>  
+  <div class="stat">
     <span class="stat-title text-base-200">盈虧比</span>
     <span class="stat-value text-white" ng-bind="simulated.summary.pnl"></span>
   </div>
@@ -159,6 +163,9 @@
   </div>
 </div>
 
+<div class="w-[85%] mx-auto max-w-6xl bg-base-100" ng-if="simulating">
+  <div class="text-2xl font-bold text-primary mt-6" ng-bind="simulating"></div>
+</div>
 <div class="w-[85%] mx-auto max-w-6xl bg-base-100">
   <div class="pl-5 pr-5 grid grid-cols-[200px_auto_250px] hover:bg-base-200" ng-repeat="event in simulated.events"
     ng-Class="'item_' + event.code">

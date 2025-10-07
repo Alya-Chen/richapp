@@ -126,7 +126,7 @@ class Investor {
 		const winRate = wins.length / trades.length;
 		const expectation = (pnl * winRate) - (1 - winRate); // 期望值 =（盈虧比 x 勝率）–（1 - 勝率）
 		return {
-			totalTrades: trades.length,
+			tradeCount: trades.length,
 			profit: (profit + loss).scale(),
 			loss: loss.scale(),
 			profitRate: (trades.reduce((sum, t) => sum + t.profitRate, 0)).scale(),

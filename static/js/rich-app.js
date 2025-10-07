@@ -784,7 +784,7 @@
 			});
 			service.notes(location.pathname);			
 		},
-		simulate: function($$, $location, $params, $timeout, service) {
+		simulate: function($$, $location, $params, $interval, service) {
 			if (!$params.codes) return $location.path('/');
 			const today = new Date();
 			const twoYearsAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
@@ -807,7 +807,7 @@
 				$$.params.codes = $$.testers.filter(s => s.checked).map(s => s.code).join('&');
 				$$.params.exitStrategy = $$.exitStrategies.filter(s => s.checked).map(s => s.key);
 				if (!$$.params.entryStrategy || !$$.params.exitStrategy.length) return $.growlUI('', `請選擇入場策略和出場策略`);
-				$$.simulating = true;
+				$$.simulating = '投資模擬回測中...';
 				$$.simulated = null;
 				const codes = $$.stocks.filter(s => s.checked).map(s => s.code);
 				service.simulate(codes, $$.money, $$.params, (simulated) => {
@@ -832,8 +832,12 @@
 							event.exitReason = event.reason.replace('\n', '<br/>');
 						}
 					});
-					$$.simulating = false;
-				});				
+					$interval.cancel($$.start.timer);
+					$$.simulating = '';
+				});
+				$$.start.timer = $interval(() => {
+					if ($$.simulating) $$.simulating += '.';
+				}, 300);
 			};
 			$$.open = function(event) {
 				window.open(`/stock/${event.code}/${event.ma}`, `_stock/${event.code}/${event.ma}`);
@@ -873,6 +877,6 @@
 	app.controller('indexCtrl', ['$scope', '$location', '$timeout', 'service', controllers.index]);
 	app.controller('homeCtrl', ['$scope', '$location', '$timeout', 'service', controllers.home]);
 	app.controller('stockCtrl', ['$scope', '$routeParams', '$timeout', 'service', controllers.stock]);
-	app.controller('simulateCtrl', ['$scope', '$location', '$routeParams', '$timeout', 'service', controllers.simulate]);
+	app.controller('simulateCtrl', ['$scope', '$location', '$routeParams', '$interval', 'service', controllers.simulate]);
 	///////////////////////////////////////////////////////////////////////////////
 })(window, jQuery, angular);
