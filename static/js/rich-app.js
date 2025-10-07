@@ -216,6 +216,16 @@
 				this.backtest.stocks = [];
 			}, SEC);
 		}
+		getParams(callback) {
+			this.$http.get('/sys/params').then((res) => {
+				if (callback) callback(res.data);
+			});			
+		}
+		saveParams(params, callback) {
+			this.$http.post('/sys/params', params).then((res) => {
+				if (callback) callback(res.data);
+			});			
+		}
 		debounce(fn, delay = 1000) {
 			let timer = null;
 			return (...args) => {
@@ -779,24 +789,19 @@
 			const today = new Date();
 			const twoYearsAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
 			$$.money = TOTAL_CAPITAL;
-			$$.testers = []; 
-			$$.params = {
-				breakout: false, // 入場需符合二日法則
-				reentry: false, // 出場後是否要重複入場
-				entryDate: twoYearsAgo,
-				exitDate: today,
-				entryStrategy: '',
-				exitStrategy: [],
-				stopLossPct: 0.03, // 止損小於入場價格的 3%
-				takeProfitPct: 0.05, // 固定止盈大於入場價格的 5%
-				dynamicStopPct: 0 // 動態止損小於入場後曾經最高價格的 0%
-			};
+			$$.testers = [];
 			$$.entryStrategyCheck = function() {
 				$$.tigerChecked = $$.params.entryStrategy.includes('Tiger') || $$.exitStrategies.find(s => s.key.includes('Tiger') && s.checked);
 			};
 			$$.exitStrategyCheck = function() {
 				$$.entryStrategyCheck();
 				$$.dynamicExitChecked = $$.exitStrategies.find(s => s.key == 'DynamicStopExit').checked;
+			};
+			$$.saveParams = function() {
+				$$.params.exitStrategy = $$.exitStrategies.filter(s => s.checked).map(s => s.key);
+				service.saveParams($$.params, (result) => {
+					$.growlUI('', result.success ? `參數儲存成功` : `參數儲存失敗`);
+				});
 			};
 			$$.start = function() {
 				$$.params.codes = $$.testers.filter(s => s.checked).map(s => s.code).join('&');
@@ -833,7 +838,8 @@
 			$$.open = function(event) {
 				window.open(`/stock/${event.code}/${event.ma}`, `_stock/${event.code}/${event.ma}`);
 			};
-			$$.$watchGroup(['params.takeProfitPct', 'params.stopLossPct', 'params.dynamicStopPct'], () => {
+			$$.$watchGroup(['params.takeProfitPct', 'params.stopLossPct', 'params.dynamicStopPct'], (data) => {
+				if (!data.find(d => d)) return;
 				$$.takeProfitPct = ($$.params.takeProfitPct * 100).toFixed() + '%';
 				$$.stopLossPct = ($$.params.stopLossPct * 100).toFixed() + '%';
 				$$.dynamicStopPct = ($$.params.dynamicStopPct * 100).toFixed() + '%';
@@ -851,6 +857,15 @@
 			service.strategies((strategies) => {
 				$$.entryStrategies = strategies.entryStrategies;
 				$$.exitStrategies = strategies.exitStrategies;
+				service.getParams((params) => {
+					$$.params = params;
+					$$.params.entryDate = twoYearsAgo;
+					$$.params.exitDate = today;
+					$$.params.exitStrategy.forEach(strategy => {
+						$$.exitStrategies.find(s => s.key == strategy).checked = true;
+					});
+					$$.exitStrategyCheck();
+				});				
 			});
 		},
 	};

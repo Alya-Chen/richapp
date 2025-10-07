@@ -192,8 +192,6 @@ app.post('/simulate', async (req, res) => {
 	const params = req.body.params;
 	params.entryDate = new Date(params.entryDate);
 	params.exitDate = new Date(params.exitDate);
-	params.entryStrategy = st[params.entryStrategy];
-	params.exitStrategy = params.exitStrategy.map(strategy => st[strategy]);
 	const result = await new Investor(codes, money, params).invest();
   	res.json(result);
 });
@@ -220,6 +218,18 @@ app.get('/sync/:code{/:forced}', async (req, res) => {
 		await stockService.backtest('all');
 		res.json(true);
 	}
+});
+
+app.get('/sys/params', async (req, res) => {
+	const sysUser = await stockService.getSysUser();
+	res.json(sysUser.settings.params);
+});
+
+app.post('/sys/params', async (req, res) => {
+	const sysUser = await stockService.getSysUser();
+	sysUser.settings.params = req.body;
+	await stockService.saveUser(sysUser);
+	res.json({ success: true });
 });
 
 app.listen(port, () => {

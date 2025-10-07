@@ -20,6 +20,7 @@ const STOCK_DIR = 'data/stock/';
 class Service {
 	constructor() {
 		this.inited = false;
+		this.sysUserName = '⚙️ System';
 	}
 
 	static async create() {
@@ -28,6 +29,7 @@ class Service {
 		if (!instance.inited) {
 			console.error('初始化數據庫失敗！');
 		}
+		instance.users();
 		return instance;
 	}
 
@@ -48,7 +50,27 @@ class Service {
 				name: '🎃 Tin'
 			});
 		}
-		return users.map(u => u.toJSON());
+		const sysUser = users.find(u => u.name == this.sysUserName);
+		if (!sysUser) {
+			await db.User.create({
+				name: this.sysUserName,
+				settings: {
+					params: {
+						breakout: false, // 入場需符合二日法則
+						reentry: false, // 出場後是否要重複入場
+						threshold: 0.005, // MA 需增量 0.5%
+						volumeRate: 1.2, // 交易需增量倍數
+						entryStrategy: 'BullTigerEntry',
+						exitStrategy: ['RsiTigerExit'],
+						stopLossPct: 0.03, // 止損小於入場價格的 3%
+						takeProfitPct: 0.1, // 固定止盈大於入場價格的 10%
+						dynamicStopPct: 0.05, // 動態止損小於曾經最高價格的 5%
+						//maxHoldPeriod: 30 // 最大持倉周期 30 天
+					}
+				}
+			});
+		}
+		return users.filter(u => u.name != this.sysUserName).map(u => u.toJSON());
 	}
 	
 	async realtime(codes) {
@@ -143,21 +165,12 @@ class Service {
 	}
 
 	async backtest(code, params) {
-		//const now = new Date().getTime();
-		params = Object.assign({
-			entryDate: dateFns.addYears(new Date(), -1),  // 取前一年資料
-			exitDate: new Date(),
-			threshold: 0.005, // MA 需增量 0.5%
-			volumeRate: 1.2, // 交易需增量倍數
-			breakout: true, // 入場需符合二日法則
-			reentry: true, // 過熱出場後是否要重複入場
-			entryStrategy: st.BullTigerEntry,
-			exitStrategy: [st.RsiTigerExit],
-			stopLossPct: 0.03, // 止損小於入場價格的 3%
-			takeProfitPct: 0.1, // 固定止盈大於入場價格的 10%
-			//dynamicStopPct: 0.05, // 動態止損小於曾經最高價格的 5%
-			//maxHoldPeriod: 30 // 最大持倉周期 30 天
-		}, params || {});
+		const sysUser = await this.getSysUser();
+		params.entryDate = params.entryDate || dateFns.addYears(new Date(), -1);  // 取前一年資料
+		params.exitDate = params.exitDate || new Date();
+		params = Object.assign({}, sysUser.settings.params, params || {});
+		params.entryStrategy = st[params.entryStrategy];
+		params.exitStrategy = params.exitStrategy.map(strategy => st[strategy]);		
 		if (code != 'all' && !Array.isArray(code)) { // ma：從 params 設定取得
 			const startDate = dateFns.addYears(params.entryDate, -1);
 			const dailies = await this.dailies(code, startDate);
@@ -260,6 +273,15 @@ class Service {
 		const user = await db.User.findOne({
 			where: {
 				id
+			}
+		});
+		return user ? user.toJSON() : {};
+	}
+
+	async getSysUser() {
+		const user = await db.User.findOne({
+			where: {
+				name: this.sysUserName
 			}
 		});
 		return user ? user.toJSON() : {};

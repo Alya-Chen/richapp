@@ -18,6 +18,11 @@
       <label class="input ml-6">
         <span class="label">出場日期</span><input type="date" ng-model="params.exitDate" class="input" />
       </label>
+      <button class="btn btn-primary btn-lg" ng-click="saveParams()">
+        <svg fill="currentColor" class="icon-spinner9 size-[1em]">
+          <use xlink:href="css/symbol-defs.svg#icon-spinner9"></use>
+        </svg> 儲存參數
+      </button>      
     </div>
     <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
       <span class="text-lg font-bold text-nowrap mr-4">入場策略</span>

@@ -183,6 +183,7 @@ export class TradingSystem {
 
 	// 記錄平倉
 	closePosition(position, day, reason) {
+		if (position.entryDate.toLocaleDateString() == day.date.toLocaleDateString()) return (position.status == 'closed');
 		position.exitPrice = day.close;
 		position.duration = ((day.date - position.entryDate) / (1000 * 60 * 60 * 24)).scale();
 		const reasons = [];

@@ -3,7 +3,6 @@
   <div class="flex mb-4 justify-between mt-6 md-4">
     <h2 class="text-3xl font-bold text-primary cursor-pointer flex items-center gap-2" ng-click="star()">
       <span ng-bind="stock.name"></span>
-
       <span ng-if="!stock.stared" class="text-base-300 hover:text-error transition-colors"><svg fill="currentColor"
           class="icon-heart size-[1.3em] ml-3 mr-1 stroke-base-content stroke-2">
           <use xlink:href="css/symbol-defs.svg#icon-heart"></use>
@@ -28,7 +27,6 @@
       </button>
     </div>
   </div>
-
   <!-- 即時價格資訊 -->
   <div ng-if="stock.realtime" class="flex gap-4 justify-center flex-wrap">
     <!-- 價格主要資訊 -->
@@ -56,7 +54,6 @@
           </a>
         </div>
       </div>
-
       <div class="text-center">
         <div class="text-4xl font-bold mb-2"
           ng-class="{'text-rich-red': (stock.realtime.diff > 0), 'text-rich-green': (stock.realtime.diff < 0), 'text-base-content': (stock.realtime.diff == 0)}">
@@ -71,7 +68,6 @@
         </div>
       </div>
     </div>
-
     <!-- 開高低量資訊 -->
     <div class="stats shadow">
       <div class="stat">
@@ -109,21 +105,17 @@
     </div>
   </div>
 </div>
-
 <div ng-if="stock.trade.invest" class="mb-6 w-[85%] mx-auto max-w-6xl"
   ng-class="{'border-2 border-warning': stock.trade.invest.rsiHot}">
   <h3 class="text-2xl font-bold text-primary mb-4 flex items-center gap-2">
     投資紀錄
     <span ng-if="stock.trade.invest.rsiHot" class="badge badge-warning">過熱</span>
   </h3>
-
   <!-- 投資交易列表 -->
   <div ng-class="{'bg-warning/10 border border-warning rounded-xl p-2': !log.id}" ng-if="log.act"
     ng-repeat="log in stock.trade.invest.logs" class="stats shadow bg-white w-full">
-
     <!-- 交易基本資訊 -->
     <div class="stat">
-
       <div class="stat-figure text-secondary">
         <svg fill="currentColor" class="icon-add-cart h-8 w-8">
           <use xlink:href="css/symbol-defs.svg#icon-add-cart"></use>
@@ -151,7 +143,6 @@
         </button>
       </div>
     </div>
-
     <!-- 損益與控制 -->
     <div class="stat">
       <div class="stat-figure"
@@ -170,7 +161,6 @@
       <div class="stat-value font-price text-4xl" ng-bind="stock.trade.invest.netProfit"></div>
       <div class="stat-desc font-pct" ng-bind="stock.trade.invest.profitRate"></div>
     </div>
-
     <!-- 停損停利資訊 -->
     <div class="stat">
       <div class="stat-title">停損價</div>
@@ -182,7 +172,6 @@
       <div class="stat-title">稅費</div>
       <div class="stat-value font-price text-lg text-rich-green" ng-bind="stock.trade.invest.tax.scale(2)"></div>
     </div>
-
     <!-- 持倉詳情 -->
     <div class="stat">
       <div class="stat-title">交易</div>
@@ -192,10 +181,6 @@
       <div class="stat-title">平均成本</div>
       <div class="stat-value font-price text-lg" ng-bind="log.avgCost"></div>
     </div>
-
-
-
-
   </div>
 </div>
 
@@ -208,9 +193,7 @@
     </svg></button>
 </div>
 
-
 <div class="list w-[85%] mx-auto max-w-6xl">
-
   <ng-container ng-if="notes.length">
     <div class="list-row cursor-pointer hover:bg-base-100" ng-repeat="note in notes" ng-click="edit(note)">
       <span ng-bind="note.date | date:'MM/dd'" class="font-date text-xl text-accent mr-4"></span>
@@ -227,7 +210,6 @@
       </span>
     </div>
   </ng-container>
-
   <ng-container ng-if="stock.done.length">
     <div class="list-row cursor-pointer hover:bg-base-100 bg-secondary/10" ng-repeat="trade in stock.done">
       <span class="font-date text-xl text-info mr-4" ng-bind="trade.exitDate | date:'MM/dd'"></span>
@@ -254,7 +236,6 @@
         <span class="font-pct" ng-bind="test.profitRate | pct" ng-click="allBand(test)"></span>
       </div>
     </label>
-
     <div class="border-l-2 border-primary border-r-2 bg-primary grid grid-cols-3 gap-4 p-4 text-center"
       id="info{{$index}}">
       <div>
@@ -266,8 +247,7 @@
         二日有效率 <span class="font-pct text-2xl" ng-bind="test.breakoutRate | pct"></span>
         總勝率 <span class="font-pct text-2xl" ng-bind="test.winRate | pct"></span>
       </div>
-
-      <div>
+      <div ng-if="test.reentry">
         返場 <span class="text-2xl" ng-bind="test.reentry"></span> 次
         成功 <span class="text-2xl" ng-bind="test.reentryWins"></span> 次
         勝率 <span class="font-2xl font-pct" ng-bind="test.reentryWinRate | pct"></span><br />
@@ -318,7 +298,6 @@
                 <span class="badge badge-primary" ng-if="trade.exitReason.includes('過熱')">過熱</span>
                 <span class="text-sm/6 text-success" ng-bind="trade.exitReason"></span>
               </span>
-
             </div>
             <hr />
           </li>
@@ -328,7 +307,6 @@
             </div>
           </li>
         </ul>
-
         <div ng-if="trade.duration" class="border-l-2 border-primary">
           <div class="flex mt-8 items-end">
             <div
@@ -339,7 +317,6 @@
             <span class="font-pct" ng-bind="trade.profitRate | pct"></span>
           </div>
         </div>
-
         <div ng-if="trade.invest" class="border-l-2 border-primary">
           <div ng-if="trade.invest.profit != 0" class="flex mt-8 items-end">
             <div
@@ -350,7 +327,6 @@
             <span ng-if="trade.invest.profit != 0" class="font-pct" ng-bind="trade.invest.profitRate | pct"></span>
           </div>
         </div>
-
         <div class="col-start-2 border-l-2 border-primary pl-2 pd-5" ng-if="trade.invest"
           ng-class="{'rich-stock-trade-rsi-hot': trade.invest.rsiHot}">
           <div ng-if="log.act" ng-repeat="log in trade.invest.logs">
@@ -367,7 +343,6 @@
             </span>
           </div>
         </div>
-
       </div>
     </div>
   </ng-container>

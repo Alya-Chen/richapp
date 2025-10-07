@@ -2,7 +2,6 @@ import * as dateFns from 'date-fns';
 import * as fs from 'fs';
 import './static/js/lang.js';
 import * as csv from './csv-utils.js';
-import * as st from './trading-strategy.js';
 import {
     TradingSystem,
     ParameterOptimizer
@@ -42,11 +41,10 @@ const params = {
     entryDate: new Date('2024-01-01'), //dateFns.addYears(dateFns.addMonths(new Date(), -6), -1), // 取前一年半資料
     exitDate: new Date(),
     //entryStrategy: st.BullTigerEntry, BBEntryExit, TwoDaysUpEntry
-    entryStrategy: st.BullTigerEntry,
-    exitStrategy: [st.DynamicStopExit], //[st.DynamicStopExit, st.RsiTigerExit],
-    //exitStrategy: st.RsiTigerExit,
-    //entryStrategy: st.MacdMaEntry,
-    //exitStrategy: st.MacdMaExit,
+    entryStrategy: 'BullTigerEntry',
+    exitStrategy: ['DynamicStopExit'], //['DynamicStopExit', 'RsiTigerExit'],
+    //entryStrategy: 'MacdMaEntry',
+    //exitStrategy: ['MacdMaExit'],
     stopLossPct: 0.03, // 止損小於入場價格的 3%
     takeProfitPct: 0.05, // 固定止盈大於入場價格的 5%
     dynamicStopPct: 0.07, // 動態止損小於曾經最高價格的 7%
@@ -60,8 +58,8 @@ function processTrading(dailies, params) {
         ma: [...Array(30).keys()].map(i => i + 15),
         stopLossPct: [0.02, 0.03, 0.04],
         takeProfitPct: [0.08, 0.1, 0.12, 10],
-        entryStrategy: [st.TigerEntry],
-        exitStrategy: [st.TigerExit]
+        entryStrategy: ['TigerEntry'],
+        exitStrategy: ['TigerExit']
     };
     const results = optimizer.gridSearch(paramGrid);
     const best = results.sort((a, b) =>
