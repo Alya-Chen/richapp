@@ -1,4 +1,5 @@
 import express from 'express';
+import session from 'express-session';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import {
@@ -17,6 +18,15 @@ stockService.scheduleSync(__filename.includes('投資'));
 const app = express();
 const port = 5001;
 
+app.set('trust proxy', 1) // trust first proxy
+app.use(session({
+	name: 'richapp',
+	secret: 'cmljaGFwcA==',
+	resave: true,
+	saveUninitialized: false,
+	cookie: { secure: false }
+}));
+
 app.use(express.static('static'))
 app.use(express.json());
 
@@ -24,9 +34,12 @@ app.get('/', (req, res) => {
 	res.redirect('/index.html');
 })
 
-app.get('/users', async (req, res) => {
+app.get('/users{/:userId}', async (req, res) => {
 	const users = await stockService.users();
-  	res.json(users);
+	const userId = parseInt(req.params.userId || req.session.userId || 1);
+	req.session.userId = userId;
+	const user = users.find(u => u.id == userId);
+  	res.json({ users, user });
 });
 
 app.get('/stocks', async (req, res) => {
@@ -139,8 +152,8 @@ app.get('/realtime{/:codes}', async (req, res) => {
   	res.json(await stockService.realtime(req.params.codes.split('|')));
 });
 
-app.get('/star/:userId/:code', async (req, res) => {
-	const user = await stockService.getUser(req.params.userId);
+app.get('/star/:code', async (req, res) => {
+	const user = await stockService.getUser(req.session.userId);
 	const code = req.params.code;
 	const settings = user.settings || { stared: [] };
 	if (settings.stared.find(s => s == code)) {
@@ -155,17 +168,22 @@ app.get('/star/:userId/:code', async (req, res) => {
 });
 
 app.get('/backtest/opened', async (req, res) => {
-	const tests = await stockService.findTests({ opened: true });
+	const tests = await stockService.findTests({ opened: true, userId: req.session.userId });
   	res.json(tests);
 });
 
 app.get('/backtest/:code{/:ma}', async (req, res) => {
-	let result = await stockService.findTests({ code: req.params.code }, ['id', 'DESC']);
+	const user = await stockService.getUser(req.session.userId);
+	const params = Object.assign({ userId: req.session.userId }, req.params);
+	let result = await stockService.findTests(params, ['id', 'DESC']);
 	result = result.map(t => t.toJSON());
-	if (req.params.ma) {
-		result = result.find(t => t.ma == req.params.ma);
-		res.json(result ? result : await stockService.backtest(req.params.code, { ma: req.params.ma }));
-		//res.json(await stockService.backtest(req.params.code, { ma: req.params.ma }));
+	if (params.ma) {
+		result = result.find(t => t.ma == params.ma);
+		if (!result && user.settings.params) {
+			Object.assign(params, user.settings.params);
+			result = await stockService.backtest(params.code, params);
+		}
+		res.json(result ? result : {});
 	}
 	else {
 		res.json(result.length ? result.reduce((t1, t2) => t1.profit > t2.profit ? t1 : t2) : {});		
@@ -221,14 +239,17 @@ app.get('/sync/:code{/:forced}', async (req, res) => {
 });
 
 app.get('/sys/params', async (req, res) => {
-	const sysUser = await stockService.getSysUser();
-	res.json(sysUser.settings.params);
+	const user = await stockService.getUser(req.session.userId);
+	res.json(user.settings.params || {});
 });
 
 app.post('/sys/params', async (req, res) => {
-	const sysUser = await stockService.getSysUser();
-	sysUser.settings.params = req.body;
-	await stockService.saveUser(sysUser);
+	const user = await stockService.getUser(req.session.userId);
+	delete req.body.entryDate;
+	delete req.body.exitDate;
+	delete req.body.codes;
+	user.settings.params = req.body;
+	await stockService.saveUser(user);
 	res.json({ success: true });
 });
 

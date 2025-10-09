@@ -193,7 +193,7 @@ Stock.save = async function(stock) {
 	return Base.save(Stock, stock);
 };
 
-/*const StockTrade = sequelize.define('StockTrade', {
+const StockTrade = sequelize.define('StockTrade', {
 	id: {
 		type: DataTypes.INTEGER,
 		autoIncrement: true,
@@ -204,11 +204,26 @@ Stock.save = async function(stock) {
 		allowNull: false,
 		comment: '股票代號'
 	},
+	userId: {
+		type: DataTypes.INTEGER,
+		allowNull: false,
+		comment: '使用者流水號'
+	},
+	shadow: {
+		type: DataTypes.BOOLEAN,
+		defaultValue: false,
+		comment: '是否為影子使用者'
+	},
 	act: {
 		type: DataTypes.STRING(5),
 		allowNull: false,
 		comment: '買進賣出'
 	},
+	ma: {
+		type: DataTypes.INTEGER,
+		allowNull: true,
+		comment: 'MA 值'
+	},	
 	date: {
 		type: DataTypes.DATEONLY,
 		allowNull: false,
@@ -227,12 +242,17 @@ Stock.save = async function(stock) {
 	amount: {
 		type: DataTypes.INTEGER,
 		allowNull: false,
-		comment: '成交股數'
+		comment: '買賣股數'
+	},
+	remain: {
+		type: DataTypes.INTEGER,
+		defaultValue: 0,
+		comment: '剩餘股數'
 	}	
 }, {
 	indexes: [{
-		unique: true,
-		fields: ['code', 'act', 'date'] // 複合唯一索引
+		unique: false,
+		fields: ['userId']
 	}, {
 		unique: false,
 		fields: ['code']
@@ -247,15 +267,16 @@ StockTrade.save = async function(trade) {
 	// 股票買進：證券手續費＝股票買進股價 × 股數 × 0.1425%
 	// 未滿新臺幣20元按新臺幣20元計收
 	if (trade.act == '買入') {
+		trade.remain = trade.amount;
 		trade.tax = trade.amount * trade.price * 0.001425;
-		trade.tax = Math.max(trade.tax, 20);
+		trade.tax = Math.max(trade.tax, 20).scale(2);
 	}
 	// 證券手續費＋證券交易稅＝（股票賣出股價 × 股數 × 0.1425%）＋（股票賣出股價 × 股數 × 0.3%）
 	if (trade.act == '賣出') {
-		trade.tax = trade.amount * trade.price * 0.004425;
+		trade.tax = (trade.amount * trade.price * 0.004425).scale(2);
 	}	
 	return Base.save(StockTrade, trade);
-};*/
+};
 
 const StockDaily = sequelize.define('StockDaily', {
 	id: {
@@ -410,6 +431,11 @@ const Backtest = sequelize.define('Backtest', {
 		allowNull: false,
 		comment: '股票代號'
 	},
+	userId: {
+		type: DataTypes.INTEGER,
+		allowNull: false,
+		comment: '使用者流水號'
+	},
 	name: {
 		type: DataTypes.STRING,
 		allowNull: false,
@@ -538,6 +564,7 @@ export {
 	User,
 	Stock,
 	StockDaily,
+	StockTrade,
 	Backtest,
 	Note,
 	Log,

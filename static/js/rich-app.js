@@ -67,7 +67,7 @@
 			});
 		}
 		star(code, callback) {
-			this.$http.get(`/star/${this.user.id}/${code}`).then((res) => {
+			this.$http.get(`/star/${code}`).then((res) => {
 				this.user = res.data;
 				callback(this.user);
 			});
@@ -102,13 +102,12 @@
 				this.$timeout(() => { this.$root.$broadcast('stocksLoaded', stocks) }, 175);
 			});
 		}
-		users(callback) {
-			this.$http.get('/users').then((res) => {
-				const users = res.data;
-				if (!Cookies.get('userId')) Cookies.set('userId', 1);
-				const userId = Cookies.get('userId');
-				this.user = users.find(u => u.id == userId);
-				callback(users);
+		users(callback, userId) {
+			const url = '/users' + (userId ? '/' + userId : '');
+			this.$http.get(url).then((res) => {
+				const users = res.data.users;
+				this.user = users.find(u => u.id == res.data.user.id);
+				callback(users, this.user);
 			});
 		}
 		dailies(stock, callback) {
@@ -217,12 +216,14 @@
 			}, SEC);
 		}
 		getParams(callback) {
-			this.$http.get('/sys/params').then((res) => {
+			const url = `/sys/params`;
+			this.$http.get(url).then((res) => {
 				if (callback) callback(res.data);
 			});			
 		}
 		saveParams(params, callback) {
-			this.$http.post('/sys/params', params).then((res) => {
+			const url = `/sys/params`;
+			this.$http.post(url, params).then((res) => {
 				if (callback) callback(res.data);
 			});			
 		}
@@ -298,8 +299,7 @@
 				$location.url('/stock/' + $$.stock.code);
 			};
 			$$.switch = function() {
-				Cookies.set('userId', $$.user.id);
-				$timeout(() => $$.$broadcast('userSwitched', $$.user), 350);
+				service.users((_, user) => $$.$broadcast('userSwitched', user), $$.user.id);
 			};
 			$$.changeMa = function() {
 				$$.$broadcast('maChanged', $$.stock.defaultMa);
@@ -355,10 +355,10 @@
 			service.stocks((stocks) => {
 				$$.stocks = stocks;
 			});
-			service.users((users) => {
+			service.users((users, user) => {
 				$$.users = users;
-				$$.user = service.user;
-				$$.switch();
+				$$.user = user;
+				$$.$broadcast('userSwitched', user);
 			});
 			$$.$on('stockLoaded', function(_, code) {
 				$$.stock = $$.stocks.find(s => s.code == code);			
@@ -539,7 +539,7 @@
 			});
 			$$.$on('stocksLoaded', function(_, stocks) {
 				$$.stocks = stocks;
-				if (service.user && !$$.stareds.length) $$.showStareds(service.user);
+				if (!$$.stareds.length) $$.showStareds($$.user);
 			});
 			service.notes(location.pathname);
 			service.logs();
@@ -575,6 +575,7 @@
 			};
 			$$.invest = {
 				simulate: function(trade) {
+					return;
 					if (!trade) return;
 					trade.ma = trade.ma || $$.stock.defaultMa;
 					trade.invest = new RsiInvest($$.stock.dailies, trade.ma).start(trade);
@@ -850,7 +851,7 @@
 			});
 			$$.$on('stocksLoaded', function(_, stocks) {
 				if ($params.codes == '我的關注') {
-					const stareds = service.user.settings.stared;
+					const stareds = $$.user.settings.stared;
 					$params.codes = $$.stocks.filter(s => stareds.find(ss => ss == s.code)).map(s => s.code).join('&');
 				}				
 				$params.codes.split('&').forEach(code => {

@@ -121,7 +121,9 @@
   <div class="stat">
     <span class="stat-title text-base-200">總損益率</span>
     <span class="stat-value after:content-['%'] after:text-xs text-white"
-      ng-bind="(simulated.summary.totalProfit) / simulated.summary.initialMoney | pct"></span>
+      ng-bind="simulated.summary.profitRate | pct"></span>
+    <span class="stat-value after:content-['%'] after:text-xs text-white"
+      ng-bind="simulated.summary.netProfitRate | pct"></span>
   </div>
   <div class="stat">
     <span class="stat-title text-base-200">模擬股數</span>

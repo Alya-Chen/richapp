@@ -50,27 +50,7 @@ class Service {
 				name: '🎃 Tin'
 			});
 		}
-		const sysUser = users.find(u => u.name == this.sysUserName);
-		if (!sysUser) {
-			await db.User.create({
-				name: this.sysUserName,
-				settings: {
-					params: {
-						breakout: false, // 入場需符合二日法則
-						reentry: false, // 出場後是否要重複入場
-						threshold: 0.005, // MA 需增量 0.5%
-						volumeRate: 1.2, // 交易需增量倍數
-						entryStrategy: 'BullTigerEntry',
-						exitStrategy: ['RsiTigerExit'],
-						stopLossPct: 0.03, // 止損小於入場價格的 3%
-						takeProfitPct: 0.1, // 固定止盈大於入場價格的 10%
-						dynamicStopPct: 0.05, // 動態止損小於曾經最高價格的 5%
-						//maxHoldPeriod: 30 // 最大持倉周期 30 天
-					}
-				}
-			});
-		}
-		return users.filter(u => u.name != this.sysUserName).map(u => u.toJSON());
+		return users.map(u => u.toJSON());
 	}
 	
 	async realtime(codes) {
@@ -115,13 +95,14 @@ class Service {
 			const codes = stocks.map(s => s.code);
 			console.log(`[${new Date().toLocaleString()}] 啟動股票即時同步抓取任務`);
 			await this.realtime(codes);
-			for (let i = 0; i < stocks.length; i++) {
-				const stock = stocks[i];
-				const params = { code: stock.code, ma: stock.defaultMa }
-				const test = await this.backtest(stock.code, params);
-				this.saveTest(stock, test);
+			const users = await db.User.findAll();
+			for (let i = 0; i < users.length; i++) {
+				const user = users[i];
+				const params = user.settings?.params;
+				if (!params) return;
+				params.userId = user.id;
+				//await this.backtest(codes, params);
 			}
-			//await this.backtest('all');
 			console.log(`[${new Date().toLocaleString()}] 股票即時同步任務執行完成`);
 		} catch (error) {
 			db.Log.error(`股票即時同步任務執行失敗 ${error}`);
@@ -156,7 +137,13 @@ class Service {
 			if (stocks.length) db.Log.error(`${stocks.join(",")} 無今日股價資料`);
 			try {
 				console.log(`[${new Date().toLocaleString()}] 啟動股票回測任務`);
-				await this.backtest('all');
+				const users = await db.User.findAll();
+				for (let i = 0; i < users.length; i++) {
+					const params = users[i].settings.params;
+					params.userId = users[i].id;
+					if (!params) return;
+					//await this.backtest('all', params);
+				}
 				db.Log.info(`股票回測任務執行完成`);
 			} catch (error) {
 				db.Log.error(`股票回測任務執行失敗 ${error}`);
@@ -164,16 +151,15 @@ class Service {
 		});		
 	}
 
-	async backtest(code, params) {
-		const sysUser = await this.getSysUser();
+	async backtest(codes, params, simulating) {
 		params.entryDate = params.entryDate || dateFns.addYears(new Date(), -1);  // 取前一年資料
 		params.exitDate = params.exitDate || new Date();
-		params = Object.assign({}, sysUser.settings.params, params || {});
+		//params = Object.assign({}, sysUser.settings.params, params || {});
 		params.entryStrategy = st[params.entryStrategy];
 		params.exitStrategy = params.exitStrategy.map(strategy => st[strategy]);		
-		if (code != 'all' && !Array.isArray(code)) { // ma：從 params 設定取得
+		if (codes != 'all' && !Array.isArray(codes)) { // ma：從 params 設定取得
 			const startDate = dateFns.addYears(params.entryDate, -1);
-			const dailies = await this.dailies(code, startDate);
+			const dailies = await this.dailies(codes, startDate);
 			if (!dailies.length) return {};
 			const sys = new TradingSystem(dailies, params);
 			const backtest = sys.backtest();
@@ -182,15 +168,15 @@ class Service {
 			const prev = sys.data.pop();
 			backtest.alerts = null;
 			const alerts = {
-				code,
+				code: codes,
 				date: last.date,
                 ma: last.ma.scale(2),
 				close: last.close
 			};
-			if (!trade.exitDate) { // 開倉中
+			if (trade && !trade.exitDate) { // 開倉中
 				if (prev.close > prev.ma && last.ma > last.close) backtest.alerts = alerts;
 			}
-			else {
+			if (trade && trade.exitDate) {
 				if (prev.ma > prev.close && last.close > last.ma) backtest.alerts = alerts;
 			}
 			return backtest;
@@ -198,13 +184,13 @@ class Service {
 		const result = [];
 		const stocks = await this.stocks();
 		for (const stock of stocks) {
-			if (Array.isArray(code) && !code.find(c => c == stock.code)) continue;
+			if (Array.isArray(codes) && !codes.find(c => c == stock.code)) continue;
 			const count = await this.countDaily(stock.code);
 			if (!count) {
 				console.log(`${stock.code} ${stock.name} 缺歷史交易資料跳過`);
 				continue;
 			}
-			const startDate = dateFns.addYears(params.entryDate, -1);
+			const startDate = dateFns.addYears(params.entryDate, -2);
 			const dailies = await this.dailies(stock.code, startDate);
 			const trade = (stock.trades || []).find(t => t.entryDate && !t.exitDate);
 			let best = null;
@@ -214,16 +200,8 @@ class Service {
 				best = new TradingSystem(dailies, params).backtest();
 			}
 			else {
-				const results = [];
-				[...Array(30).keys()].map(i => i + 16).forEach(ma => {
-					params.ma = ma;
-					params.code = stock.code;
-					results.push(new TradingSystem(dailies, params).backtest());
-				});
-				best = results.sort((a, b) =>
-					b.profit - a.profit
-				)[0];
-				stock.defaultMa = best.ma;				
+				best = await this.findBest(stock, params, dailies, simulating);
+				stock.defaultMa = best.ma;
 			}
             const profitRate = (best.profitRate * 100).scale(0) + '%';
 			best.code = stock.code;
@@ -243,6 +221,25 @@ class Service {
 		}
 		return result;
 		//console.log(`backtest ${new Date().getTime() - now}`);
+	}
+	
+	async findBest(stock, params, dailies, simulating) {
+		// 若是回測，用 entryDate 的前一年資料來 找最佳 MA
+		const entryDate = simulating ? dateFns.addYears(params.entryDate, -1) : params.entryDate;
+		const exitDate = simulating ? new Date(params.entryDate) : params.exitDate;
+		const paramsForBestMa = Object.assign({}, params, { entryDate, exitDate });
+		const results = [];
+		[...Array(30).keys()].map(i => i + 16).forEach(ma => {
+			paramsForBestMa.ma = ma;
+			paramsForBestMa.code = stock.code;
+			results.push(new TradingSystem(dailies, paramsForBestMa).backtest());
+		});
+		const best = results.sort((a, b) =>
+			b.profit - a.profit
+		)[0];
+		params.code = stock.code;
+		params.ma = best.ma;
+		return simulating ? new TradingSystem(dailies, params).backtest() : best;
 	}
 
 	async exportCsv(tests) {
@@ -278,10 +275,10 @@ class Service {
 		return user ? user.toJSON() : {};
 	}
 
-	async getSysUser() {
+	async getUserByName(name) {
 		const user = await db.User.findOne({
 			where: {
-				name: this.sysUserName
+				name
 			}
 		});
 		return user ? user.toJSON() : {};
@@ -306,6 +303,10 @@ class Service {
 	
 	async saveStock(stock) {
 		return await db.Stock.save(stock);
+	}
+
+	async saveTrade(trade) {
+		return await db.StockTrade.save(trade);
 	}
 
 	async stocks() {
@@ -374,6 +375,7 @@ class Service {
 		delete params.exitDate;
 		const backtest = {
 			code: stock.code,
+			userId: params.userId,
 			name: stock.name,
 			ma: result.ma,
 			opened: result.opened,
@@ -388,6 +390,7 @@ class Service {
 		backtest.paramsMD5 = crypto.createHash('md5').update(JSON.stringify(backtest.params)).digest('hex');
 		try {
 			let loaded = await this.findTests({
+				userId: params.userId,
 				code: stock.code
 			});
 			loaded = loaded.find(t => t.ma == backtest.ma && t.paramsMD5 == backtest.paramsMD5);
