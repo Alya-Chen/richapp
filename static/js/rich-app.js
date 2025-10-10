@@ -352,14 +352,11 @@
 					});
 				}
 			};
-			service.stocks((stocks) => {
-				$$.stocks = stocks;
-			});
-			service.users((users, user) => {
-				$$.users = users;
-				$$.user = user;
-				$$.$broadcast('userSwitched', user);
-			});
+			$$.$on('userSwitched', () => {
+				service.stocks((stocks) => {
+					$$.stocks = stocks;
+				});				
+			});			
 			$$.$on('stockLoaded', function(_, code) {
 				$$.stock = $$.stocks.find(s => s.code == code);			
 			});
@@ -376,6 +373,11 @@
 				const stock = $$.stocks.find(s => s.code == test.code);
 				stock.profit = `${test.profit} ➜ ${profitRate}%`;
 				stock.ma = `【${stock.defaultMa}${stock.tigerMa ? ' ' + stock.tigerMa : ''}】`;
+			});
+			service.users((users, user) => {
+				$$.users = users;
+				$$.user = user;
+				$$.$broadcast('userSwitched', user);
 			});
 		},
 		home: function($$, $location, $timeout, service) {
@@ -529,6 +531,12 @@
 			});
 			$$.$on('userSwitched', function(_, user) {
 				$$.showStareds(user);
+				service.strategies((strategies) => {
+					service.getParams((params) => {
+						$$.entryStrategy = strategies.entryStrategies.find(s => s.key == params.entryStrategy).name;
+						$$.exitStrategy = params.exitStrategy.map(strategy => strategies.exitStrategies.find(s => s.key == strategy).name).join('＆');
+					});
+				});					
 			});
 			$$.$on('notesLoaded', function(_, notes) {
 				$$.notes = notes;
@@ -540,7 +548,7 @@
 			$$.$on('stocksLoaded', function(_, stocks) {
 				$$.stocks = stocks;
 				if (!$$.stareds.length) $$.showStareds($$.user);
-			});
+			});		
 			service.notes(location.pathname);
 			service.logs();
 			$timeout(() => {
@@ -858,7 +866,7 @@
 					stocks.find(s => s.code == code).checked = true;
 					$$.testers.push(stocks.find(s => s.code == code));
 				});
-			});			
+			});
 			service.strategies((strategies) => {
 				$$.entryStrategies = strategies.entryStrategies;
 				$$.exitStrategies = strategies.exitStrategies;
@@ -869,8 +877,11 @@
 					$$.params.exitStrategy.forEach(strategy => {
 						$$.exitStrategies.find(s => s.key == strategy).checked = true;
 					});
+					$$.params.takeProfitPct = $$.params.takeProfitPct || 0.05;
+					$$.params.stopLossPct = $$.params.stopLossPct || 0.03;
+					$$.params.dynamicStopPct = $$.params.dynamicStopPct || 0;
 					$$.exitStrategyCheck();
-				});				
+				});
 			});
 		},
 	};

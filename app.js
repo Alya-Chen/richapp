@@ -30,6 +30,10 @@ app.use(session({
 app.use(express.static('static'))
 app.use(express.json());
 
+const getUser = async (req) => {
+	return await stockService.getUser(req.session.userId || 1);
+};
+
 app.get('/', (req, res) => {
 	res.redirect('/index.html');
 })
@@ -153,7 +157,7 @@ app.get('/realtime{/:codes}', async (req, res) => {
 });
 
 app.get('/star/:code', async (req, res) => {
-	const user = await stockService.getUser(req.session.userId);
+	const user = await getUser(req);
 	const code = req.params.code;
 	const settings = user.settings || { stared: [] };
 	if (settings.stared.find(s => s == code)) {
@@ -173,7 +177,19 @@ app.get('/backtest/opened', async (req, res) => {
 });
 
 app.get('/backtest/:code{/:ma}', async (req, res) => {
-	const user = await stockService.getUser(req.session.userId);
+	if ('all' == req.params.code) {
+		const users = await stockService.users();
+		for (let i = 0; i < users.length; i++) {
+			const user = users[i];
+			const params = user.settings?.params;
+			if (!params) continue;
+			params.userId = user.id;
+			console.log(`[${new Date().toLocaleString()}] 啟動 ${user.name} 股票回測任務`);				
+			await stockService.backtest('all', params);
+		}	
+		return res.json({ success: true });
+	}
+	const user = await getUser(req);
 	const params = Object.assign({ userId: req.session.userId }, req.params);
 	let result = await stockService.findTests(params, ['id', 'DESC']);
 	result = result.map(t => t.toJSON());
@@ -239,12 +255,12 @@ app.get('/sync/:code{/:forced}', async (req, res) => {
 });
 
 app.get('/sys/params', async (req, res) => {
-	const user = await stockService.getUser(req.session.userId);
+	const user = await getUser(req);
 	res.json(user.settings.params || {});
 });
 
 app.post('/sys/params', async (req, res) => {
-	const user = await stockService.getUser(req.session.userId);
+	const user = await getUser(req);
 	delete req.body.entryDate;
 	delete req.body.exitDate;
 	delete req.body.codes;

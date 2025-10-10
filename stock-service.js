@@ -99,9 +99,10 @@ class Service {
 			for (let i = 0; i < users.length; i++) {
 				const user = users[i];
 				const params = user.settings?.params;
-				if (!params) return;
+				if (!params) continue;
 				params.userId = user.id;
-				//await this.backtest(codes, params);
+				console.log(`[${new Date().toLocaleString()}] 啟動 ${user.name} 股票回測任務`);				
+				await this.backtest(codes, params);
 			}
 			console.log(`[${new Date().toLocaleString()}] 股票即時同步任務執行完成`);
 		} catch (error) {
@@ -136,13 +137,14 @@ class Service {
 			const stocks = this.checkDailies();
 			if (stocks.length) db.Log.error(`${stocks.join(",")} 無今日股價資料`);
 			try {
-				console.log(`[${new Date().toLocaleString()}] 啟動股票回測任務`);
 				const users = await db.User.findAll();
 				for (let i = 0; i < users.length; i++) {
-					const params = users[i].settings.params;
-					params.userId = users[i].id;
-					if (!params) return;
-					//await this.backtest('all', params);
+					const user = users[i];
+					const params = user.settings.params;
+					params.userId = user.id;
+					if (!params) continue;
+					console.log(`[${new Date().toLocaleString()}] 啟動 ${user.name} 股票回測任務`);
+					await this.backtest('all', params);
 				}
 				db.Log.info(`股票回測任務執行完成`);
 			} catch (error) {
@@ -387,19 +389,15 @@ class Service {
 			lastModified: new Date(),
 			result
 		};		
-		backtest.paramsMD5 = crypto.createHash('md5').update(JSON.stringify(backtest.params)).digest('hex');
 		try {
-			let loaded = await this.findTests({
+			const loaded = await this.findTests({
 				userId: params.userId,
 				code: stock.code
 			});
-			loaded = loaded.find(t => t.ma == backtest.ma && t.paramsMD5 == backtest.paramsMD5);
-			if (loaded) {
-				loaded.set(backtest);
-				return await loaded.save();
-			} else {
-				return await db.Backtest.create(backtest);
+			if (loaded.length) {
+				backtest.id = loaded[0].id;
 			}
+			return await db.Backtest.save(backtest);
 		} catch (error) {
 			db.Log.error(`${stock.code} ${stock.name} 測試結果保存到數據庫失敗: ${error.message}`);
 			return null;

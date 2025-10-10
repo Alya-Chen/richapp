@@ -1,7 +1,6 @@
 <div class="mockup-code w-[85%] mx-auto max-w-6xl mt-6 mb-6 bg-success text-success-content">
-  <pre data-prefix="∩"><code>入場策略：布林帶策略</code></pre>
-  <pre data-prefix="∪"><code>出場策略：態止盈止損出場策略 + RSI＋金唬男均線出場場策略</code></pre>
-  <pre data-prefix="𝓓" class="bg-warning text-warning-content"><code>觀測區間：2024/10/01~2025/10/01(365 days)</code></pre>
+  <pre data-prefix="∩"><code>入場策略：<span ng-bind="entryStrategy"></span></code></pre>
+  <pre data-prefix="∪"><code>出場策略：<span ng-bind="exitStrategy"></span></code></pre>
 </div>
 <div class="stats cursor-pointer flex w-[85%] mx-auto max-w-6xl" ng-click="showTrades()">
   <div class="stat">

@@ -451,11 +451,6 @@ const Backtest = sequelize.define('Backtest', {
 		allowNull: false,
 		comment: '測試參數'
 	},
-	paramsMD5: {
-		type: DataTypes.STRING,
-		allowNull: false,
-		comment: '測試參數的 MD5'
-	},
 	startDate: {
 		type: DataTypes.DATEONLY,
 		allowNull: false,
@@ -492,11 +487,14 @@ const Backtest = sequelize.define('Backtest', {
 }, {
 	indexes: [{
 		unique: true,
-		fields: ['code', 'ma', 'paramsMD5', 'startDate', 'endDate'] // 複合唯一索引
+		fields: ['code', 'userId'] // 複合唯一索引
 	}],
 	timestamps: false // 不使用Sequelize自帶時間戳
 });
 
+Backtest.save = async function(test) {
+	return Base.save(Backtest, test);
+};
 
 const Log = sequelize.define('Log', {
 	id: {
