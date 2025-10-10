@@ -799,6 +799,7 @@
 				const codes = $$.stocks.filter(s => s.checked).map(s => s.code);
 				service.simulate(codes, $$.money, $$.params, (simulated) => {
 					$$.simulated = simulated.data;
+					$$.simulated.csv = simulated.csv;
 					//console.log(simulated.data);
 					const pres = {};
 					$$.simulated.events.forEach(event => {

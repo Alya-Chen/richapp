@@ -22,7 +22,7 @@
         <svg fill="currentColor" class="icon-spinner9 size-[1em]">
           <use xlink:href="css/symbol-defs.svg#icon-spinner9"></use>
         </svg> 儲存參數
-      </button>      
+      </button>
     </div>
     <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
       <span class="text-lg font-bold text-nowrap mr-4">入場策略</span>
@@ -80,6 +80,9 @@
     </div>
   </div>
 </div>
+<div ng-if="simulated.csv" class="w-[85%] mx-auto max-w-6xl mt-6 bg-success rounded-t-lg grid grid-cols-10">
+  <textarea ng-bind="simulated.csv" style="width: 100%; height: 400px;"></textarea>
+</div>
 <div ng-if="simulated" class="w-[85%] mx-auto max-w-6xl mt-6 bg-success rounded-t-lg grid grid-cols-6">
   <div class="stat bg-base-100 rounded-tl-lg row-span-2">模擬日期區間
     <ul class="steps steps-vertical">
@@ -115,7 +118,7 @@
     <span class="stat-title text-base-200">總損益</span>
     <span class="stat-value before:content-['$'] before:text-xs text-white"
       ng-bind="simulated.summary.totalProfit.scale()"></span>
-    <span class="stat-value before:content-['$'] before:text-xs text-white" 
+    <span class="stat-value before:content-['$'] before:text-xs text-white"
       ng-bind="-(simulated.summary.tax.scale())"></span>
   </div>
   <div class="stat">
@@ -132,7 +135,7 @@
   <div class="stat">
     <span class="stat-title text-base-200">交易次數</span>
     <span class="stat-value text-white" ng-bind="simulated.summary.tradeCount"></span>
-  </div>  
+  </div>
   <div class="stat">
     <span class="stat-title text-base-200">盈虧比</span>
     <span class="stat-value text-white" ng-bind="simulated.summary.pnl"></span>
@@ -238,7 +241,7 @@
         🧧 <span class="font-price text-4xl" ng-bind="event.profit"
           ng-class="{'text-rich-green': event.profit < 0, 'text-rich-red': event.profit > 0}"></span>
         <span class="font-pct" ng-bind="event.profitRate | pct"></span>
-        (<span class="font-price text-4xl" ng-bind="-event.tax.scale()" class="text-rich-green"></span>)    
+        (<span class="font-price text-4xl" ng-bind="-event.tax.scale()" class="text-rich-green"></span>)
       </div>
     </div>
     <div ng-if="event.invest" class="border-l-2 border-primary">

@@ -16,6 +16,7 @@ import {
 } from './static/js/macd-kdj.js';
 
 const STOCK_DIR = 'data/stock/';
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
 
 class Service {
 	constructor() {
@@ -51,14 +52,14 @@ class Service {
 		}
 		return users.map(u => u.toJSON());
 	}
-	
+
 	async realtime(codes) {
 		const dailies = await new Crawler().realtime(codes);
 		const today = new Date();
 		for (let i = 0; i < dailies.length; i++) {
 			const daily = dailies[i];
 			try {
-				if (!daily.open) continue; //!today.isSameDay(daily.date) || 
+				if (!daily.open) continue; //!today.isSameDay(daily.date) ||
 				await db.StockDaily.save(daily);
 			} catch (error) {
 				db.Log.error(`${daily.code} 股票即時資料儲存失敗 ${error}`);
@@ -100,8 +101,10 @@ class Service {
 			db.Log.error(`股票即時同步任務執行失敗 ${error}`);
 		}
 	}
-	
+
 	async realtimeBacktest(codes) {
+		// 距離上次的回測需至少 15 分鐘才執行
+		if (new Date().getTime() - FIFTEEN_MINUTES < (this.lastSimulatingTime || 0)) return;
 		this.realtimeBacktest.count = this.realtimeBacktest.count || 0;
 		if (this.realtimeBacktest.count++ % 2) return;
 		const users = await db.User.findAll();
@@ -110,7 +113,7 @@ class Service {
 			const params = user.settings?.params;
 			if (!params) continue;
 			params.userId = user.id;
-			console.log(`[${new Date().toLocaleString()}] 啟動 ${user.name} 股票回測任務`);				
+			console.log(`[${new Date().toLocaleString()}] 啟動 ${user.name} 股票回測任務`);
 			await this.backtest(codes, params);
 		}
 	}
@@ -122,7 +125,7 @@ class Service {
 		rule1.minute = new schedule.Range(0, 59, 3); // 每 3 分鐘
 		rule1.tz = 'Asia/Taipei'; // 設置時區
 		schedule.scheduleJob(rule1, this.realtimeJob.bind(this));
-		
+
 		// 配置交易日時間規則（以台灣股市為例）
 		const rule2 = new schedule.RecurrenceRule();
 		rule2.dayOfWeek = [1, 2, 3, 4, 5]; // 周一到周五
@@ -154,7 +157,7 @@ class Service {
 			} catch (error) {
 				db.Log.error(`股票回測任務執行失敗 ${error}`);
 			}
-		});		
+		});
 	}
 
 	async backtest(codes, params, simulating) {
@@ -162,7 +165,7 @@ class Service {
 		params.exitDate = params.exitDate || new Date();
 		//params = Object.assign({}, sysUser.settings.params, params || {});
 		params.entryStrategy = st[params.entryStrategy];
-		params.exitStrategy = params.exitStrategy.map(strategy => st[strategy]);		
+		params.exitStrategy = params.exitStrategy.map(strategy => st[strategy]);
 		if (codes != 'all' && !Array.isArray(codes)) { // ma：從 params 設定取得
 			const startDate = dateFns.addYears(params.entryDate, -1);
 			const dailies = await this.dailies(codes, startDate);
@@ -221,14 +224,14 @@ class Service {
 				this.saveTest(stock, best);
 				stock.financial = Object.assign(stock.financial || {}, new BullBear(dailies).calculate());
 				this.saveStock(stock);
-				//console.log(`${stock.code} ${JSON.stringify(stock.financial)}`);				
+				//console.log(`${stock.code} ${JSON.stringify(stock.financial)}`);
 			}
 			result.push(best);
 		}
 		return result;
 		//console.log(`backtest ${new Date().getTime() - now}`);
 	}
-	
+
 	async findBest(stock, params, dailies, simulating) {
 		// 若是回測，用 entryDate 的前一年資料來 找最佳 MA
 		const entryDate = simulating ? dateFns.addYears(params.entryDate, -1) : params.entryDate;
@@ -269,7 +272,7 @@ class Service {
 			test.trades = test.trades || test.result.trades;
 			results.push(`"${stock.code}","${stock.name + otc}",${test.ma},${profitRate},${test.profit},${winRate},${reentryProfitRate},${reentryProfit},${reentryWinRate},${reentry},${pnl},${expectation},${test.trades.length}`);
 		};
-		return results.join('\r\n');	
+		return results.join('\r\n');
 	}
 
 	async getUser(id) {
@@ -306,7 +309,7 @@ class Service {
 	async findStock(code) {
 		return await new Crawler({ code }).fetchMeta();
 	}
-	
+
 	async saveStock(stock) {
 		return await db.Stock.save(stock);
 	}
@@ -338,7 +341,7 @@ class Service {
 			otc: stock.otc == true && stock.country != 'us'
 		});
 	}
-	
+
 	async notes(owner) {
 		const notes = await db.Note.findByOwner(owner);
 		return notes;
@@ -351,17 +354,17 @@ class Service {
 	async delNote(id) {
 		return await db.Note.del(id);
 	}
-	
+
 	async logs(limit) {
 		const logs = await db.Log.last(limit);
 		return logs;
 	}
-	
+
 	async trades() {
 		const trades = await db.Stock.findTrades();
 		return trades;
 	}
-	
+
 	async findTests(where, orderBy) {
 		const params = {
 			order: orderBy ? [orderBy] : ['code']
@@ -392,7 +395,7 @@ class Service {
 			profitRate: result.profitRate,
 			lastModified: new Date(),
 			result
-		};		
+		};
 		try {
 			const loaded = await this.findTests({
 				userId: params.userId,
@@ -407,11 +410,11 @@ class Service {
 			return null;
 		}
 	}
-	
+
 	async saveDaily(daily) {
 		return await db.StockDaily.save(daily);
 	}
-	
+
 	async countDaily(code) {
 		return await db.StockDaily.count({
 			where: {
@@ -419,7 +422,7 @@ class Service {
 			}
 		});
 	}
-	
+
 	async dailies(code, startDate) {
 		startDate = startDate || dateFns.addYears(new Date(), -2); // 取前兩年前資料
 		let result = await db.StockDaily.query(code, startDate, new Date());
@@ -439,7 +442,7 @@ class Service {
 		const result = await db.StockDaily.last();
 		return result.map(s => s.toJSON());
 	}
-	
+
 	async checkDailies() {
 		const stocks = await this.stocks();
 		let lastDate = '1980-01-01';
@@ -456,14 +459,14 @@ class Service {
 		});
 		return result;
 	}
-	
+
 	async saveTrade(trade) {
 		return await db.StockTrade.save(trade);
 	}
-	
+
 	async fetchDividendData(stock) {
 		return await new Crawler(stock).fetchDividendData();
-	}	
+	}
 }
 
 const stockService = await Service.create();

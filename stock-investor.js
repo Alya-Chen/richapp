@@ -1,3 +1,4 @@
+import * as st from './trading-strategy.js';
 import {
 	stockService
 } from './stock-service.js';
@@ -8,13 +9,15 @@ class Investor {
 		this.money = money || (200 * 10000);
 		params.transient = true;
 		params.entryDate = params.entryDate || new Date(new Date().getFullYear() + '/01/01');
-		params.exitDate = params.exitDate || new Date();		
+		params.exitDate = params.exitDate || new Date();
 		this.params = params;
 	}
-	
+
 	async invest() {
 		const entryDate = this.params.entryDate;
-		const exitDate = this.params.exitDate;	
+		const exitDate = this.params.exitDate;
+		const entryStrategy = st[this.params.entryStrategy].name;
+		const exitStrategy = this.params.exitStrategy.map(s => st[s].name).join('＋');
 		const invested = {
 			money: this.money,
 			profit: 0
@@ -37,7 +40,7 @@ class Investor {
 		const trades = [];
 		let tests = null;
 		let runningTests = [];
-		csv.push(`"代號","公司","MA","購入日期","購入價格","購入股數","剩餘本金","賣出日期","賣出價格","單筆收益","單筆稅金","累積收益","期末本金","出場原因"`);
+		csv.push(`代號	公司	MA	購入日期	購入價格	購入股數	剩餘本金	賣出日期	賣出價格	單筆收益	單筆稅金	累積收益	期末本金	出場原因`);
 		while (!entryDate.isSameDay(exitDate)) {
 			const codes = this.stockCodes.filter(code => !runningTests.map(t => t.code).includes(code));
 			tests = this.params.dynamic ? runningTests.concat(await this.getTests(codes, entryDate)) : (tests || await this.getTests(codes, entryDate));
@@ -88,7 +91,7 @@ class Investor {
 					invested.profit += trade.profit;
 					trades.find(t => t.code == trade.code).status = 'done';
 					const reason = trade.exitReason + (trade.reentry ? '（返場）' : '');
-					csv.push(`"${trade.code}","${trade.name}（${trade.ma}）","${trade.entryDate}",${trade.entryPrice.scale(2)},${trade.amount},${trade.entryRemain.scale()},"${trade.exitDate}",${trade.exitPrice.scale()},${trade.profit.scale()},${trade.tax.scale()},${invested.profit.scale()},${invested.money.scale()},"${reason}"`);
+					csv.push(`${trade.code}	${trade.name}	${trade.ma}	${trade.entryDate.toLocaleDateString()}	${trade.entryPrice.scale(2)}	${trade.amount}	${trade.entryRemain.scale()}	${trade.exitDate.toLocaleDateString()}	${trade.exitPrice.scale()}	${trade.profit.scale()}	${trade.tax.scale()}	${invested.profit.scale()}	${invested.money.scale()}	${reason}`);
 					data.events.push({ type: 'sell', date: trade.exitDate, code: trade.code, name: trade.name, ma: trade.ma, price: trade.exitPrice, amount: trade.amount, profit: trade.profit, tax: trade.tax, remainMoney: invested.money, reason });
 					runningTests = runningTests.filter(t => t.code != trade.code);
 				}
@@ -101,8 +104,9 @@ class Investor {
 		data.summary = Object.assign(data.summary, this.calculateMetrics(trades));
 		data.summary.profitRate = (data.summary.totalProfit / this.money);
 		data.summary.netProfitRate = (data.summary.netProfit / this.money);
-		csv.push(`"最後本金","總獲利","總獲利率","總稅金","稅後淨利","淨利率","總交易次數","總勝率","盈虧比","期望值","返場次數","返場勝率","返場獲利"`);
-		csv.push(`${data.summary.finalMoney},${data.summary.totalProfit.scale()},${data.summary.profitRate.scale(2)},${data.summary.tax.scale()},${data.summary.netProfit.scale()},${data.summary.netProfitRate.scale(2)},${data.summary.tradeCount},${data.summary.winRate.scale(2)},${data.summary.pnl},${data.summary.expectation},${data.summary.reentry},${data.summary.reentryWinRate.scale(2)},${data.summary.reentryProfit.scale()}`);
+		csv.unshift(`${data.summary.finalMoney.scale()}	${data.summary.totalProfit.scale()}	${data.summary.profitRate.scale(2)}	${data.summary.tax.scale()}	${data.summary.netProfit.scale()}	${data.summary.netProfitRate.scale(2)}	${data.summary.tradeCount}	${data.summary.winRate.scale(2)}	${data.summary.pnl}	${data.summary.expectation}	${data.summary.reentry}	${data.summary.reentryWinRate.scale(2)}	${data.summary.reentryProfit.scale()}`);
+		csv.unshift(`最後本金	總獲利	總獲利率	總稅金	稅後淨利	淨利率	總交易次數	總勝率	盈虧比	期望值	返場次數	返場勝率	返場獲利`);
+		csv.unshift(`入場日期	${entryDate.toLocaleDateString()}	出場日期	${exitDate.toLocaleDateString()}	入場策略	${entryStrategy}	出場策略	${exitStrategy}`);
 		return {
 			csv: csv.join('\r\n'),
 			data,
@@ -128,7 +132,7 @@ class Investor {
 			tradeCount: trades.length,
 			totalLoss: totalLoss.scale(),
 			tax,
-			netProfit: (profit + totalLoss - tax).scale(), 
+			netProfit: (profit + totalLoss - tax).scale(),
 			breakoutRate: (breakouts / trades.length).scale(),
 			winRate: winRate.scale(),
 			reentry: reentry.length,

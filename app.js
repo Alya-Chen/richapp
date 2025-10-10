@@ -97,7 +97,7 @@ app.post('/stock/:code/trade', async (req, res) => {
 			const total = trade.logs.reduce((sum, l) => sum + (l.act == '買入' ? l.amount : -l.amount), 0);
 			if (!total) {
 				trade.exitDate = trade.logs[trade.logs.length - 1].date;
-			}			
+			}
 		}
 	}
 	else {
@@ -116,7 +116,7 @@ app.post('/stock/:code/dividend', async (req, res) => {
 	const trade = stock.trades.find(t => t.id == req.body.id) || req.body;
 	if (trade.id) {
 		if (trade.amount) {
-			Object.assign(trade, req.body);			
+			Object.assign(trade, req.body);
 		}
 		else { // 刪除
 			stock.trades = stock.trades.filter(t => t.id != trade.id);
@@ -184,9 +184,9 @@ app.get('/backtest/:code{/:ma}', async (req, res) => {
 			const params = user.settings?.params;
 			if (!params) continue;
 			params.userId = user.id;
-			console.log(`[${new Date().toLocaleString()}] 啟動 ${user.name} 股票回測任務`);				
+			console.log(`[${new Date().toLocaleString()}] 啟動 ${user.name} 股票回測任務`);
 			await stockService.backtest('all', params);
-		}	
+		}
 		return res.json({ success: true });
 	}
 	const user = await getUser(req);
@@ -202,7 +202,7 @@ app.get('/backtest/:code{/:ma}', async (req, res) => {
 		res.json(result ? result : {});
 	}
 	else {
-		res.json(result.length ? result.reduce((t1, t2) => t1.profit > t2.profit ? t1 : t2) : {});		
+		res.json(result.length ? result.reduce((t1, t2) => t1.profit > t2.profit ? t1 : t2) : {});
 	}
 });
 
@@ -221,6 +221,7 @@ app.get('/simulate{/:codes}', async (req, res) => {
 });
 
 app.post('/simulate', async (req, res) => {
+	stockService.lastSimulatingTime = new Date().getTime();
 	const codes = req.body.codes;
 	const money = req.body.money;
 	const params = req.body.params;
