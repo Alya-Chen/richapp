@@ -406,7 +406,13 @@
 					realtimes.forEach(realtime => {
 						if (!realtime.open) return;
 						const stock = stocks.find(s => s.code == realtime.code);
-						if (stock) stock.realtime = realtime;
+						if (stock) {
+							stock.realtime = realtime;
+							if (stock.trade && !stock.trade.exitDate) {
+								const entryPrice = stock.trade.entryPrice;
+								stock.realtime.profitRate = (realtime.close - entryPrice) / entryPrice;
+							}
+						}
 					});
 					const isAfterTrading = new Date().isAfterTrading();
 					if (!isAfterTrading) service.stocks(); // triger stocks backtest
@@ -452,33 +458,6 @@
 				console.log(metrics(result.first, '首衝'));
 				console.log(metrics(result.re, '回場'));
 			};
-			$$.showTrades = function() {
-				$$.trades = [];
-				$$.trades.netProfit = 0;
-				$$.trades.totalDividend = 0;
-				const calTrade = function(stock, dailies, trade) {
-					const invest = new RsiInvest(dailies, trade.ma).start(trade);
-					$$.trades.push({ ...stock, ...invest });
-					$$.trades.netProfit += invest.netProfit;
-					$$.trades.netProfitRate = $$.trades.netProfit / $$.invested.totalCapital;						
-				}
-				service.trades(trades => {
-					trades.forEach(trade => {
-						const stock = { code: trade.code, name: trade.name };
-						if (trade.type == 'dividend') {
-							$$.trades.totalDividend += trade.payment;
-							return $$.trades.push({ ...stock, ...trade });
-						}
-						if (!trade.exitDate) return service.dailies(stock, (dailies) => calTrade(stock, dailies, trade));
-						calTrade(stock, [], trade);
-					});
-				});				
-				$.blockUI({
-					message: $('#trades-block'),
-					onOverlayClick: $.unblockUI,
-					css: { width: '70%', height: '60%', left: '15%', top: '20%' }
-				});
-			}
 			$$.showStareds = function(user) {
 				const stareds = (user.settings || {
 					stared: []
@@ -493,8 +472,8 @@
 			};
 			$$.resort = service.debounce(() => {
 				const INVESTED = 10000000000;
-				$$.stareds = $$.stareds.sort((a, b) => (Date.parse(b.trade.entryDate) + (b.trade.invest ? INVESTED : 0)) - (Date.parse(a.trade.entryDate) + (a.trade.invest ? INVESTED : 0)));
-				$$.openeds = $$.openeds.sort((a, b) => Date.parse(b.trade.entryDate) - Date.parse(a.trade.entryDate));
+				$$.stareds = $$.stareds.sort((a, b) => (Date.parse(b.trade?.entryDate || 0) + (b.trade?.invest ? INVESTED : 0)) - (Date.parse(a.trade?.entryDate || 0) + (a.trade?.invest ? INVESTED : 0)));
+				$$.openeds = $$.openeds.sort((a, b) => Date.parse(b.trade?.entryDate || 0) - Date.parse(a.trade?.entryDate || 0));
 			}, 1.5 * SEC);
 			$$.checked = function(stock) {
 				$$.$emit('stockChecked', stock);
@@ -512,12 +491,12 @@
 				}
 				else {
 					stock.trade = test.trades.pop();
-					stock.trade.entryDate = new Date(stock.trade.entryDate);					
+					if (stock.trade) stock.trade.entryDate = new Date(stock.trade.entryDate);					
 				}
 				const stocks = $$.stareds.concat($$.openeds, $$.todays, $$.closeds, $$.bulls);
 				const twoWeeksAgo = new Date().addDays(-14);
-				if (stock.trade.status == 'open' && !stocks.find(s => s.code == test.code)) $$.openeds.push(stock);
-				if (stock.trade.exitDate) {
+				if (stock.trade && stock.trade.status == 'open' && !stocks.find(s => s.code == test.code)) $$.openeds.push(stock);
+				if (stock.trade && stock.trade.exitDate) {
 					stock.trade.exitDate = new Date(stock.trade.exitDate);
 					stock.trade.rsiHot = stock.trade.exitReason.includes('過熱');
 					if (!stocks.find(s => s.code == test.code) && stock.trade.exitDate.isToday()) $$.todays.push(stock);
@@ -779,8 +758,8 @@
 			service.stock($params.code, (stock) => {
 				$$.stock = stock;
 				$$.stock.defaultMa = $params.ma || stock.defaultMa;
-				if (service.user) {
-					const stareds = (service.user.settings || {
+				if ($$.user) {
+					const stareds = ($$.user.settings || {
 						stared: []
 					}).stared;
 					$$.stock.stared = stareds.find(s => s == stock.code);

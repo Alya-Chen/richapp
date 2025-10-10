@@ -20,7 +20,6 @@ const STOCK_DIR = 'data/stock/';
 class Service {
 	constructor() {
 		this.inited = false;
-		this.sysUserName = '⚙️ System';
 	}
 
 	static async create() {
@@ -95,29 +94,34 @@ class Service {
 			const codes = stocks.map(s => s.code);
 			console.log(`[${new Date().toLocaleString()}] 啟動股票即時同步抓取任務`);
 			await this.realtime(codes);
-			const users = await db.User.findAll();
-			for (let i = 0; i < users.length; i++) {
-				const user = users[i];
-				const params = user.settings?.params;
-				if (!params) continue;
-				params.userId = user.id;
-				console.log(`[${new Date().toLocaleString()}] 啟動 ${user.name} 股票回測任務`);				
-				await this.backtest(codes, params);
-			}
+			await this.realtimeBacktest(codes);
 			console.log(`[${new Date().toLocaleString()}] 股票即時同步任務執行完成`);
 		} catch (error) {
 			db.Log.error(`股票即時同步任務執行失敗 ${error}`);
 		}
 	}
 	
-	scheduleSync(isDev) {
+	async realtimeBacktest(codes) {
+		this.realtimeBacktest.count = this.realtimeBacktest.count || 0;
+		if (this.realtimeBacktest.count++ % 2) return;
+		const users = await db.User.findAll();
+		for (let i = 0; i < users.length; i++) {
+			const user = users[i];
+			const params = user.settings?.params;
+			if (!params) continue;
+			params.userId = user.id;
+			console.log(`[${new Date().toLocaleString()}] 啟動 ${user.name} 股票回測任務`);				
+			await this.backtest(codes, params);
+		}
+	}
+
+	scheduleSync() {
 		const rule1 = new schedule.RecurrenceRule();
 		rule1.dayOfWeek = [1, 2, 3, 4, 5]; // 周一到周五
 		rule1.hour = new schedule.Range(0, 23); // 每小時執行
-		rule1.minute = new schedule.Range(0, 59, 3); // 每 5 分鐘
+		rule1.minute = new schedule.Range(0, 59, 3); // 每 3 分鐘
 		rule1.tz = 'Asia/Taipei'; // 設置時區
 		schedule.scheduleJob(rule1, this.realtimeJob.bind(this));
-		if (isDev) return;
 		
 		// 配置交易日時間規則（以台灣股市為例）
 		const rule2 = new schedule.RecurrenceRule();

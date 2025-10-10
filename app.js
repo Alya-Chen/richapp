@@ -13,7 +13,7 @@ import * as st from './trading-strategy.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-stockService.scheduleSync(__filename.includes('投資'));
+stockService.scheduleSync();
 
 const app = express();
 const port = 5001;
