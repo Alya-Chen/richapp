@@ -144,7 +144,7 @@
 
           <span ng-class="{'date--today': stock.trade.entryDate.isToday()}" class="font-date"
             ng-bind="stock.trade.entryDate | date:'MM/dd'"></span>
-
+          <span class="font-pct font-bold" ng-if="stock.realtime.profitRate" ng-bind="stock.realtime.profitRate | pct"></span>
           <span class="badge badge-secondary ml-auto" ng-if="stock.trade.reentry">返場</span>
           <span class="badge badge-secondary ml-auto" ng-if="stock.trade.breakout">二日</span>
         </span>
@@ -174,14 +174,6 @@
             <span class="text-right"><span ng-bind="log.act"></span>
               <span class="italic underline text-lg" ng-bind="log.amount"></span> 股
             </span>
-
-            <!--
-	      <span ng-if="log.invested > 0">
-			持倉：<span ng-bind="log.totalInvested"></span> 股
-	        平均成本：<span class="price" ng-bind="log.avgCost"></span>
-	        停損價：<span class="price" ng-bind="log.stopLossPrice"></span>
-		  </span>
-		  -->
             <span class="row-start-2 col-start-2 col-span-2 border-t border-base-200 text-right"
               ng-if="log.profit != 0">
               <span ng-if="log.invested > 0">目前</span>損益
@@ -212,9 +204,6 @@
       </div>
     </div>
   </div>
-</div>
-
-
 </div>
 
 <div id="trades-block" class="rounded-2xl grid grid-rows-[90%_auto] h-full" style="display: none">
@@ -249,7 +238,6 @@
             ng-class="{'text-rich-red': trade.netProfit > 0, 'text-rich-green': trade.netProfit < 0}"
             ng-bind="trade.netProfit | number"></span>
         </span>
-
 
         <span class="font-pct font-bold"
           ng-class="{'text-rich-red': trade.netProfitRate > 0, 'text-rich-green': trade.netProfitRate < 0}"
