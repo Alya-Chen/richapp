@@ -1,6 +1,6 @@
 (function(window, $, angular) {
 	'use strict';
-	
+
 	const SEC = 1000;
 	const EIGHT_HOURS = 8 * 3600 * SEC;
 	const ONE_DAY = 3 * EIGHT_HOURS;
@@ -62,7 +62,7 @@
 		sync(code, callback) {
 			$.growlUI('', `${code} 開始進行資料同步與回測，請稍候...`);
 			this.$http.get('/sync/' + code).then((res) => {
-				$.growlUI('', `${code} 完成資料同步與回測`); 
+				$.growlUI('', `${code} 完成資料同步與回測`);
 				callback(res.data);
 			});
 		}
@@ -116,7 +116,7 @@
 				data.forEach(d => d.date = new Date(d.date));
 				this.withMa(data, stock.defaultMa, true).withMa(data, 20).withMa(data, 60).withMa(data, 120); //.lsr(data);
 				const last = data[data.length - 1];
-				//if (last.lsr > -20 && last.lsr < 20) 
+				//if (last.lsr > -20 && last.lsr < 20)
 				//console.log(`${code} ${last.lsr}`);
 				callback(data);
 			});
@@ -135,7 +135,7 @@
 				if (!day.ma20 || !day.ma60 || !day.ma120) return null;
 				day.lsr = parseFloat([(day.ma20 - day.ma60), (day.ma60 - day.ma120)].reduce((sum, diff) => sum + (diff > 0 ? diff : -diff), 0).scale(2));
 				day.lsr = (day.ma20 > day.ma60 && day.ma60 > day.ma120 && day.ma20 > day.ma120) ? day.lsr : -day.lsr;
-			});			
+			});
 		}
 		simulate(codes, money, params, callback) {
 			const data = { codes, money, params };
@@ -154,7 +154,7 @@
 				const notes = res.data;
 				this.$root.$broadcast('notesLoaded', notes);
 				if (callback) callback(notes);
-			});			
+			});
 		}
 		logs(callback) {
 			this.$http.get('/logs').then((res) => {
@@ -168,7 +168,7 @@
 				      seen.add(log.msg);
 				      logs.push(log);
 				    }
-				}				
+				}
 				this.$root.$broadcast('logsLoaded', logs);
 				if (callback) callback(logs);
 			});
@@ -182,17 +182,17 @@
 				const dividend = res.data.filter(t => t.type == 'dividend').sort(comparer);
 				if (callback) callback(running.concat(exited).concat(dividend));
 			});
-		}		
+		}
 		saveNote(note, callback) {
 			note.owner = note.owner.replaceAll('/', '／');
 			this.$http.post('/note', note).then((res) => {
 				if (callback) callback(res.data);
-			});			
+			});
 		}
 		delNote(id, callback) {
 			this.$http.delete('/note/' + id).then((res) => {
 				if (callback) callback(res.data);
-			});			
+			});
 		}
 		backtest(stock, callback) {
 			if (stock.financial && stock.financial.bullscore) {
@@ -219,13 +219,13 @@
 			const url = `/sys/params`;
 			this.$http.get(url).then((res) => {
 				if (callback) callback(res.data);
-			});			
+			});
 		}
 		saveParams(params, callback) {
 			const url = `/sys/params`;
 			this.$http.post(url, params).then((res) => {
 				if (callback) callback(res.data);
-			});			
+			});
 		}
 		debounce(fn, delay = 1000) {
 			let timer = null;
@@ -261,7 +261,7 @@
 	};
 	app.filter('dt', dt);
 	app.filter('pct', pct);
-	///////////////////////////////////////////////////////////////////////////////	
+	///////////////////////////////////////////////////////////////////////////////
 	const controllers = {
 		index: function($$, $location, $timeout, service) {
 			$$.name = '發財 APP';
@@ -288,9 +288,9 @@
 						});
 						service.sync(this.code, (test) => {
 							$$.$broadcast('testLoaded', test);
-						});											
+						});
 					});
-				}				
+				}
 			};
 			$$.home = function() {
 				$location.url('/');
@@ -312,7 +312,7 @@
 						message: $('#note-form'),
 						onOverlayClick: $.unblockUI
 					});
-				},				
+				},
 				save: function() {
 					if (!this.model.title) return;
 					service.saveNote(this.model, (notes) => {
@@ -333,17 +333,17 @@
 			$$.simulate = {
 				stockGroups: ['我選的股票', '我的關注','可交易','全部台股','全部上市台股','全部上櫃台股','全部美股'],
 				open: function() {
-					const url = $location.url();
-					if (url.startsWith('/stock/')) {
-						const code = url.split('/').pop();
-						return window.open(`/simulate/${code}`, `_simulate/${code}`);
-					}
 					let codes = $$.stocks.filter(s => s.checked).map(s => s.code).join('&');
 					if ($$.simulate.stockGroup == '我選的股票' && !codes) return $.growlUI('', `請選擇至少一支股票！`);
 					codes = codes || $$.simulate.stockGroup;
 					window.open(`/simulate/${codes}`, `_simulate/${codes}`);
 				},
 				setup: function() {
+					const url = $location.url();
+					if (url.startsWith('/stock/')) {
+						const code = url.split('/').pop();
+						return window.open(`/simulate/${code}`, `_simulate/${code}`);
+					}
 					const stocks = $$.stocks.filter(s => s.checked);
 					$$.simulate.stockGroup = stocks.length ? '我選的股票' : '我的關注';
 					$.blockUI({
@@ -355,19 +355,19 @@
 			$$.$on('userSwitched', () => {
 				service.stocks((stocks) => {
 					$$.stocks = stocks;
-				});				
-			});			
-			$$.$on('stockLoaded', function(_, code) {
-				$$.stock = $$.stocks.find(s => s.code == code);			
+				});
 			});
-			$$.$on('stockChecked', function(_, stock) {
+			$$.$on('stockLoaded', (_, code) => {
+				$$.stock = $$.stocks.find(s => s.code == code);
+			});
+			$$.$on('stockChecked', (_, stock) => {
 				$$.stocks.find(s => s.code == stock.code).checked = stock.checked;
 			});
-			$$.$on('noteEditing', function(_, note) {
+			$$.$on('noteEditing', (_, note) => {
 				$$.note.model = note;
 				$$.note.edit(note);
-			});			
-			$$.$on('testLoaded', function(_, test) {
+			});
+			$$.$on('testLoaded', (_, test) => {
 				if (!test.code || !test.profit) return;
 				const profitRate = (test.profitRate * 100).scale();
 				const stock = $$.stocks.find(s => s.code == test.code);
@@ -383,8 +383,8 @@
 		home: function($$, $location, $timeout, service) {
 			$$.blocks = {};
 			$$.stareds = [];
-			$$.openeds = [];				
-			$$.todays = [];				
+			$$.openeds = [];
+			$$.todays = [];
 			$$.closeds = [];
 			$$.bulls = [];
 			$$.invested = {  // 已經購買的股票紀錄
@@ -392,7 +392,7 @@
 				totalCapital: TOTAL_CAPITAL,
 				cost: 0,
 				stocks: []
-			};	
+			};
 			$$.changeTo = function(code) {
 				window.open(`/stock/${code}`, `_stock/${code}`);
 			};
@@ -478,7 +478,7 @@
 			$$.checked = function(stock) {
 				$$.$emit('stockChecked', stock);
 			};
-			$$.$on('testLoaded', function(_, test) {
+			$$.$on('testLoaded', (_, test) => {
 				if (!test.code || !test.trades) return;
 				const stock = $$.stocks.find(s => s.code == test.code);
 				stock.alerts = test.alerts;
@@ -491,7 +491,7 @@
 				}
 				else {
 					stock.trade = test.trades.pop();
-					if (stock.trade) stock.trade.entryDate = new Date(stock.trade.entryDate);					
+					if (stock.trade) stock.trade.entryDate = new Date(stock.trade.entryDate);
 				}
 				const stocks = $$.stareds.concat($$.openeds, $$.todays, $$.closeds, $$.bulls);
 				const twoWeeksAgo = new Date().addDays(-14);
@@ -508,26 +508,26 @@
 				$$.resort();
 				//if ($$.stareds.find(s => s.code == test.code)) $$.calculate(stock, test);
 			});
-			$$.$on('userSwitched', function(_, user) {
+			$$.$on('userSwitched', (_, user) => {
 				$$.showStareds(user);
 				service.strategies((strategies) => {
 					service.getParams((params) => {
 						$$.entryStrategy = strategies.entryStrategies.find(s => s.key == params.entryStrategy).name;
 						$$.exitStrategy = params.exitStrategy.map(strategy => strategies.exitStrategies.find(s => s.key == strategy).name).join('＆');
 					});
-				});					
+				});
 			});
-			$$.$on('notesLoaded', function(_, notes) {
+			$$.$on('notesLoaded', (_, notes) => {
 				$$.notes = notes;
 			});
-			$$.$on('logsLoaded', function(_, logs) {
+			$$.$on('logsLoaded', (_, logs) => {
 				$$.logs = logs;
 				$timeout(service.logs.bind(service), 30 * SEC);
 			});
-			$$.$on('stocksLoaded', function(_, stocks) {
+			$$.$on('stocksLoaded', (_, stocks) => {
 				$$.stocks = stocks;
 				if (!$$.stareds.length) $$.showStareds($$.user);
-			});		
+			});
 			service.notes(location.pathname);
 			service.logs();
 			$timeout(() => {
@@ -536,7 +536,7 @@
 		},
 		stock: function($$, $params, $timeout, service) {
 			$$.tests = [];
-			$$.$on('maChanged', function(_, ma) {
+			$$.$on('maChanged', (_, ma) => {
 				$$.backtest(ma);
 			});
 			$$.star = function() {
@@ -546,7 +546,7 @@
 			};
 			$$.edit = function(note) {
 				$$.$emit('noteEditing', note);
-			};			
+			};
 			$$.backtest = function(ma) {
 				if (!$$.tests.find(t => t.ma == ma)) {
 					const params = {
@@ -572,9 +572,9 @@
 					$$.stock.done = $$.stock.done || [];
 					trades.forEach(trade => {
 						const invest = new RsiInvest($$.stock.dailies, trade.ma).start(trade);
-						$$.stock.done.push(invest);						
+						$$.stock.done.push(invest);
 					});
-				},				
+				},
 				edit: function(log) {
 					if (log.date && !log.id) return;
 					this.log = log || {};
@@ -593,7 +593,7 @@
 					$$.stock.trade = $$.stock.trade || { logs: [] };
 					const log = $$.stock.trade.logs.find(l => l.id == this.log.id);
 					if (!log) $$.stock.trade.logs.push(this.log);
-					else Object.assign(log, this.log);				
+					else Object.assign(log, this.log);
 					service.trade($$.stock, (trade) => {
 						$$.stock.trade = trade;
 						$$.invest.simulate(trade);
@@ -610,7 +610,7 @@
 							$.unblockUI();
 						});
 					}
-				}				
+				}
 			};
 			$$.dividend = {
 				edit: function(trade) {
@@ -700,14 +700,14 @@
 					id: 'MACD',
 					visible: false,
 					url: 'https://t.ly/PPRaC'
-				}, { 
-					id: 'CCI', 
-					visible: false, 
-					url: 'https://t.ly/G4dSi' 
-				}, { 
-					id: 'Bollinger', 
-					visible: false, 
-					url: 'https://t.ly/aDzD9' 
+				}, {
+					id: 'CCI',
+					visible: false,
+					url: 'https://t.ly/G4dSi'
+				}, {
+					id: 'Bollinger',
+					visible: false,
+					url: 'https://t.ly/aDzD9'
 				},
 				/*{
 					id: 'RSI',
@@ -754,7 +754,7 @@
 					$$.chart.update($$.stock.realtime);
 					$timeout($$.realtime, 30 * SEC);
 				});
-			};			
+			};
 			service.stock($params.code, (stock) => {
 				$$.stock = stock;
 				$$.stock.defaultMa = $params.ma || stock.defaultMa;
@@ -767,17 +767,16 @@
 				$$.dailies();
 				$$.$emit('stockLoaded', stock.code);
 			});
-			$$.$on('notesLoaded', function(_, notes) {
+			$$.$on('notesLoaded', (_, notes) => {
 				$$.notes = notes;
 			});
-			service.notes(location.pathname);			
+			service.notes(location.pathname);
 		},
 		simulate: function($$, $location, $params, $interval, service) {
 			if (!$params.codes) return $location.path('/');
 			const today = new Date();
 			const twoYearsAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
 			$$.money = TOTAL_CAPITAL;
-			$$.testers = [];
 			$$.entryStrategyCheck = function() {
 				$$.tigerChecked = $$.params.entryStrategy.includes('Tiger') || $$.exitStrategies.find(s => s.key.includes('Tiger') && s.checked);
 			};
@@ -836,11 +835,12 @@
 				$$.stopLossPct = ($$.params.stopLossPct * 100).toFixed() + '%';
 				$$.dynamicStopPct = ($$.params.dynamicStopPct * 100).toFixed() + '%';
 			});
-			$$.$on('stocksLoaded', function(_, stocks) {
+			$$.$on('stocksLoaded', (_, stocks) => {
+				$$.testers = [];
 				if ($params.codes == '我的關注') {
 					const stareds = $$.user.settings.stared;
 					$params.codes = $$.stocks.filter(s => stareds.find(ss => ss == s.code)).map(s => s.code).join('&');
-				}				
+				}
 				$params.codes.split('&').forEach(code => {
 					stocks.find(s => s.code == code).checked = true;
 					$$.testers.push(stocks.find(s => s.code == code));
