@@ -17,6 +17,7 @@ import {
 
 const STOCK_DIR = 'data/stock/';
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
+const SLEEP = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 class Service {
 	constructor() {
@@ -227,6 +228,7 @@ class Service {
 				//console.log(`${stock.code} ${JSON.stringify(stock.financial)}`);
 			}
 			result.push(best);
+			await SLEEP(50);
 		}
 		return result;
 		//console.log(`backtest ${new Date().getTime() - now}`);
