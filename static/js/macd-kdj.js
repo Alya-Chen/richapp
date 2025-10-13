@@ -57,7 +57,6 @@ export class Macd {
         const k = 2 / (period + 1);
         const emaArray = [];
         let ema;
-
         for (let i = 0; i < values.length; i++) {
             if (i < period - 1) {
                 emaArray.push(null);
@@ -81,18 +80,14 @@ export class Macd {
             if (prev.diff == null || prev.dea == null || curr.diff == null || curr.dea == null) {
                 continue;
             }
-            if (prev.diff < prev.dea && curr.diff >= curr.dea && curr.dea >= 0) {
+            // 1. DIF（快線）由下往上穿越 DEA（慢線）
+            // 2. DEA 線為正：必須在零軸上方，表示目前處於多頭趨勢
+            if (prev.diff < prev.dea && curr.diff >= curr.dea) { // && curr.dea >= 0
                 curr.golden = true; // 金叉
             }
-            if (prev.diff > prev.dea && curr.diff <= curr.dea && curr.dea >= 0) {
+            if (prev.diff > prev.dea && curr.diff <= curr.dea) { //  && curr.dea >= 0
                 curr.dead = true; // 死亡交叉
             }
-            /*if (!prev.diffSignal && curr.diffSignal) {
-            	curr.golden = true; // 金叉
-            }
-            if (prev.diffSignal && !curr.diffSignal) {
-            	curr.dead = true; // 死亡交叉
-            }*/
         }
         return diffArray;
     }
@@ -164,7 +159,7 @@ export class Kdj {
     }
 
     detectCrossovers(kdjArray) {
-        /*let lastTop = 0;
+        let lastTop = 0;
         for (let i = 1; i < kdjArray.length; i++) {
             const prev = kdjArray[i - 1];
             const curr = kdjArray[i];
@@ -182,19 +177,19 @@ export class Kdj {
             } else {
                 lastTop = (curr.k > lastTop) ? curr.k : lastTop;
             }
-            //if (onBottom && prev.k < prev.d && curr.k >= curr.d) {
-            //	curr.golden = true;
-            //}
-            //if (onTop && prev.k > prev.d && curr.k <= curr.d) {
-            //	curr.dead = true;
-            //}
-        }*/
-		for (let i = 1; i < kdjArray.length; i++) {
+            if (onBottom && prev.k < prev.d && curr.k >= curr.d) {
+            	curr.golden = true;
+            }
+            if (onTop && prev.k > prev.d && curr.k <= curr.d) {
+            	curr.dead = true;
+            }
+        }
+		/*for (let i = 1; i < kdjArray.length; i++) {
             const prev = kdjArray[i - 1];
             const curr = kdjArray[i];
             if (!prev || !curr) continue;
             curr.dead = prev.k >= 90 && curr.k < 90;
-		}		
+		}*/
         return kdjArray;
     }
 }
@@ -235,9 +230,9 @@ export class Cci {
             const prev = cciArray[i - 1];
             const curr = cciArray[i];
             if (!prev || !curr) continue;
-            //if (prev.cci < -this.limit && curr.cci >= -this.limit) {
-            //	curr.golden = true;
-            //}
+            if (prev.cci < -this.limit && curr.cci >= -this.limit) {
+            	curr.golden = true;
+            }
             if (prev.cci > this.limit && curr.cci <= this.limit) {
                 curr.dead = true;
             }
@@ -306,9 +301,16 @@ export class Rsi {
             const prev = rsiArray[i - 1];
             const curr = rsiArray[i];
             if (!prev || !curr) continue;
-            curr.dead = prev.rsi >= this.limit && curr.rsi < this.limit;
-            //curr.dead = curr.rsi >= this.limit;
-            //curr.golden = curr.rsi <= (100 - this.limit);
+            // 金叉：從超賣區下方，向上穿越超賣線
+            const oversoldLimit = 100 - this.limit; // e.g., 20
+            if (prev.rsi < oversoldLimit && curr.rsi >= oversoldLimit) {
+                curr.golden = true;
+            }
+            // 死叉：從超買區上方，向下穿越超買線
+            const overboughtLimit = this.limit; // e.g., 80
+            if (prev.rsi > overboughtLimit && curr.rsi <= overboughtLimit) {
+                curr.dead = true;
+            }
         }
         return rsiArray;
     }
@@ -327,8 +329,8 @@ export class Rsi {
 			if (priceHigher && rsiLower && volumeLower) curr.bear = true;
 			if (priceLower && rsiHigher && volumeLower) curr.bull = true;
 	    }
-	    return rsiArray;		
-	}	
+	    return rsiArray;
+	}
 }
 
 export class BullBear {
@@ -405,7 +407,7 @@ export class BollingerBands {
 		for (let i = 0; i < this.data.length; i++) {
 			if (i <= this.period - 1) {
 		        result.push({ middle: null, upper: null, lower: null, bandwidth: null });
-		        continue;				
+		        continue;
 			}
 			const windowData = this.data.slice(i - this.period + 1, i + 1).map(d => d.close);
 			const middle = this.sma(windowData);

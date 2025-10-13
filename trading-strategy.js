@@ -1,5 +1,31 @@
 import * as dateFns from 'date-fns';
-import { Macd, Rsi, BullBear, BollingerBands } from './static/js/macd-kdj.js';
+import { Macd, Kdj, Rsi, BullBear, BollingerBands } from './static/js/macd-kdj.js';
+
+class Cache {
+	constructor(claz) {
+		this.claz = claz;
+		this.cache = {};
+		this.date = new Date().toDateString();
+	}
+
+	get(code, data) {
+		if (this.date != new Date().toDateString()) {
+			this.date = new Date().toDateString();
+			this.cache = {};
+		}
+		if (!this.cache[code]) {
+			this.cache[code] = new this.claz(data).calculate();
+		}
+		return this.cache[code];
+	}
+	set(code, value) {
+		this.cache[code] = value;
+	}
+}
+
+const RSI_CACHE = new Cache(Rsi);
+const MACD_CACHE = new Cache(Macd);
+const KDJ_CACHE = new Cache(Kdj);
 
 export class TwoDaysUpEntry {
 	constructor(data, params) {
@@ -41,9 +67,9 @@ export class DynamicStopExit {
 			dynamicStopPct, // 動態止損小於曾經最高價格的 5%
 			maxHoldPeriod // 最大持倉周期 30 天
 		} = this.params;
-		
+
 		const exitConditions = [];
-		
+
 		// 固定止損
 		if (stopLossPct) {
 			exitConditions.push({
@@ -79,7 +105,7 @@ export class DynamicStopExit {
 		}
 		return condition;
 	}
-	
+
 	// 更新動態止損，交易日最高價格的 xx%
 	getDynamicStop(day) {
 	    this.dynamicStop = this.dynamicStop || 0;
@@ -98,7 +124,7 @@ export class TigerEntry {
 		this.name = `金唬男均線突破${ this.params.breakout ? '二日法則' : '' }進場策略`;
 		this.enabled = true;
 	}
-		
+
 	// 開倉條件檢查
 	checkEntry(day, index, position) {
 		const {
@@ -129,7 +155,7 @@ export class TigerEntry {
 		// slopeCond > 0 均線【上彎】時，均線突破的機率會高很多
 		// return isUp && volumeCond && slopeCond;
 		return (isUp && breakout && volumeCond) ? { reason: `${this.name} ${day.close.scale()} > ${day.ma.scale()}` } : null;
-	}	
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -140,7 +166,7 @@ export class TigerExit {
 		this.data = data;
 		this.params = params;
 	}
-	
+
 	// 平倉條件檢查
 	checkExit(day, index, position) {
 		const threshold = 1 - this.params.threshold;
@@ -167,39 +193,32 @@ export class BullTigerEntry {
 		this.tigerEntry = new TigerEntry(data, params);
 		this.trendTurns = new BullBear(this.data).calculate();
 	}
-	
+
 	// 開倉條件檢查
 	checkEntry(day, index, position) {
 		const pass = this.tigerEntry.checkEntry(day, index, position);
 		const isNowBullish = day.ma20 > day.ma60 || day.ma20 > day.ma120;
 		if (!pass || !isNowBullish) return false;
 		pass.reason = 'MA20>MA60 或 MA20>MA120 ' + pass.reason;
-		return pass;		
-	}	
+		return pass;
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 export class RsiTigerExit {
-	static CACHE = { date: new Date().toLocaleDateString() };
-	
 	constructor(data, params) {
-		if (RsiTigerExit.CACHE.date < new Date().toLocaleDateString()) {
-			RsiTigerExit.CACHE = { date: new Date().toLocaleDateString() };
-			console.log(`＃＃＃＃＃＃＃ ${RsiTigerExit.CACHE.date} 初始化 RsiTigerExit.CACHE ＃＃＃＃＃＃＃`);
-		}
 		this.name = 'RSI＋金唬男均線出場場策略';
 		this.enabled = true;
 		this.data = data;
 		this.params = params;
 		this.tigerExit = new TigerExit(data, params);
-		this.rsi = (params.code && RsiTigerExit.CACHE.hasOwnProperty(params.code)) ? RsiTigerExit.CACHE[params.code] : new Rsi(this.data).calculate();
-		RsiTigerExit.CACHE[params.code] = this.rsi.filter(r => r && r.dead);
+		this.rsi = RSI_CACHE.get(params.code, data);
 	}
-	
+
 	// 平倉條件檢查
 	checkExit(day, index, position) {
 		//const diffRate = (day.close - position.entryPrice) / position.entryPrice;
-		//if (diffRate <= -0.05) return { reason: `${toFixed(diffRate * 100)}％ 止損出場` } 
+		//if (diffRate <= -0.05) return { reason: `${toFixed(diffRate * 100)}％ 止損出場` }
 		const time = Date.parse(day.date);
 		const rsiExit = this.rsi.find(r => r && r.time == time && r.dead);
 		if (rsiExit) {
@@ -213,35 +232,37 @@ export class RsiTigerExit {
 export class MacdMaEntry {
 	constructor(data, params) {
 		this.name = 'MACD 進場策略';
-		this.enabled = false;
-		this.data = data;
+		this.enabled = true;
+		this.data = data || [];
 		this.params = params;
-		this.macd = new Macd(this.data).calculate();
+		this.macd = MACD_CACHE.get(params.code, data);
 	}
-	
+
 	// 開倉條件檢查
 	checkEntry(day, index, position) {
-		const curr = this.macd[index];
-		if (index < 1 || curr == null || position.status != 'closed') return null;
-		return (curr.golden) ? { reason: `${this.name} ${curr.signal.scale()} 金叉` } : null;		
-	}	
+		const macd = this.macd[index];
+		if (index < 1 || position.status != 'closed' || macd == null) return null;
+        return macd.golden ? { reason: `${this.name} 金叉` } : null;
+	}
 }
 
 export class MacdMaExit {
 	constructor(data, params) {
 		this.name = 'MACD 出場策略';
-		this.enabled = false;
-		this.data = data;
+		this.enabled = true;
+		this.data = data || [];
 		this.params = params;
-		this.macd = new Macd(this.data).calculate();
+		this.macd = MACD_CACHE.get(params.code, data);
+		this.kdj = KDJ_CACHE.get(params.code, data);
+		this.rsi = RSI_CACHE.get(params.code, data);
 	}
-	
+
 	// 平倉條件檢查
 	checkExit(day, index, position) {
-		const curr = this.macd[index];
-		if (index < 1 || curr == null) return null;
-		return (curr.dead) ? { reason: `${this.name} ${curr.signal.scale()} 死叉` } : null;		
-	}	
+		const macd = this.macd[index];
+		if (index < 1 || macd == null) return null;
+        return macd.dead ? { reason: `${this.name} 死叉` } : null;
+	}
 }
 ///////////////////////////////////////////////////////////////////////////////
 export class BBEntryExit {
@@ -257,12 +278,12 @@ export class BBEntryExit {
 			shortHighLookback: 20, // 規則2「創短期新高」的回看天數
 			atrMul: 1 // 停損 ATR 倍數（規則1）
 		}, params);
-		
+
 		if (this.data.length < this.params.period) return;
 
 		const bb = new BollingerBands(this.data, this.params.period, this.params.k).calculate();
 		this.data.forEach((d, i) => d.bb = bb[i]);
-		
+
 		const atrs = this.calcATR(this.data, this.params.period);
 		this.data.forEach((d, i) => d.atr = atrs[i]);
 	}
@@ -305,7 +326,7 @@ export class BBEntryExit {
 		}
 		return atrValues;
 	}
-	
+
 	// 取得近N日中第q(%)分位的帶寬門檻
 	getBandwidthPercentile(index) {
 		const n = this.params.bwLookback;
@@ -507,14 +528,14 @@ export class TigerPartialEntryExit {
 		this.params = params;
 		this.params.entryRates = [ 0.25, 0.4, 0.35 ]; // 資金分批進場比例
 	}
-	
+
 	// 開倉條件檢查
 	checkEntry(day, index, position) {
 		const {
 			entryRates
 		} = this.params;
 		if (index < ma) return false;
-		
+
 		if (position.status == 'closed') {
 			this.tigerEntry = new TigerEntry(this.data, this.params);
 			if (this.tigerEntry.checkEntry(day, index, position)) {
@@ -522,18 +543,18 @@ export class TigerPartialEntryExit {
 				this.cost.push({ price: day.close, rate: entryRates[idx] });
 			}
 		}
-		
+
 		position.avgCost = this.getAvgCost();
 	}
-	
+
 	getAvgCost() {
 		const cost = this.cost.reduce((sum, cost) => sum + (cost.price * cost.rate), 0);
 		const rate = this.cost.reduce((sum, cost) => sum + cost.rate, 0);
 		return cost / rate;
 	}
-	
+
 	// 平倉條件檢查
 	checkExit(day, index, position) {
-	
+
 	}
 }
