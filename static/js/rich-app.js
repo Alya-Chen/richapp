@@ -299,7 +299,7 @@
 				$location.url('/stock/' + $$.stock.code);
 			};
 			$$.switch = function() {
-				service.users((_, user) => $$.$broadcast('userSwitched', user), $$.user.id);
+				service.users(() => location.reload(), $$.user.id);
 			};
 			$$.changeMa = function() {
 				$$.$broadcast('maChanged', $$.stock.defaultMa);
@@ -352,11 +352,6 @@
 					});
 				}
 			};
-			$$.$on('userSwitched', () => {
-				service.stocks((stocks) => {
-					$$.stocks = stocks;
-				});
-			});
 			$$.$on('stockLoaded', (_, code) => {
 				$$.stock = $$.stocks.find(s => s.code == code);
 			});
@@ -377,7 +372,8 @@
 			service.users((users, user) => {
 				$$.users = users;
 				$$.user = user;
-				$timeout(() => $$.$broadcast('userSwitched', user), 150);
+				service.stocks((stocks) => $$.stocks = stocks);
+				$timeout(() => $$.$broadcast('inited', user), 150);
 			});
 		},
 		home: function($$, $location, $timeout, service) {
@@ -435,29 +431,6 @@
 					}
 				});
 			};
-			$$.calculate = function(stock, test) {
-				const metrics = function(trades, type) {
-					const wins = trades.filter(t => t.profit > 0); // 有獲利的交易數
-					const profit = trades.reduce((sum, t) => sum + (t.profit > 0 ? t.profit : 0), 0);
-					const loss = trades.reduce((sum, t) => sum + (t.profit < 0 ? t.profit : 0), 0);
-					return {
-						name: stock.name,
-						type,
-						length: trades.length,
-                        profit: (profit + loss).scale(2),
-                        pnl: (profit / Math.abs(loss || 1)).scale(2), // 盈虧比：總獲利金額除以總虧損金額
-                        profitRate: (trades.reduce((sum, t) => sum + t.profitRate, 0)).scale(2),
-                        winRate: (wins.length / trades.length).scale(2),
-					};
-				}
-				const result = { re: [], first: [] };
-				test.trades.forEach(trade => {
-					if (trade.reentry) result.re.push(trade);
-					else result.first.push(trade);
-				});
-				console.log(metrics(result.first, '首衝'));
-				console.log(metrics(result.re, '回場'));
-			};
 			$$.showStareds = function(user) {
 				const stareds = (user.settings || {
 					stared: []
@@ -506,16 +479,14 @@
 					if (!$$.stareds.concat($$.openeds, $$.todays, $$.closeds).find(s => s.code == stock.code)) $$.bulls.push(stock);
 				}
 				$$.resort();
-				//if ($$.stareds.find(s => s.code == test.code)) $$.calculate(stock, test);
 			});
-			$$.$on('userSwitched', (_, user) => {
+			$$.$on('inited', (_, user) => {
 				$$.showStareds(user);
 				service.strategies((strategies) => {
-					service.getParams((params) => {
-						$$.entryStrategy = strategies.entryStrategies.find(s => s.key == params.entryStrategy).name;
-						$$.exitStrategy = params.exitStrategy.map(strategy => strategies.exitStrategies.find(s => s.key == strategy).name).join('＆');
-					});
-				});
+					const params = user.settings.params || {};
+					$$.entryStrategy = strategies.entryStrategies.find(s => s.key == params.entryStrategy).name;
+					$$.exitStrategy = params.exitStrategy.map(strategy => strategies.exitStrategies.find(s => s.key == strategy).name).join('＆');
+			});
 			});
 			$$.$on('notesLoaded', (_, notes) => {
 				$$.notes = notes;
@@ -847,10 +818,11 @@
 					$$.testers.push(stocks.find(s => s.code == code));
 				});
 			});
-			service.strategies((strategies) => {
-				$$.entryStrategies = strategies.entryStrategies;
-				$$.exitStrategies = strategies.exitStrategies;
-				service.getParams((params) => {
+			$$.$on('inited', (_, user) => {
+				service.strategies((strategies) => {
+					const params = user.settings.params || {};
+					$$.entryStrategies = strategies.entryStrategies;
+					$$.exitStrategies = strategies.exitStrategies;
 					$$.params = params;
 					$$.params.entryDate = twoYearsAgo;
 					$$.params.exitDate = today;
