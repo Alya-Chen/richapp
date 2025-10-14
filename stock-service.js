@@ -15,7 +15,6 @@ import {
 	BullBear
 } from './static/js/macd-kdj.js';
 
-const STOCK_DIR = 'data/stock/';
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const SLEEP = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -333,7 +332,7 @@ class Service {
 			exist.name = name;
 			return db.Stock.save(exist);
 		}
-		const stocks = JSON.parse(fs.readFileSync(STOCK_DIR + '/stocks.json', 'utf8'));
+		const stocks = JSON.parse(fs.readFileSync('static/stocks.json', 'utf8'));
 		const stock = stocks.find(s => s.Code == code) || { otc: true, Code: code, Name: name };
 		stock.country = parseInt(code.charAt(0)) ? 'tw' : 'us';
 		return await db.Stock.save({

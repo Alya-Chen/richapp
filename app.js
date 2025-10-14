@@ -1,7 +1,8 @@
 import express from 'express';
 import session from 'express-session';
+import path from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { writeFileSync } from 'fs';
 import {
 	stockService
 } from './stock-service.js';
@@ -11,7 +12,10 @@ import {
 import * as st from './trading-strategy.js';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
+
+const pidFile = path.join(__dirname, 'app.pid');
+writeFileSync(pidFile, process.pid.toString());
 
 stockService.scheduleSync();
 
