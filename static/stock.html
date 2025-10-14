@@ -159,7 +159,7 @@
         <span ng-if="log.invested == 0">實現損益</span>
       </div>
       <div class="stat-value font-price text-4xl" ng-bind="stock.trade.invest.netProfit"></div>
-      <div class="stat-desc font-pct" ng-bind="stock.trade.invest.profitRate"></div>
+      <div class="stat-desc font-pct" ng-bind="(stock.trade.invest.profitRate * 100).scale(2)"></div>
     </div>
     <!-- 停損停利資訊 -->
     <div class="stat">

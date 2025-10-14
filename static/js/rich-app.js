@@ -533,7 +533,6 @@
 			};
 			$$.invest = {
 				simulate: function(trade) {
-					return;
 					if (!trade) return;
 					trade.ma = trade.ma || $$.stock.defaultMa;
 					trade.invest = new RsiInvest($$.stock.dailies, trade.ma).start(trade);
