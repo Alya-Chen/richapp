@@ -9,6 +9,13 @@
         <label class="input">
           <span class="label">投入資金 $</span><input type="number" ng-model="money" />
         </label>
+        <label class="input">
+          回測專用：
+          <span class="label">動態 MA</span>
+          <input type="checkbox" class="checkbox" ng-model="params.dynamic" />
+          <span class="label">金唬 MA</span>
+          <input type="checkbox" class="checkbox" ng-model="params.usingTigerMa" />
+        </label>
       </div>
     </summary>
     <div class="border-t-base-content/5 flex border-t border-dashed py-2 p-2">
@@ -38,7 +45,7 @@
       <span class="text-lg font-bold text-nowrap mr-4">出場策略</span>
       <div class="flex gap-2 flex-wrap">
         <span ng-repeat="strategy in exitStrategies" class="text-nowrap">
-          <input type="checkbox" ng-model="strategy.checked" ng-change="exitStrategyCheck()" class="checkbox" />
+          <input type="checkbox" class="checkbox" ng-model="strategy.checked" ng-change="exitStrategyCheck()" />
           <label ng-bind="strategy.name"></label>
         </span>
       </div>

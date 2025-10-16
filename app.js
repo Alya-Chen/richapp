@@ -87,31 +87,16 @@ app.post('/stock/:code/financial', async (req, res) => {
 });
 
 app.post('/stock/:code/trade', async (req, res) => {
-	const stock = await stockService.getStock(req.params.code);
-	stock.trades = stock.trades || [];
-	const trade = stock.trades.find(t => t.id == req.body.id) || req.body;
-	if (trade.id) {
-		Object.assign(trade, req.body);
-		trade.invest = null;
-		if (!trade.logs.length) { // 刪除
-			stock.trades = stock.trades.filter(t => t.id != trade.id);
-		}
-		else {
-			trade.logs = trade.logs.sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
-			const total = trade.logs.reduce((sum, l) => sum + (l.act == '買入' ? l.amount : -l.amount), 0);
-			if (!total) {
-				trade.exitDate = trade.logs[trade.logs.length - 1].date;
-			}
-		}
+	const trade = req.body;
+	trade.userId = 1;
+	if (trade.destroy) {
+		await stockService.deleteTrade(trade.id);
 	}
 	else {
-		trade.id = new Date().getTime();
-		trade.ma = stock.defaultMa;
-		trade.entryDate = trade.logs[0].date;
-		stock.trades.push(trade);
+		await stockService.saveTrade(trade);
 	}
-	await stockService.saveStock(stock);
-	res.json(trade);
+	const stock = await stockService.getStock(req.params.code);
+	res.json(stock.trades.find(t => t.entryDate && !t.exitDate));
 });
 
 app.post('/stock/:code/dividend', async (req, res) => {
@@ -225,14 +210,19 @@ app.get('/simulate{/:codes}', async (req, res) => {
 });
 
 app.post('/simulate', async (req, res) => {
-	stockService.lastSimulatingTime = new Date().getTime();
 	const codes = req.body.codes;
 	const money = req.body.money;
 	const params = req.body.params;
 	params.entryDate = new Date(params.entryDate);
 	params.exitDate = new Date(params.exitDate);
-	const result = await new Investor(codes, money, params).invest();
-  	res.json(result);
+	try {
+		stockService.simulating = true;
+		const result = await new Investor(codes, money, params).invest();
+  		res.json(result);
+	}
+	finally {
+			stockService.simulating = false;
+	}
 });
 
 app.get('/dailies/check', async (req, res) => {

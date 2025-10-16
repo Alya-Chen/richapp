@@ -72,9 +72,8 @@
 				callback(this.user);
 			});
 		}
-		trade(stock, callback) {
-			stock.trade.logs = stock.trade.logs.filter(l => l.id);
-			this.$http.post(`/stock/${stock.code}/trade`, stock.trade).then((res) => {
+		trade(log, callback) {
+			this.$http.post(`/stock/${log.code}/trade`, log).then((res) => {
 				callback(res.data);
 			});
 		}
@@ -484,9 +483,14 @@
 				$$.showStareds(user);
 				service.strategies((strategies) => {
 					const params = user.settings.params || {};
-					$$.entryStrategy = strategies.entryStrategies.find(s => s.key == params.entryStrategy).name;
-					$$.exitStrategy = params.exitStrategy.map(strategy => strategies.exitStrategies.find(s => s.key == strategy).name).join('＆');
-			});
+					$$.entryStrategy = { name: strategies.entryStrategies.find(s => s.key == params.entryStrategy).name, reentry: params.reentry };
+					$$.exitStrategy = { name: params.exitStrategy.map(strategy => strategies.exitStrategies.find(s => s.key == strategy).name).join('＆') };
+					if ($$.exitStrategy.name.includes('動態止盈止損')) {
+						$$.exitStrategy.dynamicStop = true;
+						$$.exitStrategy.stopLossPct = params.stopLossPct * 100;
+						$$.exitStrategy.takeProfitPct = params.takeProfitPct * 100;
+					}
+				});
 			});
 			$$.$on('notesLoaded', (_, notes) => {
 				$$.notes = notes;
@@ -557,14 +561,10 @@
 					});
 				},
 				save: function() {
-					this.log.id = this.log.id || new Date().getTime();
+					this.log.code = $$.stock.code;
+					this.log.ma = $$.stock.defaultMa;
 					this.log.date = new Date(this.log.date.toJSON().slice(0, 10));
-					this.log.day = null;
-					$$.stock.trade = $$.stock.trade || { logs: [] };
-					const log = $$.stock.trade.logs.find(l => l.id == this.log.id);
-					if (!log) $$.stock.trade.logs.push(this.log);
-					else Object.assign(log, this.log);
-					service.trade($$.stock, (trade) => {
+					service.trade(this.log, (trade) => {
 						$$.stock.trade = trade;
 						$$.invest.simulate(trade);
 						this.log = {};
@@ -573,8 +573,8 @@
 				},
 				destroy: function() {
 					if (confirm(`確認要刪除這筆 ${this.log.act}？`)) {
-						$$.stock.trade.logs = $$.stock.trade.logs.filter(t => t.id != this.log.id);
-						service.trade($$.stock, (trade) => {
+						this.log.destroy = true;
+						service.trade(this.log, (trade) => {
 							$$.stock.trade = trade;
 							$$.invest.simulate(trade);
 							$.unblockUI();
@@ -755,6 +755,8 @@
 				$$.dynamicExitChecked = $$.exitStrategies.find(s => s.key == 'DynamicStopExit').checked;
 			};
 			$$.saveParams = function() {
+				delete $$.params.dynamic; // 動態 MA，回測專用不儲存
+				delete $$.params.usingTigerMa; // 金唬 MA，回測專用不儲存
 				$$.params.exitStrategy = $$.exitStrategies.filter(s => s.checked).map(s => s.key);
 				service.saveParams($$.params, (result) => {
 					$.growlUI('', result.success ? `參數儲存成功` : `參數儲存失敗`);

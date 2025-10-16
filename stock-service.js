@@ -14,6 +14,7 @@ import {
 import {
 	BullBear
 } from './static/js/macd-kdj.js';
+import { console } from 'inspector';
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const SLEEP = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -31,13 +32,6 @@ class Service {
 		}
 		instance.users();
 		return instance;
-	}
-
-	async stocks() {
-		const stocks = await db.Stock.findAll({
-			order: ['otc', 'code']
-		});
-		return stocks.map(s => s.toJSON());
 	}
 
 	async users() {
@@ -103,8 +97,8 @@ class Service {
 	}
 
 	async realtimeBacktest(codes) {
-		// 距離上次的回測需至少 15 分鐘才執行
-		if (new Date().getTime() - FIFTEEN_MINUTES < (this.lastSimulatingTime || 0)) return;
+		// 正在模擬回測中，不執行即時回測
+		if (this.simulating) return;
 		this.realtimeBacktest.count = this.realtimeBacktest.count || 0;
 		if (this.realtimeBacktest.count++ % 2) return;
 		const users = await db.User.findAll();
@@ -201,7 +195,7 @@ class Service {
 			}
 			const startDate = dateFns.addYears(params.entryDate, -2);
 			const dailies = await this.dailies(stock.code, startDate);
-			const trade = (stock.trades || []).find(t => t.entryDate && !t.exitDate);
+			const trade = stock.trades.find(t => t.entryDate && !t.exitDate);
 			let best = null;
 			if (trade) { // 正在交易中，不作全部回測，不改 MA
 				params.code = stock.code;
@@ -216,7 +210,7 @@ class Service {
 			best.code = stock.code;
 			best.name = stock.name;
 			best.opened = best.trades.find(trade => trade.status != 'closed') !== undefined;
-			console.log(`[${new Date().toLocaleString()}] ${stock.code} ${stock.name} MA${best.ma} ${best.profit} ${profitRate} ${best.opened ? '開倉中' : ''}`);
+			//console.log(`[${new Date().toLocaleString()}] ${stock.code} ${stock.name} MA${best.ma} ${best.profit} ${profitRate} ${best.opened ? '開倉中' : ''}`);
 			//console.log(best.trades);
 			//const filePath = `${DATA_DIR}${code} ${stock.name} MA${best.ma} (${best.profit} ${profitRate}).csv`;
 			//csv.writeFile(filePath, best.trades);
@@ -238,6 +232,14 @@ class Service {
 		const entryDate = simulating ? dateFns.addYears(params.entryDate, -1) : params.entryDate;
 		const exitDate = simulating ? new Date(params.entryDate) : params.exitDate;
 		const paramsForBestMa = Object.assign({}, params, { entryDate, exitDate });
+		if (params.usingTigerMa && stock.tigerMa) {
+			const ma = new String(stock.tigerMa).split(',')[0].split('/')[0];
+			if (ma) {
+				params.code = stock.code;
+				params.ma = ma;
+				return new TradingSystem(dailies, params).backtest()
+			}
+		}
 		const results = [];
 		[...Array(30).keys()].map(i => i + 16).forEach(ma => {
 			paramsForBestMa.ma = ma;
@@ -304,7 +306,7 @@ class Service {
 				code
 			}
 		});
-		return stock ? stock.toJSON() : {};
+		return stock ? Object.assign(stock.toJSON(), { trades: await db.Stock.trades(stock.code) }) : {};
 	}
 
 	async findStock(code) {
@@ -319,11 +321,19 @@ class Service {
 		return await db.StockTrade.save(trade);
 	}
 
+	async deleteTrade(id) {
+		return await db.StockTrade.del(id);
+	}
+
 	async stocks() {
-		const stocks = await db.Stock.findAll({
+		const stocks = (await db.Stock.findAll({
 			order: ['otc', 'code']
-		});
-		return stocks.map(s => s.toJSON());
+		})).map(s => s.toJSON());
+		for (let i = 0; i < stocks.length; i++) {
+			const stock = stocks[i];
+			stock.trades = await db.Stock.trades(stock.code);
+		}
+		return stocks;
 	}
 
 	async addStock(code, name) {
@@ -362,7 +372,7 @@ class Service {
 	}
 
 	async trades() {
-		const trades = await db.Stock.findTrades();
+		const trades = await db.StockTrade.findAll();
 		return trades;
 	}
 

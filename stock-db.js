@@ -25,7 +25,7 @@ const Base = {
 		} else {
 			entity = await dao.create(entity);
 			return await entity.save();
-		}	
+		}
 	},
 	del: async function(dao, id) {
 		return await dao.destroy({ where: { id } });
@@ -150,11 +150,6 @@ const Stock = sequelize.define('Stock', {
 		type: DataTypes.JSON,
 		allowNull: true,
 		comment: '財報資料'
-	},
-	trades: {
-		type: DataTypes.JSON,
-		allowNull: true,
-		comment: '投資紀錄'
 	}
 }, {
 	indexes: [{
@@ -172,25 +167,39 @@ Stock.findByCode = async function(code) {
 	});
 };
 
-Stock.findTrades = async function() {
-	const stocks = await Stock.findAll({
-		where: {
-			trades: {
-            	[Op.not]: null
-        	}
-		}
-	});
-	return stocks.map(stock => {
-		stock.trades.forEach(trade => {
-			trade.code = stock.code;
-			trade.name =  stock.name;			
-		});
-		return stock.trades;
-	});
-};
-
 Stock.save = async function(stock) {
 	return Base.save(Stock, stock);
+};
+
+Stock.trades = async function(code, userId, shadow) {
+	const where = {
+		code
+	};
+	if (userId) {
+		where.userId = userId;
+	}
+	where.shadow = shadow || false;
+	const trades = await StockTrade.findAll({
+		where,
+		order: [
+			['id', 'ASC']
+		]
+	});
+	const result = [];
+	trades.forEach(t => {
+		let trade = { logs: [] };
+		if (t.act == '買入') {
+			trade.entryDate = t.date;
+			trade.ma = t.ma;
+			result.push(trade);
+		}
+		if (t.act == '賣出') {
+			trade = result.findLast(t => !t.exitDate);
+			trade.exitDate = t.date;
+		}
+		trade.logs.push(t.toJSON());
+	});
+	return result;
 };
 
 const StockTrade = sequelize.define('StockTrade', {
@@ -223,7 +232,7 @@ const StockTrade = sequelize.define('StockTrade', {
 		type: DataTypes.INTEGER,
 		allowNull: true,
 		comment: 'MA 值'
-	},	
+	},
 	date: {
 		type: DataTypes.DATEONLY,
 		allowNull: false,
@@ -248,7 +257,7 @@ const StockTrade = sequelize.define('StockTrade', {
 		type: DataTypes.INTEGER,
 		defaultValue: 0,
 		comment: '剩餘股數'
-	}	
+	}
 }, {
 	indexes: [{
 		unique: false,
@@ -274,8 +283,12 @@ StockTrade.save = async function(trade) {
 	// 證券手續費＋證券交易稅＝（股票賣出股價 × 股數 × 0.1425%）＋（股票賣出股價 × 股數 × 0.3%）
 	if (trade.act == '賣出') {
 		trade.tax = (trade.amount * trade.price * 0.004425).scale(2);
-	}	
+	}
 	return Base.save(StockTrade, trade);
+};
+
+StockTrade.del = async function(id) {
+	return Base.del(StockTrade, id);
 };
 
 const StockDaily = sequelize.define('StockDaily', {
@@ -399,7 +412,7 @@ StockDaily.last = async function(code) {
 			order: [
 				['date', 'DESC']
 			]
-		});		
+		});
 	}
 	else {
 		const latest = await StockDaily.findAll({

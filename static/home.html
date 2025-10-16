@@ -1,6 +1,18 @@
 <div class="mockup-code w-[85%] mx-auto max-w-6xl mt-6 mb-6 bg-success text-success-content">
-  <pre data-prefix="∩"><code>入場策略：<span ng-bind="entryStrategy"></span></code></pre>
-  <pre data-prefix="∪"><code>出場策略：<span ng-bind="exitStrategy"></span></code></pre>
+  <pre data-prefix="∩">
+    <code>入場策略：
+      <span ng-bind="entryStrategy.name"></span>
+      <span ng-if="entryStrategy.reentry">（返場）</span>
+    </code>
+  </pre>
+  <pre data-prefix="∪"><code>出場策略：
+    <span ng-bind="exitStrategy.name"></span>
+      <span ng-if="exitStrategy.dynamicStop">
+        ＋動態止損 <span ng-bind="exitStrategy.stopLossPct"></span>％
+        止盈 <span ng-bind="exitStrategy.takeProfitPct"></span>％
+      </span>
+    </code>
+  </pre>
 </div>
 <div class="stats cursor-pointer flex w-[85%] mx-auto max-w-6xl" ng-click="showTrades()">
   <div class="stat">
