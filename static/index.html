@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" data-theme="rosewood">
+
 <head>
   <base href="/">
   <link rel="icon" href="gold.ico">
@@ -12,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/css/output.css?date=20251001" />
+  <link rel="stylesheet" href="/css/output.css?date=20251017" />
   <!-- 自定義樣式 --><!-- 自定義主題 CSS -->
   <link href="css/themes.css" rel="stylesheet" type="text/css" />
   <script src="https://code.highcharts.com/stock/highstock.js"></script>
@@ -31,6 +32,7 @@
   <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js" crossorigin="anonymous"
     referrerpolicy="no-referrer"></script>
 </head>
+
 <body ng-app="rich-app" ng-controller="indexCtrl" class="bg-base-200 text-base-content font-rich">
   <!-- 使用 DaisyUI 的 navbar 組件 -->
   <div class="navbar bg-base-100 shadow-sm">
@@ -158,7 +160,7 @@
               <span class="text-lg font-bold">
                 <span ng-repeat="group in simulate.stockGroups">
                   <input type="radio" ng-model="simulate.stockGroup" value="{{group}}" class="radio" />
-                  <span ng-bind="group"></span><br/>
+                  <span ng-bind="group"></span><br />
                 </span>
               </span>
             </div>
@@ -199,4 +201,5 @@
   <script src="/js/stock-chart.js"></script>
   <script src="/js/rich-app.js"></script>
 </body>
+
 </html>

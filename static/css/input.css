@@ -1,0 +1,121 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+@theme {
+    --color-rich-red: #ff7777;
+    --color-rich-green: #98d7a4;
+}
+
+@layer utilities {
+    .font-price::before {
+        content: "$";
+        font-size: 0.5em;
+        margin-right: 0.25em;
+        /* 可選 */
+        line-height: 1;
+        /* 可選：避免行高造成對齊偏移 */
+        color: rgb(from currentColor r g b / 0.5);
+        /* 可選：跟隨文字顏色 */
+    }
+
+    .font-pct::after {
+        content: "%";
+        font-size: 0.5em;
+        margin-left: 0.25em;
+        /* 可選 */
+        line-height: 1;
+        /* 可選：避免行高造成對齊偏移 */
+        color: rgb(from currentColor r g b / 0.5);
+        /* 可選：跟隨文字顏色 */
+    }
+}
+
+/* 添加自定義字體類別 */
+.font-date {
+    font-family: "Huninn", sans-serif;
+}
+
+.font-price {
+    font-family: "Anonymous Pro", monospace;
+}
+
+.font-rich {
+    font-family: "Chiron Hei HK", sans-serif;
+}
+
+.font-pct {
+    font-family: "Chiron Hei HK", sans-serif;
+}
+
+.font-title {
+    font-family: "Huninn", sans-serif;
+}
+
+.stock_usa {
+    background-image: url("data:image/svg+xml,%3Csvg%20version%3D%221.1%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22900%22%20height%3D%2216%22%20viewBox%3D%220%200%20900%2016%22%3E%20%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M0%200h40v16H0z%22/%3E%20%3Cpath%20fill%3D%22%23b22234%22%20d%3D%22M0%200h900v4H0z%22/%3E%20%3Cpath%20fill%3D%22%23b22234%22%20d%3D%22M0%208h900v4H0z%22/%3E%20%3Cpath%20fill%3D%22%233c3b6e%22%20d%3D%22M0%200h40v16H0z%22/%3E%20%3Cpolygon%20points%3D%228%2C5%209%2C8%2012%2C8%209.5%2C10%2010.5%2C13%208%2C11.5%205.5%2C13%206.5%2C10%204%2C8%207%2C8%22%20fill%3D%22%23fff%22/%3E%20%3Cpolygon%20points%3D%2220%2C5%2021%2C8%2024%2C8%2021.5%2C10%2022.5%2C13%2020%2C11.5%2017.5%2C13%2018.5%2C10%2016%2C8%2019%2C8%22%20fill%3D%22%23fff%22/%3E%20%3Cpolygon%20points%3D%2232%2C5%2033%2C8%2036%2C8%2033.5%2C10%2034.5%2C13%2032%2C11.5%2029.5%2C13%2030.5%2C10%2028%2C8%2031%2C8%22%20fill%3D%22%23fff%22/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    background-size: 900px 16px;
+}
+
+.blockMsg {
+    border-radius: 2em;
+    overflow: hidden;
+}
+
+/* stock tabs */
+
+.stock_trades {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+
+.stock_trades input[type=radio] {
+    position: absolute;
+    left: -200vw;
+}
+
+.stock_trades label {
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+}
+
+.stock_trades [id^=trade] {
+    grid-column: 1/-1;
+    grid-row: 3;
+    display: none;
+}
+
+.stock_trades [id^=info] {
+    grid-column: 1/-1;
+    grid-row: 2;
+    display: none;
+}
+
+.stock_trades [id^=tab]:checked~[id^=label] {
+    @apply bg-base-200/50;
+    @apply rounded-t-lg rounded-b-none;
+    @apply border-2 border-primary;
+    border-bottom: 0;
+}
+
+.stock_trades [id^=tab]:not(:checked)~[id^=label] {
+    @apply bg-base-300;
+    @apply border-b-2 border-primary;
+
+}
+
+.stock_trades [id^=tab]:checked~[id^=trade] {
+    display: block;
+}
+
+.stock_trades [id^=tab]:checked~[id^=info] {
+    display: grid;
+}
+
+ng-container {
+    display: contents;
+}

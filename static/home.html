@@ -1,18 +1,29 @@
 <div class="mockup-code w-[85%] mx-auto max-w-6xl mt-6 mb-6 bg-success text-success-content">
-  <pre data-prefix="∩">
-    <code>入場策略：
-      <span ng-bind="entryStrategy.name"></span>
-      <span ng-if="entryStrategy.reentry">（返場）</span>
-    </code>
-  </pre>
-  <pre data-prefix="∪"><code>出場策略：
+  <div class="flex ml-10">
+
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      class="size-4 text-white">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="m9 13.5 3 3m0 0 3-3m-3 3v-6m1.06-4.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+    </svg>
+
+    <span class="ml-2">入場策略：</span>
+    <span class="text-secondary" ng-bind="entryStrategy.name"></span>
+    <span class="text-accent" ng-if="entryStrategy.reentry">（返場）</span>
+  </div>
+  <div class="flex ml-10">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      class="size-4 text-white">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+    </svg>
+
+    <span class="ml-2">出場策略：</span>
     <span ng-bind="exitStrategy.name"></span>
-      <span ng-if="exitStrategy.dynamicStop">
-        ＋動態止損 <span ng-bind="exitStrategy.stopLossPct"></span>％
-        止盈 <span ng-bind="exitStrategy.takeProfitPct"></span>％
-      </span>
-    </code>
-  </pre>
+    <span class="text-secondary" ng-if="entryStrategy.reentry">（返場）</span>
+    <span class="text-secondary">＋動態止損 <span ng-bind="exitStrategy.stopLossPct" class="text-error"></span>％</span>
+    <span class="text-secondary">止盈 <span ng-bind="exitStrategy.takeProfitPct" class="text-error"></span>％</span>
+  </div>
 </div>
 <div class="stats cursor-pointer flex w-[85%] mx-auto max-w-6xl" ng-click="showTrades()">
   <div class="stat">
@@ -156,7 +167,8 @@
 
           <span ng-class="{'date--today': stock.trade.entryDate.isToday()}" class="font-date"
             ng-bind="stock.trade.entryDate | date:'MM/dd'"></span>
-          <span class="font-pct font-bold" ng-if="stock.realtime.profitRate" ng-bind="stock.realtime.profitRate | pct"></span>
+          <span class="font-pct font-bold" ng-if="stock.realtime.profitRate"
+            ng-bind="stock.realtime.profitRate | pct"></span>
           <span class="badge badge-secondary ml-auto" ng-if="stock.trade.reentry">返場</span>
           <span class="badge badge-secondary ml-auto" ng-if="stock.trade.breakout">二日</span>
         </span>
