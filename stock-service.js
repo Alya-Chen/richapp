@@ -107,6 +107,7 @@ class Service {
 			const params = user.settings?.params;
 			if (!params) continue;
 			params.userId = user.id;
+			params.realtime = true;
 			console.log(`[${new Date().toLocaleString()}] 啟動 ${user.name} 股票回測任務`);
 			await this.backtest(codes, params);
 		}
@@ -197,9 +198,9 @@ class Service {
 			const dailies = await this.dailies(stock.code, startDate);
 			const trade = stock.trades.find(t => t.entryDate && !t.exitDate);
 			let best = null;
-			if (trade) { // 正在交易中，不作全部回測，不改 MA
+			if (trade || params.realtime) { // 平日或正在交易中，不改 MA
 				params.code = stock.code;
-				params.ma = trade.ma;
+				params.ma = trade?.ma || stock.defaultMa;
 				best = new TradingSystem(dailies, params).backtest();
 			}
 			else {
@@ -389,10 +390,7 @@ class Service {
 
 	async saveTest(stock, result) {
 		const params = Object.assign({}, result.params);
-		delete params.code;
-		delete params.transient;
-		delete params.entryDate;
-		delete params.exitDate;
+		['code', 'transient', 'realtime', 'entryDate', 'exitDate'].forEach(key => delete params[key]);
 		const backtest = {
 			code: stock.code,
 			userId: params.userId,
