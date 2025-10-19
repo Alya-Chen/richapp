@@ -33,6 +33,11 @@
 			this.$timeout = $timeout;
 			this.$root = $root;
 		}
+		sql(commands, callback) {
+			this.$http.post(`/sql`, { commands }).then((res) => {
+				callback(res.data);
+			});
+		}
 		checkList(code, callback) {
 			if (code == 'blank') {
 				if (this.blankCheckList) return callback(this.blankCheckList);
@@ -288,6 +293,22 @@
 						service.sync(this.code, (test) => {
 							$$.$broadcast('testLoaded', test);
 						});
+					});
+				}
+			};
+			$$.sql = {
+				show: function() {
+					this.result = $('#sql-result');
+					$.blockUI({
+						message: $('#sql-form'),
+						onOverlayClick: $.unblockUI
+					});
+				},
+				exec: function() {
+					this.result.css('height', '0px');
+					service.sql(this.commands, (data) => {
+						this.result.jsonBrowse(data);
+						this.result.css('height', '300px');
 					});
 				}
 			};

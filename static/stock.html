@@ -6,11 +6,11 @@
       <span ng-if="!stock.stared" class="text-base-300 hover:text-error transition-colors"><svg fill="currentColor"
           class="icon-heart size-[1.3em] ml-3 mr-1 stroke-base-content stroke-2">
           <use xlink:href="css/symbol-defs.svg#icon-heart"></use>
-        </svg></span>
+      </svg></span>
       <span ng-if="stock.stared" class="text-error"><svg fill="currentColor"
           class="icon-heart size-[1.3em] ml-3 mr-1 text-rich-red">
           <use xlink:href="css/symbol-defs.svg#icon-heart"></use>
-        </svg></span>
+      </svg></span>
     </h2>
     <div class="flex gap-2">
       <button class="btn btn-primary btn-sm" ng-click="invest.edit({ act: '買入' })">
@@ -216,8 +216,10 @@
       <div class="list-col-grow">
         <span class="font-price text-2xl" ng-bind="trade.netProfit | number"></span>
         （<span class="font-price" ng-bind="trade.netProfitRate | pct"></span>）<br />
-        <span class="font-price" ng-bind="trade.entryPrice"></span> 買入
-        <span class="font-price" ng-bind="trade.exitPrice"></span> 賣出
+        <span class="font-price" ng-bind="trade.entryPrice"></span>
+        <span ng-click="invest.edit(trade.logs[0])">買入</span>
+        <span class="font-price" ng-bind="trade.exitPrice"></span>
+        <span ng-click="invest.edit(trade.logs[1])">賣出</span>
         稅費 <span class="font-price" ng-bind="trade.tax | number"></span>
       </div>
     </div>
@@ -268,7 +270,6 @@
                 <path stroke-linecap="round" stroke-linejoin="round"
                   d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" />
               </svg>
-
             </div>
             <div class="timeline-end flex">
               <span class="font-price text-xl timeline-box mr-1.5 h-fit" ng-bind="trade.entryPrice.scale(2)"></span>
@@ -277,7 +278,6 @@
                 <span class="badge badge-secondary" ng-if="trade.reentry">重新入場</span>
                 <span class="text-sm/6 text-success" ng-bind="trade.entryReason"></span>
               </span>
-
             </div>
             <hr class="pt-11" />
           </li>
@@ -294,7 +294,6 @@
             <div class="timeline-end">
               <span class="font-price text-xl timeline-box mr-1.5 h-fit" ng-bind="trade.exitPrice.scale(2)"></span>
               <span>
-
                 <span class="badge badge-primary" ng-if="trade.exitReason.includes('過熱')">過熱</span>
                 <span class="text-sm/6 text-success" ng-bind="trade.exitReason"></span>
               </span>
@@ -352,13 +351,14 @@
   <br />
   <div>
     <span ng-bind="invest.log.act"></span>
-    <input type="date" ng-model="invest.log.date">
-    <input type="number" ng-model="invest.log.price"> 元
-    <input type="number" ng-model="invest.log.amount"> 股
+    <input type="date" style="border: 1px solid #ccc;" ng-model="invest.log.date">
+    <input type="number" style="width: 60px; border: 1px solid #ccc;" ng-model="invest.log.price"> 元
+    <input type="number" style="width: 60px; border: 1px solid #ccc;" ng-model="invest.log.amount"> 股
+    <input type="checkbox" ng-model="invest.log.shadow" class="checkbox" />大師
   </div>
   <br />
   <div>
-    <textarea rows="4" cols="50" ng-model="note.log.note"></textarea>
+    <textarea style="border: 1px solid #ccc;" rows="4" cols="50" ng-model="note.log.note"></textarea>
   </div>
   <div>
     <p>

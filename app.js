@@ -40,7 +40,12 @@ const getUser = async (req) => {
 
 app.get('/', (req, res) => {
 	res.redirect('/index.html');
-})
+});
+
+app.post('/sql', async (req, res) => {
+	const result = await stockService.execSql(req.body.commands);
+	res.json(result);
+});
 
 app.get('/users{/:userId}', async (req, res) => {
 	const users = await stockService.users();

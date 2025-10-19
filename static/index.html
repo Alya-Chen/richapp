@@ -6,6 +6,7 @@
   <link rel="icon" href="gold.ico">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular-csp.min.css"
     crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/json-browse@0.2.0/json-browse/jquery.json-browse.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chiron+Hei+HK:ital,wght@0,200..900;1,200..900&display=swap"
@@ -79,6 +80,7 @@
             <use xlink:href="css/symbol-defs.svg#icon-spinner9"></use>
           </svg> 回測
         </button>
+        <button class="btn btn-primary join-item" ng-click="sql.show()" data-tip="SQL">⛁</button>
       </div>
     </div>
   </div>
@@ -177,6 +179,19 @@
     </div>
   </div>
   <div ng-view class=""></div>
+
+  <div id="sql-form" style="display: none">
+    <br />
+    <div>
+      <textarea style="border: 1px solid #ccc;" rows="4" cols="50" ng-model="sql.commands"></textarea>
+      <pre style="text-align: left; overflow-y: scroll; width: 96%;" id="sql-result" class="json-body"></pre>
+    </div>
+    <div>
+      <p>
+        <button ng-click="sql.exec()">確認</button>
+      </p>
+    </div>
+  </div>
   <script src="/js/lang.js"></script>
   <script src="/js/svg-helper.js"></script>
   <script src="/js/svg-init.js"></script>
@@ -200,6 +215,7 @@
   <script src="/js/rsi-invest.js"></script>
   <script src="/js/stock-chart.js"></script>
   <script src="/js/rich-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/json-browse@0.2.0/json-browse/jquery.json-browse.min.js"></script>
 </body>
 
 </html>

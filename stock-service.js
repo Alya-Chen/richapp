@@ -5,6 +5,7 @@ import * as dateFns from 'date-fns';
 import './static/js/lang.js';
 import * as db from './stock-db.js';
 import * as st from './trading-strategy.js';
+import * as QueryTypes from 'sequelize';
 import {
 	Crawler
 } from './stock-crawler.js';
@@ -32,6 +33,35 @@ class Service {
 		}
 		instance.users();
 		return instance;
+	}
+
+	async execSql(sqls) {
+		if (!Array.isArray(sqls)) {
+			sqls = [sqls];
+		}
+		const results = [];
+		const sequelize = db.User.sequelize;
+		for (const sql of sqls) {
+			try {
+				const upperCaseSql = sql.trim().toUpperCase();
+				let queryType;
+				if (upperCaseSql.startsWith('SELECT')) {
+					queryType = QueryTypes.SELECT;
+				} else if (upperCaseSql.startsWith('INSERT')) {
+					queryType = QueryTypes.INSERT;
+				} else if (upperCaseSql.startsWith('UPDATE')) {
+					queryType = QueryTypes.UPDATE;
+				} else if (upperCaseSql.startsWith('DELETE')) {
+					queryType = QueryTypes.DELETE;
+				}
+				const result = await sequelize.query(sql, { type: queryType });
+				results.push(result);
+			} catch (error) {
+				db.Log.error(`Error executing SQL: ${sql} - ${error.message}`);
+				results.push({ error: error.message });
+			}
+		}
+		return results.length === 1 ? results[0] : results;
 	}
 
 	async users() {
