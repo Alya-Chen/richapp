@@ -213,7 +213,7 @@
   <!-- 大師操作紀錄 -->
   <ng-container ng-if="stock.shadow.length">
     <div class="list-row cursor-pointer hover:bg-base-100 bg-secondary/10" ng-repeat="trade in stock.shadow">
-      <span class="font-date text-xl text-info mr-4" ng-bind="trade.exitDate | date:'MM/dd'"></span>
+      <span class="font-date text-xl text-info mr-4" ng-bind="trade.entryDate | date:'MM/dd'"></span>
       <div class="list-col-grow">
         👽 <span class="font-price text-2xl" ng-bind="trade.netProfit | number"></span>
         （<span class="font-price" ng-bind="trade.netProfitRate | pct"></span>）<br />
@@ -221,6 +221,7 @@
         <span ng-click="invest.edit(trade.logs[0])">買入</span>
         <span ng-bind="trade.logs[0].amount"></span> 股
         <div ng-if="trade.exitDate">
+          <span class="font-date" ng-bind="trade.exitDate | date:'MM/dd'"></span>
           <span class="font-price" ng-bind="trade.exitPrice"></span>
           <span ng-click="invest.edit(trade.logs[1])">賣出</span>
           <span ng-bind="trade.logs[1].amount"></span> 股
