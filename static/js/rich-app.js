@@ -462,7 +462,7 @@
 					if (!$$.shadowed.stocks.find(i => i.code == stock.code)) {
 						$$.shadowed.stocks.push({ code: stock.code, invest: stock.shadow.invest });
 						$$.shadowed.profit += stock.shadow.invest.netProfit;
-						$$.invested.diffRate += ($$.invested.profit - $$.shadowed.profit) / $$.invested.profit;
+						$$.invested.diffRate = ($$.invested.profit - $$.shadowed.profit) / $$.invested.profit;
 						// 尚未被模擬賣出
 						if (stock.shadow.invest.totalInvested) return $$.shadowed.cost += stock.shadow.invest.avgCost * stock.shadow.invest.totalInvested;
 						$$.shadowed.cost += stock.shadow.logs.filter(l => l.act == '買入').reduce((sum, l) => sum + (l.price * l.amount), 0);

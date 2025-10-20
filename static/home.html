@@ -45,8 +45,8 @@
       </svg>
     </div>
     <div class="stat-title">目前投資</div>
-    <div class="stat-value"><span class="font-price" ng-bind="invested.cost | number"></span></div>
     <div class="stat-value"><span class="font-price" ng-bind="shadowed.cost | number"></span></div>
+    <div class="stat-value"><span class="font-price" ng-bind="invested.cost | number"></span></div>
   </div>
   <div class="stat">
     <div class="stat-figure text-secondary">
@@ -55,9 +55,9 @@
       </svg>
     </div>
     <div class="stat-title">剩餘資金</div>
-    <div class="stat-value"><span class="font-price" ng-bind="(invested.totalCapital - invested.cost) | number"></span>
-    </div>
     <div class="stat-value"><span class="font-price" ng-bind="(invested.totalCapital - shadowed.cost) | number"></span>
+    </div>
+    <div class="stat-value"><span class="font-price" ng-bind="(invested.totalCapital - invested.cost) | number"></span>
     </div>
   </div>
   <div class="stat">
@@ -67,9 +67,9 @@
       </svg>
     </div>
     <div class="stat-title">績效</div>
-    <div class="stat-value"><span class="font-price" ng-bind="invested.profit | number"></span></div>
-    <div class="stat-value"><span class="font-price" ng-bind="shadowed.profit | number"></span></div>
-    <div class="stat-desc">偏差值 <span ng-bind="invested.diffRate | pct"></span></div>
+    <div class="stat-value"><span class="font-price" ng-bind="shadowed.profit.scale() | number"></span></div>
+    <div class="stat-value"><span class="font-price" ng-bind="invested.profit.scale() | number"></span></div>
+    <div class="stat-desc">偏差值 <span ng-bind="invested.diffRate.scale(2) | pct"></span>％</div>
   </div>
 </div>
 

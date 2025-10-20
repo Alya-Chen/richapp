@@ -22,7 +22,7 @@ stockService.scheduleSync();
 const app = express();
 const port = 5001;
 // 總資產
-const TOTAL_CAPITAL = 617281;
+const TOTAL_CAPITAL = 511528; // 617281
 
 app.set('trust proxy', 1) // trust first proxy
 app.use(session({
