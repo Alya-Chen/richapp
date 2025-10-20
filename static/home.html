@@ -205,6 +205,27 @@
             </span>
           </span>
         </span>
+        <!-- 大師投資參考 -->
+        <span ng-if="stock.shadow.invest"
+          class="rounded-box bg-primary/50 col-span-2 w-full justify-start overflow-hidden"
+          ng-class="{'bg-primary': stock.shadow.invest.rsiHot}">
+          <span ng-class="{'bg-secondary': !log.id}" ng-if="log.act" ng-repeat="log in stock.shadow.invest.logs"
+            ng-click="invest.edit(log)" class="grid grid-cols-[50px_auto_auto] gap-2 p-3 items-center">
+            <span class="font-date opacity-30" ng-bind="(log.date || log.day.date) | date:'MM/dd'"></span>
+            <span class="font-price text-base-100 text-2xl" ng-bind="(log.price || log.day.close).scale(2)"></span>
+            <span class="text-right"><span ng-bind="log.act"></span>
+              <span class="italic underline text-lg" ng-bind="log.amount"></span> 股
+            </span>
+            <span class="row-start-2 col-start-2 col-span-2 border-t border-base-200 text-right"
+              ng-if="log.profit != 0">
+              <span ng-if="log.invested > 0">目前</span>損益
+              <span class="text-xl badge"><span class="font-price" ng-bind="log.profit.scale(2)"></span>
+                <span class="font-pct text-sm font-bold pl-2" ng-bind="log.profitRate"></span>
+              </span>
+              <span class="badge badge-primary ml-auto" ng-if="stock.shadow.invest.rsiHot">過熱</span>
+            </span>
+          </span>
+        </span>
 
         <span ng-if="stock.alerts" class="badge col-span-2 w-full justify-start p-5 border border-dashed"
           ng-class="{'border-rich-red bg-rich-red/10': stock.alerts.close >= stock.alerts.ma, 'border-rich-green bg-rich-green/10': stock.alerts.close < stock.alerts.ma}">
