@@ -21,6 +21,8 @@ stockService.scheduleSync();
 
 const app = express();
 const port = 5001;
+// 總資產
+const TOTAL_CAPITAL = 617281;
 
 app.set('trust proxy', 1) // trust first proxy
 app.use(session({
@@ -52,7 +54,7 @@ app.get('/users{/:userId}', async (req, res) => {
 	const userId = parseInt(req.params.userId || req.session.userId || 1);
 	req.session.userId = userId;
 	const user = users.find(u => u.id == userId);
-  	res.json({ users, user });
+  	res.json({ users, user, totalCapital: TOTAL_CAPITAL });
 });
 
 app.get('/stocks', async (req, res) => {
@@ -66,7 +68,10 @@ app.get('/logs', async (req, res) => {
 });
 
 app.get('/trades', async (req, res) => {
-	const trades = await stockService.trades();
+	const user = await getUser(req);
+	const where = Object.assign({}, { userId: user.id }, req.query);
+	where.shadow = where.shadow === 'true';
+	const trades = await stockService.trades(where);
   	res.json(trades);
 });
 

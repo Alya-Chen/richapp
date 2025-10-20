@@ -337,7 +337,7 @@ class Service {
 				code
 			}
 		});
-		return stock ? Object.assign(stock.toJSON(), { trades: await db.Stock.trades(stock.code) }) : {};
+		return stock ? Object.assign(stock.toJSON(), { trades: await db.Stock.trades({ code: stock.code }) }) : {};
 	}
 
 	async findStock(code) {
@@ -362,7 +362,7 @@ class Service {
 		})).map(s => s.toJSON());
 		for (let i = 0; i < stocks.length; i++) {
 			const stock = stocks[i];
-			stock.trades = await db.Stock.trades(stock.code);
+			stock.trades = await db.Stock.trades({ code: stock.code });
 		}
 		return stocks;
 	}
@@ -402,9 +402,8 @@ class Service {
 		return logs;
 	}
 
-	async trades() {
-		const trades = await db.StockTrade.findAll();
-		return trades;
+	async trades(where) {
+		return await db.Stock.trades(where);
 	}
 
 	async findTests(where, orderBy) {

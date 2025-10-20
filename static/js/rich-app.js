@@ -4,7 +4,6 @@
 	const SEC = 1000;
 	const EIGHT_HOURS = 8 * 3600 * SEC;
 	const ONE_DAY = 3 * EIGHT_HOURS;
-	const TOTAL_CAPITAL = 555022;
 
 	const app = angular.module('rich-app', [
 		'ngRoute',
@@ -77,6 +76,17 @@
 				callback(this.user);
 			});
 		}
+		trades(params, callback) {
+			this.$http.get('/trades', { params }).then((res) => {
+				/*res.data = (res.data || []).flat();
+				const comparer = (a, b) => Date.parse(b.entryDate) - Date.parse(a.entryDate);
+				const running = res.data.filter(t => t.entryDate && !t.exitDate).sort(comparer);
+				const exited = res.data.filter(t => t.entryDate && t.exitDate).sort(comparer);
+				const dividend = res.data.filter(t => t.type == 'dividend').sort(comparer);
+				if (callback) callback(running.concat(exited).concat(dividend));*/
+				if (callback) callback(res.data);
+			});
+		}
 		trade(log, callback) {
 			this.$http.post(`/stock/${log.code}/trade`, log).then((res) => {
 				callback(res.data);
@@ -111,7 +121,7 @@
 			this.$http.get(url).then((res) => {
 				const users = res.data.users;
 				this.user = users.find(u => u.id == res.data.user.id);
-				callback(users, this.user);
+				callback(users, this.user, res.data.totalCapital);
 			});
 		}
 		dailies(stock, callback) {
@@ -175,16 +185,6 @@
 				}
 				this.$root.$broadcast('logsLoaded', logs);
 				if (callback) callback(logs);
-			});
-		}
-		trades(callback) {
-			this.$http.get('/trades').then((res) => {
-				res.data = (res.data || []).flat();
-				const comparer = (a, b) => Date.parse(b.entryDate) - Date.parse(a.entryDate);
-				const running = res.data.filter(t => t.entryDate && !t.exitDate).sort(comparer);
-				const exited = res.data.filter(t => t.entryDate && t.exitDate).sort(comparer);
-				const dividend = res.data.filter(t => t.type == 'dividend').sort(comparer);
-				if (callback) callback(running.concat(exited).concat(dividend));
 			});
 		}
 		saveNote(note, callback) {
@@ -389,11 +389,11 @@
 				stock.profit = `${test.profit} ➜ ${profitRate}%`;
 				stock.ma = `【${stock.defaultMa}${stock.tigerMa ? ' ' + stock.tigerMa : ''}】`;
 			});
-			service.users((users, user) => {
+			service.users((users, user, totalCapital) => {
 				$$.users = users;
 				$$.user = user;
 				service.stocks((stocks) => $$.stocks = stocks);
-				$timeout(() => $$.$broadcast('inited', user), 150);
+				$timeout(() => $$.$broadcast('inited', user, totalCapital), 150);
 			});
 		},
 		home: function($$, $location, $timeout, service) {
@@ -405,10 +405,14 @@
 			$$.bulls = [];
 			$$.invested = {  // 已經購買的股票紀錄
 				date: new Date(),
-				totalCapital: TOTAL_CAPITAL,
+				totalCapital: 0,
 				cost: 0,
+				profit: 0,
+				diffRate: 0,
 				stocks: []
 			};
+			// Master 的股票交易紀錄
+			$$.shadowed = Object.assign({}, $$.invested, { stocks: [] });
 			$$.changeTo = function(code) {
 				window.open(`/stock/${code}`, `_stock/${code}`);
 			};
@@ -445,9 +449,23 @@
 					stock.trade.invest = new RsiInvest(dailies, stock.defaultMa).start(stock.trade);
 					if (!$$.invested.stocks.find(i => i.code == stock.code)) {
 						$$.invested.stocks.push({ code: stock.code, invest: stock.trade.invest });
+						$$.invested.profit += stock.trade.invest.netProfit;
 						// 尚未被模擬賣出
 						if (stock.trade.invest.totalInvested) return $$.invested.cost += stock.trade.invest.avgCost * stock.trade.invest.totalInvested;
 						$$.invested.cost += stock.trade.logs.filter(l => l.act == '買入').reduce((sum, l) => sum + (l.price * l.amount), 0);
+					}
+				});
+			};
+			$$.shadow = function(stock) {
+				service.dailies(stock, (dailies) => {
+					stock.shadow.invest = new RsiInvest(dailies, stock.defaultMa).start(stock.shadow);
+					if (!$$.shadowed.stocks.find(i => i.code == stock.code)) {
+						$$.shadowed.stocks.push({ code: stock.code, invest: stock.shadow.invest });
+						$$.shadowed.profit += stock.shadow.invest.netProfit;
+						$$.invested.diffRate += ($$.invested.profit - $$.shadowed.profit) / $$.invested.profit;
+						// 尚未被模擬賣出
+						if (stock.shadow.invest.totalInvested) return $$.shadowed.cost += stock.shadow.invest.avgCost * stock.shadow.invest.totalInvested;
+						$$.shadowed.cost += stock.shadow.logs.filter(l => l.act == '買入').reduce((sum, l) => sum + (l.price * l.amount), 0);
 					}
 				});
 			};
@@ -467,6 +485,14 @@
 				const INVESTED = 10000000000;
 				$$.stareds = $$.stareds.sort((a, b) => (Date.parse(b.trade?.entryDate || 0) + (b.trade?.invest ? INVESTED : 0)) - (Date.parse(a.trade?.entryDate || 0) + (a.trade?.invest ? INVESTED : 0)));
 				$$.openeds = $$.openeds.sort((a, b) => Date.parse(b.trade?.entryDate || 0) - Date.parse(a.trade?.entryDate || 0));
+				service.trades({ shadow: true }, (trades) => {
+					trades.forEach(trade => {
+						const stock = $$.stocks.find(s => s.code == trade.logs[0].code);
+						if (!stock) return;
+						stock.shadow = trade;
+						$$.shadow(stock);
+					});
+				});
 			}, 1.5 * SEC);
 			$$.checked = function(stock) {
 				$$.$emit('stockChecked', stock);
@@ -500,7 +526,8 @@
 				}
 				$$.resort();
 			});
-			$$.$on('inited', (_, user) => {
+			$$.$on('inited', (_, user, totalCapital) => {
+				$$.invested.totalCapital = totalCapital;
 				$$.showStareds(user);
 				service.strategies((strategies) => {
 					const params = user.settings.params || {};
@@ -737,6 +764,13 @@
 						$$.dividends = $$.stock.trades.filter(t => t.type == 'dividend');
 					}
 					$$.realtime();
+					service.trades({ code: $$.stock.code, shadow: true }, trades => {
+						$$.stock.shadow = $$.stock.shadow || [];
+						trades.forEach(trade => {
+							const invest = new RsiInvest(dailies, trade.ma).start(trade);
+							$$.stock.shadow.push(invest);
+						});
+					});
 				});
 			};
 			$$.realtime = function() {
@@ -767,7 +801,6 @@
 			if (!$params.codes) return $location.path('/');
 			const today = new Date();
 			const twoYearsAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-			$$.money = TOTAL_CAPITAL;
 			$$.entryStrategyCheck = function() {
 				$$.tigerChecked = $$.params.entryStrategy.includes('Tiger') || $$.exitStrategies.find(s => s.key.includes('Tiger') && s.checked);
 			};
@@ -840,7 +873,8 @@
 					$$.testers.push(stocks.find(s => s.code == code));
 				});
 			});
-			$$.$on('inited', (_, user) => {
+			$$.$on('inited', (_, user, totalCapital) => {
+				$$.money = totalCapital;
 				service.strategies((strategies) => {
 					const params = user.settings.params || {};
 					$$.entryStrategies = strategies.entryStrategies;

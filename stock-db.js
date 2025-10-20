@@ -171,14 +171,8 @@ Stock.save = async function(stock) {
 	return Base.save(Stock, stock);
 };
 
-Stock.trades = async function(code, userId, shadow) {
-	const where = {
-		code
-	};
-	if (userId) {
-		where.userId = userId;
-	}
-	where.shadow = shadow || false;
+Stock.trades = async function(where) {
+	where = Object.assign({}, where);
 	const trades = await StockTrade.findAll({
 		where,
 		order: [
