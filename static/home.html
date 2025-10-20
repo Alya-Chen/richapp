@@ -67,9 +67,15 @@
       </svg>
     </div>
     <div class="stat-title">績效</div>
-    <div class="stat-value"><span class="font-price" ng-bind="shadowed.profit.scale() | number"></span></div>
-    <div class="stat-value"><span class="font-price" ng-bind="invested.profit.scale() | number"></span></div>
-    <div class="stat-desc">偏差值 <span ng-bind="invested.diffRate.scale(2) | pct"></span>％</div>
+    <div class="stat-value">
+      <span class="font-price" ng-bind="shadowed.profit.scale() | number"></span>
+      <span ng-bind="shadowed.profitRate.scale(4) | pct"></span>％
+    </div>
+    <div class="stat-value">
+      <span class="font-price" ng-bind="invested.profit.scale() | number"></span>
+      <span ng-bind="invested.profitRate.scale(4) | pct"></span>％
+    </div>
+    <div class="stat-desc">偏差值 <span ng-bind="invested.diffRate.scale(4) | pct"></span>％</div>
   </div>
 </div>
 

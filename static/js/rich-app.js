@@ -409,6 +409,7 @@
 				cost: 0,
 				profit: 0,
 				diffRate: 0,
+				profitRate: 0,
 				stocks: []
 			};
 			// Master 的股票交易紀錄
@@ -451,8 +452,9 @@
 						$$.invested.stocks.push({ code: stock.code, invest: stock.trade.invest });
 						$$.invested.profit += stock.trade.invest.netProfit;
 						// 尚未被模擬賣出
-						if (stock.trade.invest.totalInvested) return $$.invested.cost += stock.trade.invest.avgCost * stock.trade.invest.totalInvested;
-						$$.invested.cost += stock.trade.logs.filter(l => l.act == '買入').reduce((sum, l) => sum + (l.price * l.amount), 0);
+						if (!stock.trade.invest.totalInvested) return $$.invested.cost += stock.trade.logs.filter(l => l.act == '買入').reduce((sum, l) => sum + (l.price * l.amount), 0);
+						$$.invested.cost += stock.trade.invest.avgCost * stock.trade.invest.totalInvested;
+						$$.invested.profitRate = $$.invested.profit / $$.invested.cost;
 					}
 				});
 			};
@@ -462,10 +464,11 @@
 					if (!$$.shadowed.stocks.find(i => i.code == stock.code)) {
 						$$.shadowed.stocks.push({ code: stock.code, invest: stock.shadow.invest });
 						$$.shadowed.profit += stock.shadow.invest.netProfit;
-						$$.invested.diffRate = ($$.invested.profit - $$.shadowed.profit) / $$.invested.profit;
 						// 尚未被模擬賣出
-						if (stock.shadow.invest.totalInvested) return $$.shadowed.cost += stock.shadow.invest.avgCost * stock.shadow.invest.totalInvested;
-						$$.shadowed.cost += stock.shadow.logs.filter(l => l.act == '買入').reduce((sum, l) => sum + (l.price * l.amount), 0);
+						if (!stock.shadow.invest.totalInvested) return $$.shadowed.cost += stock.shadow.logs.filter(l => l.act == '買入').reduce((sum, l) => sum + (l.price * l.amount), 0);
+						$$.shadowed.cost += stock.shadow.invest.avgCost * stock.shadow.invest.totalInvested;
+						$$.shadowed.profitRate = $$.shadowed.profit / $$.shadowed.cost;
+						$$.invested.diffRate = $$.invested.profitRate - $$.shadowed.profitRate;
 					}
 				});
 			};
