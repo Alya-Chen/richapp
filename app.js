@@ -171,7 +171,8 @@ app.get('/star/:code', async (req, res) => {
 });
 
 app.get('/backtest/opened', async (req, res) => {
-	const tests = await stockService.findTests({ opened: true, userId: req.session.userId });
+	const user = await getUser(req);
+	const tests = await stockService.findTests({ opened: true, userId: user.id });
   	res.json(tests);
 });
 
@@ -246,10 +247,14 @@ app.get('/dailies/:code', async (req, res) => {
 
 app.get('/sync/:code{/:forced}', async (req, res) => {
 	const code = req.params.code;
+	const user = await getUser(req);
 	if (code != 'all') {
 		await stockService.sync(code, req.params.forced);
 		const stock = await stockService.getStock(code);
-		const result = await stockService.backtest(code, { ma: stock.defaultMa });
+		const params = user.settings?.params;
+		params.userId = user.id;
+		params.ma = stock.defaultMa;
+		const result = await stockService.backtest(code, params);
 		res.json(result);
 	}
 	else {

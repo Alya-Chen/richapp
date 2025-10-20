@@ -375,7 +375,7 @@ class Service {
 		}
 		const stocks = JSON.parse(fs.readFileSync('static/stocks.json', 'utf8'));
 		const stock = stocks.find(s => s.Code == code) || { otc: true, Code: code, Name: name };
-		stock.country = parseInt(code.charAt(0)) ? 'tw' : 'us';
+		stock.country = code.match(/^\d/) ? 'tw' : 'us';
 		return await db.Stock.save({
 			code: stock.Code,
 			name: stock.Name,
