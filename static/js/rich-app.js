@@ -804,12 +804,10 @@
 			if (!$params.codes) return $location.path('/');
 			const today = new Date();
 			const twoYearsAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-			$$.entryStrategyCheck = function() {
+			$$.strategyChange = function() {
 				$$.tigerChecked = $$.params.entryStrategy.includes('Tiger') || $$.exitStrategies.find(s => s.key.includes('Tiger') && s.checked);
-			};
-			$$.exitStrategyCheck = function() {
-				$$.entryStrategyCheck();
 				$$.dynamicExitChecked = $$.exitStrategies.find(s => s.key == 'DynamicStopExit').checked;
+				$$.maCrossChecked = $$.params.entryStrategy.includes('MaCross') || $$.exitStrategies.find(s => s.key.includes('MaCross') && s.checked);
 			};
 			$$.saveParams = function() {
 				delete $$.params.dynamic; // 動態 MA，回測專用不儲存
@@ -865,6 +863,13 @@
 				$$.stopLossPct = ($$.params.stopLossPct * 100).toFixed() + '%';
 				$$.dynamicStopPct = ($$.params.dynamicStopPct * 100).toFixed() + '%';
 			});
+			$$.$watch('maCrossChecked', (checked) => {
+				if (!checked) return;
+				$$.params.ma1 = $$.params.ma1 || 5;
+				$$.params.ma2 = $$.params.ma2 || 10;
+				$$.params.ma3 = $$.params.ma3 || 60;
+				$$.params.rsiThreshold = $$.params.rsiThreshold || 80;
+			});
 			$$.$on('stocksLoaded', (_, stocks) => {
 				$$.testers = [];
 				if ($params.codes == '我的關注') {
@@ -891,7 +896,7 @@
 					$$.params.takeProfitPct = $$.params.takeProfitPct || 0.05;
 					$$.params.stopLossPct = $$.params.stopLossPct || 0.03;
 					$$.params.dynamicStopPct = $$.params.dynamicStopPct || 0;
-					$$.exitStrategyCheck();
+					$$.strategyChange();
 				});
 			});
 		},

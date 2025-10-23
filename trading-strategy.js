@@ -1,5 +1,5 @@
 import * as dateFns from 'date-fns';
-import { Macd, Kdj, Rsi, BullBear, BollingerBands } from './static/js/macd-kdj.js';
+import { Macd, Kdj, Rsi, BullBear, BollingerBands, Adx } from './static/js/macd-kdj.js';
 
 class Cache {
 	constructor(claz) {
@@ -26,6 +26,7 @@ class Cache {
 const RSI_CACHE = new Cache(Rsi);
 const MACD_CACHE = new Cache(Macd);
 const KDJ_CACHE = new Cache(Kdj);
+const ADX_CACHE = new Cache(Adx);
 
 export class TwoDaysUpEntry {
 	constructor(data, params) {
@@ -65,6 +66,7 @@ export class DynamicStopExit {
 			stopLossPct,   // 止損小於入場價格的 3%
 			takeProfitPct, // 固定止盈大於入場價格的 10%
 			dynamicStopPct, // 動態止損小於曾經最高價格的 5%
+			partialProfitPct, // 部分止盈大於入場價格的 5%
 			maxHoldPeriod // 最大持倉周期 30 天
 		} = this.params;
 
@@ -79,10 +81,21 @@ export class DynamicStopExit {
 		}
 		// 固定止盈
 		if (takeProfitPct) {
-			exitConditions.push({
-				reason: `止盈觸發：${day.close.scale()} 大於入場價格 ${position.entryPrice.scale()} 的 ${(takeProfitPct * 100).scale()}%`,
-				condition: day.close >= position.entryPrice * (1 + takeProfitPct)
-			});
+			if (partialProfitPct && !position.tookProfit && day.close >= position.entryPrice * (1 + partialProfitPct)) {
+				position.tookProfit = true;
+				exitConditions.push({
+					reason: `部分止盈觸發：${day.close.scale()} 大於入場價格 ${position.entryPrice.scale()} 的 ${(partialProfitPct * 100).scale()}%`,
+					condition: day.close >= position.entryPrice * (1 + partialProfitPct),
+					status: `closed-${(partialProfitPct * 100).scale()}%`
+				});
+			}
+			else {
+				exitConditions.push({
+					reason: `止盈觸發：${day.close.scale()} 大於入場價格 ${position.entryPrice.scale()} 的 ${(takeProfitPct * 100).scale()}%`,
+					condition: day.close >= position.entryPrice * (1 + takeProfitPct),
+					status: 'closed'
+				});
+			}
 		}
 		// 動態止損
 		if (dynamicStopPct) {
@@ -229,7 +242,84 @@ export class RsiTigerExit {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-export class MacdMaEntry {
+export class MaCrossEntryExit {
+	constructor(data, params) {
+		this.name = 'MA 交叉進出場策略';
+		this.enabled = true;
+		this.data = data || [];
+		this.params = params;
+		if (this.data.length > 0) {
+			params.ma1 = params.ma1 || 5;
+			params.ma2 = params.ma2 || 10;
+			params.ma3 = params.ma3 || 60;
+			this.calculateMA(params.ma1);
+			this.calculateMA(params.ma2);
+			this.calculateMA(params.ma3);
+			this.rsi = RSI_CACHE.get(params.code, data);
+		}
+	}
+
+	calculateMA(period) {
+		const maKey = `ma${period}`;
+		for (let i = 0; i < this.data.length; i++) {
+			if (i < period - 1) {
+				this.data[i][maKey] = null;
+			} else {
+				let sum = 0;
+				for (let j = 0; j < period; j++) {
+					sum += this.data[i - j].close;
+				}
+				this.data[i][maKey] = sum / period;
+			}
+		}
+	}
+
+	// 開倉條件檢查
+	checkEntry(_, index, position) {
+		if (index < 1 || position.status != 'closed') return false;
+
+		const prev = this.data[index - 1];
+		const day = this.data[index];
+		const ma1 = `ma${this.params.ma1}`;
+		const ma2 = `ma${this.params.ma2}`;
+		const ma3 = `ma${this.params.ma3}`;
+		const rsiThreshold = this.params.rsiThreshold;
+
+		// 確保兩天的均線數據都存在
+		if (day[ma1] == null || day[ma2] == null || day[ma3] == null || prev[ma1] == null || prev[ma2] == null || prev[ma3] == null) {
+			return null;
+		}
+
+		const time = Date.parse(day.date);
+		const rsi = this.rsi.find(r => r && r.time == time)?.rsi;
+		if (rsiThreshold && rsi > rsiThreshold) return null; // RSI 過熱不入場
+		// 黃金交叉：ma1 從下方穿越 ma2 且當日股價 >= ma3
+		const goldenCross = prev[ma1] <= prev[ma2] && day[ma1] > day[ma2] && day.close >= day[ma3];
+		return goldenCross ? { reason: `黃金交叉: ${ma1} > ${ma2} 且 ${day.close.scale()} >= ${day[ma3].scale()} RSI: ${rsi.scale()}` } : null;
+	}
+
+	// 平倉條件檢查
+	checkExit(_, index, position) {
+		if (index < 1) return false;
+
+		const prev = this.data[index - 1];
+		const day = this.data[index];
+		const ma1 = `ma${this.params.ma1}`;
+		const ma2 = `ma${this.params.ma2}`;
+
+		// 確保兩天的均線數據都存在
+		if (day[ma1] == null || day[ma2] == null || prev[ma1] == null || prev[ma2] == null) {
+			return null;
+		}
+
+		// 死亡交叉：ma1 從上方穿越 ma2 且當日股價 <= ma3
+		const deathCross = prev[ma1] >= prev[ma2] && day[ma1] < day[ma2];
+		return deathCross ? { reason: `死亡交叉: ${ma1} < ${ma2}` } : null;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+export class MaEntry {
 	constructor(data, params) {
 		this.name = 'MACD 進場策略';
 		this.enabled = true;

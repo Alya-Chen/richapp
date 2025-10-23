@@ -427,6 +427,176 @@ export class BollingerBands {
 	}
 }
 
+// Average Directional Index
+export class Adx {
+    constructor(data, {
+        period = 14
+    } = {}) {
+        this.data = data; // 每個元素應該包含 { high, low, close }
+        this.period = period;
+    }
+
+    calculate() {
+        let adxArray = [];
+        let plusDms = [];
+        let minusDms = [];
+        let trs = [];
+        let dxs = [];
+
+        let smoothPlusDm = 0;
+        let smoothMinusDm = 0;
+        let smoothTr = 0;
+        let adx = 0;
+
+        if (this.data.length < this.period * 2) {
+            console.warn("ADX calculation needs at least 2 * period data points.");
+            // 即使數據不足，也返回與 data 等長的 null 陣列
+            return this.data.map(() => ({ adx: null, plusDi: null, minusDi: null }));
+        }
+
+        for (let i = 0; i < this.data.length; i++) {
+            // --- 1. 計算 +DM, -DM, 和 TR ---
+            // 從第二根 K 棒開始 (i=1)
+            if (i === 0) {
+                adxArray.push({ adx: null, plusDi: null, minusDi: null });
+                continue;
+            }
+
+            const current = this.data[i];
+            const prev = this.data[i - 1];
+            // 計算 Directional Movement (DM)
+            let upMove = current.high - prev.high;
+            let downMove = prev.low - current.low;
+
+            let plusDm = 0;
+            let minusDm = 0;
+            if (upMove > downMove && upMove > 0) {
+                plusDm = upMove;
+            }
+            if (downMove > upMove && downMove > 0) {
+                minusDm = downMove;
+            }
+
+            // 計算 True Range (TR)
+            let tr = Math.max(
+                current.high - current.low,
+                Math.abs(current.high - prev.close),
+                Math.abs(current.low - prev.close)
+            );
+
+            // 儲存原始值以供後續平滑
+            plusDms.push(plusDm);
+            minusDms.push(minusDm);
+            trs.push(tr);
+
+            // --- 2. 平滑 DM 和 TR ---
+            // 我們需要 'period' 個數值來開始平滑
+
+            let currentPlusDi = null;
+            let currentMinusDi = null;
+            let currentAdx = null;
+            if (i < this.period) {
+                // 在第一個 'period' 週期內，僅累積初始總和
+                smoothPlusDm += plusDm;
+                smoothMinusDm += minusDm;
+                smoothTr += tr;
+                adxArray.push({ adx: null, plusDi: null, minusDi: null });
+                continue;
+            }
+            else if (i === this.period) {
+                // 在第 'period' 根 K 棒，完成第一次加總 (使用 i=1 到 i=period 的數據)
+                smoothPlusDm += plusDm;
+                smoothMinusDm += minusDm;
+                smoothTr += tr;
+            }
+            else {
+                // 'period' 之後，使用 Wilder's Smoothing (EMA with alpha = 1/period)
+                // 範例 (14天): (前值 * 13 + 現值) / 14
+                smoothPlusDm = (smoothPlusDm * (this.period - 1) + plusDm) / this.period;
+                smoothMinusDm = (smoothMinusDm * (this.period - 1) + minusDm) / this.period;
+                smoothTr = (smoothTr * (this.period - 1) + tr) / this.period;
+            }
+
+            // --- 3. 計算 +Di 和 -Di ---
+            // 避免除以零
+            if (smoothTr === 0) {
+                currentPlusDi = 0;
+                currentMinusDi = 0;
+            } else {
+                currentPlusDi = 100 * (smoothPlusDm / smoothTr);
+                currentMinusDi = 100 * (smoothMinusDm / smoothTr);
+            }
+
+            // --- 4. 計算 DX ---
+            let diSum = currentPlusDi + currentMinusDi;
+            let dx = 0;
+            if (diSum !== 0) {
+                dx = 100 * (Math.abs(currentPlusDi - currentMinusDi) / diSum);
+            }
+            dxs.push(dx); // 儲存 DX 值以計算 ADX
+
+            // --- 5. 計算 ADX (DX 的平滑移動平均) ---
+            // 我們需要 'period' 個 DX 值來計算第一個 ADX
+            // 第一個 DX 在 i = period 時算出
+            // 第 'period' 個 DX 在 i = period + (period - 1) = (2 * period) - 1 時算出
+
+            if (i < (2 * this.period) - 1) {
+                // 數據不足以計算 ADX
+                currentAdx = null;
+            }
+            else if (i === (2 * this.period) - 1) {
+                // 計算第一個 ADX (DXs 陣列中現在有 period 個值)
+                adx = dxs.reduce((a, b) => a + b, 0) / this.period;
+                currentAdx = adx;
+            }
+            else {
+                // 計算後續的 ADX (使用 Wilder's Smoothing)
+                adx = (adx * (this.period - 1) + dx) / this.period;
+                currentAdx = adx;
+            }
+            const day = this.data[i];
+            const time = day.date ? Date.parse(day.date) : null;
+            adxArray.push({ time, val: currentAdx, plusDi: currentPlusDi, minusDi: currentMinusDi });
+        }
+        return this.detectCrossovers(adxArray);
+    }
+
+    detectCrossovers(adxArray) {
+        for (let i = 1; i < adxArray.length; i++) {
+            const current = adxArray[i];
+            const prev = adxArray[i - 1];
+            // 確保有足夠的資料
+            if (!current || !prev ||
+                current.plusDi == null || current.minusDi == null || current.adx == null ||
+                prev.plusDi == null || prev.minusDi == null || prev.adx == null) {
+                continue;
+            }
+            // 檢查 ADX 趨勢（上升或下降）
+            const adxRising = i > 1 && adxArray[i - 1].adx != null && adxArray[i - 2]?.adx != null
+                ? current.adx > prev.adx
+                : false;
+
+            // +DI 向上穿越 -DI（黃金交叉）
+            if (prev.plusDi <= prev.minusDi && current.plusDi > current.minusDi) {
+                current.diGolden = true;
+                // 強烈買入訊號：ADX > 20 且正在上升
+                if (current.adx > 20 && adxRising) {
+                    current.strongBuy = true;
+                }
+            }
+            // -DI 向上穿越 +DI（死亡交叉）
+            if (prev.minusDi <= prev.plusDi && current.minusDi > current.plusDi) {
+                current.diDead = true;
+                // 強烈賣出訊號：ADX > 20 且正在上升
+                if (current.adx > 20 && adxRising) {
+                    current.strongSell = true;
+                }
+            }
+        }
+        return adxArray;
+    }
+}
+
 export class ExitAlert {
     constructor(data) {
         this.data = data;

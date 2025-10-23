@@ -35,7 +35,7 @@
       <span class="text-lg font-bold text-nowrap mr-4">入場策略</span>
       <div class="flex gap-2 flex-wrap">
         <label ng-repeat="strategy in entryStrategies" class="text-nowrap">
-          <input type="radio" name="entryStrategy" ng-model="params.entryStrategy" ng-change="entryStrategyCheck()"
+          <input type="radio" name="entryStrategy" ng-model="params.entryStrategy" ng-change="strategyChange()"
             value="{{strategy.key}}" class="radio" />
           <span ng-bind="strategy.name"></span>
         </label>
@@ -45,7 +45,7 @@
       <span class="text-lg font-bold text-nowrap mr-4">出場策略</span>
       <div class="flex gap-2 flex-wrap">
         <span ng-repeat="strategy in exitStrategies" class="text-nowrap">
-          <input type="checkbox" class="checkbox" ng-model="strategy.checked" ng-change="exitStrategyCheck()" />
+          <input type="checkbox" class="checkbox" ng-model="strategy.checked" ng-change="strategyChange()" />
           <label ng-bind="strategy.name"></label>
         </span>
       </div>
@@ -68,6 +68,16 @@
           <input type="number" ng-model="params.dynamicStopPct" step="0.01" />
           -->
         </div>
+        <div class="ml-4" ng-if="maCrossChecked">
+          短線：
+          <input type="number" ng-model="params.ma1" step="1" />
+          中線：
+          <input type="number" ng-model="params.ma2" step="1" />
+          長線：
+          <input type="number" ng-model="params.ma3" step="1" />
+          RSI 過熱閥值：
+          <input type="number" ng-model="params.rsiThreshold" step="5" />
+        </div>
       </div>
     </div>
     <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
@@ -87,7 +97,7 @@
     </div>
   </div>
 </div>
-<div ng-if="simulated.csv" class="w-[85%] mx-auto max-w-6xl mt-6 bg-success rounded-t-lg grid grid-cols-10">
+<div ng-if="simulated.csv" class="w-[85%] mx-auto max-w-6xl">
   <textarea ng-bind="simulated.csv" style="width: 100%; height: 400px;"></textarea>
 </div>
 <div ng-if="simulated" class="w-[85%] mx-auto max-w-6xl mt-6 bg-success rounded-t-lg grid grid-cols-6">
