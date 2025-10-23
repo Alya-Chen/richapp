@@ -295,7 +295,7 @@ export class MaCrossEntryExit {
 		if (rsiThreshold && rsi > rsiThreshold) return null; // RSI 過熱不入場
 		// 黃金交叉：ma1 從下方穿越 ma2 且當日股價 >= ma3
 		const goldenCross = prev[ma1] <= prev[ma2] && day[ma1] > day[ma2] && day.close >= day[ma3];
-		return goldenCross ? { reason: `黃金交叉: ${ma1} > ${ma2} 且 ${day.close.scale()} >= ${day[ma3].scale()} RSI: ${rsi.scale()}` } : null;
+		return goldenCross ? { reason: `黃金交叉: ${ma1} > ${ma2} 且 ${day.close.scale()} >= ${day[ma3].scale()} RSI: ${rsi?.scale()}` } : null;
 	}
 
 	// 平倉條件檢查
