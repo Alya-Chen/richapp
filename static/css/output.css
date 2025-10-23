@@ -43,6 +43,7 @@
     --default-mono-font-family: var(--font-mono);
     --color-rich-red: #ff7777;
     --color-rich-green: #98d7a4;
+    --color-rich-master: #7b3196;
   }
 }
 @layer base {
@@ -5448,9 +5449,6 @@
   .ml-10 {
     margin-left: calc(var(--spacing) * 10);
   }
-  .ml-11 {
-    margin-left: calc(var(--spacing) * 11);
-  }
   .ml-auto {
     margin-left: auto;
   }
@@ -6074,10 +6072,6 @@
       width: var(--size);
       height: var(--size);
     }
-  }
-  .size-2 {
-    width: calc(var(--spacing) * 2);
-    height: calc(var(--spacing) * 2);
   }
   .size-4 {
     width: calc(var(--spacing) * 4);
@@ -6858,6 +6852,9 @@
   .border-rich-green {
     border-color: var(--color-rich-green);
   }
+  .border-rich-master {
+    border-color: var(--color-rich-master);
+  }
   .border-rich-red {
     border-color: var(--color-rich-red);
   }
@@ -7047,6 +7044,27 @@
     background-color: color-mix(in srgb, #98d7a4 10%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-rich-green) 10%, transparent);
+    }
+  }
+  .bg-rich-master {
+    background-color: var(--color-rich-master);
+  }
+  .bg-rich-master\/10 {
+    background-color: color-mix(in srgb, #7b3196 10%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-rich-master) 10%, transparent);
+    }
+  }
+  .bg-rich-master\/30 {
+    background-color: color-mix(in srgb, #7b3196 30%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-rich-master) 30%, transparent);
+    }
+  }
+  .bg-rich-master\/50 {
+    background-color: color-mix(in srgb, #7b3196 50%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-rich-master) 50%, transparent);
     }
   }
   .bg-rich-red\/10 {
@@ -8107,6 +8125,9 @@
   }
   .text-rich-green {
     color: var(--color-rich-green);
+  }
+  .text-rich-master {
+    color: var(--color-rich-master);
   }
   .text-rich-red {
     color: var(--color-rich-red);

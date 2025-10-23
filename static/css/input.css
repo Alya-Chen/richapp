@@ -4,6 +4,7 @@
 @theme {
     --color-rich-red: #ff7777;
     --color-rich-green: #98d7a4;
+    --color-rich-master: #7b3196;
 }
 
 @layer utilities {

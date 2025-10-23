@@ -18,14 +18,16 @@
     <span class="ml-2">出場策略：</span>
     <span ng-bind="exitStrategy.name"></span>
     <span class="text-secondary" ng-if="exitStrategy.reentry">（返場）</span>
-    <span class="text-secondary" ng-if="exitStrategy.dynamicStop">＋動態止損 <span ng-bind="exitStrategy.stopLossPct" class="text-error"></span>％</span>
-    <span class="text-secondary" ng-if="exitStrategy.dynamicStop">止盈 <span ng-bind="exitStrategy.takeProfitPct" class="text-error"></span>％</span>
+    <span class="text-secondary" ng-if="exitStrategy.dynamicStop">＋動態止損 <span ng-bind="exitStrategy.stopLossPct"
+        class="text-error"></span>％</span>
+    <span class="text-secondary" ng-if="exitStrategy.dynamicStop">止盈 <span ng-bind="exitStrategy.takeProfitPct"
+        class="text-error"></span>％</span>
   </div>
 </div>
 <div class="stats cursor-pointer flex w-[85%] mx-auto max-w-6xl" ng-click="showTrades()">
   <div class="stat">
     <div class="stat-title">角色</div>
-    <div class="stat-value">Master</div>
+    <div class="stat-value text-rich-master">Master</div>
     <div class="stat-value">實際</div>
   </div>
   <div class="stat">
@@ -35,7 +37,8 @@
       </svg>
     </div>
     <div class="stat-title">總資金</div>
-    <div class="stat-value"><span class="font-price" ng-bind="invested.totalCapital | number"></span></div>
+    <div class="stat-value text-rich-master"><span class="font-price" ng-bind="invested.totalCapital | number"></span>
+    </div>
     <div class="stat-value"><span class="font-price" ng-bind="invested.totalCapital | number"></span></div>
   </div>
   <div class="stat">
@@ -45,7 +48,7 @@
       </svg>
     </div>
     <div class="stat-title">目前投資</div>
-    <div class="stat-value"><span class="font-price" ng-bind="shadowed.cost | number"></span></div>
+    <div class="stat-value text-rich-master"><span class="font-price" ng-bind="shadowed.cost | number"></span></div>
     <div class="stat-value"><span class="font-price" ng-bind="invested.cost | number"></span></div>
   </div>
   <div class="stat">
@@ -55,7 +58,8 @@
       </svg>
     </div>
     <div class="stat-title">剩餘資金</div>
-    <div class="stat-value"><span class="font-price" ng-bind="(invested.totalCapital - shadowed.cost) | number"></span>
+    <div class="stat-value text-rich-master"><span class="font-price"
+        ng-bind="(invested.totalCapital - shadowed.cost) | number"></span>
     </div>
     <div class="stat-value"><span class="font-price" ng-bind="(invested.totalCapital - invested.cost) | number"></span>
     </div>
@@ -67,15 +71,9 @@
       </svg>
     </div>
     <div class="stat-title">績效</div>
-    <div class="stat-value">
-      <span class="font-price" ng-bind="shadowed.profit.scale() | number"></span>
-      <span ng-bind="shadowed.profitRate.scale(4) | pct"></span>％
-    </div>
-    <div class="stat-value">
-      <span class="font-price" ng-bind="invested.profit.scale() | number"></span>
-      <span ng-bind="invested.profitRate.scale(4) | pct"></span>％
-    </div>
-    <div class="stat-desc">偏差值 <span ng-bind="invested.diffRate.scale(4) | pct"></span>％</div>
+    <div class="stat-value"><span class="font-price" ng-bind="shadowed.profit.scale() | number"></span></div>
+    <div class="stat-value"><span class="font-price" ng-bind="invested.profit.scale() | number"></span></div>
+    <div class="stat-desc">偏差值 <span ng-bind="invested.diffRate.scale(2) | pct"></span>％</div>
   </div>
 </div>
 
@@ -213,7 +211,7 @@
         </span>
         <!-- 大師投資參考 -->
         <span ng-if="stock.shadow.invest"
-          class="rounded-box bg-primary/50 col-span-2 w-full justify-start overflow-hidden"
+          class="rounded-box bg-primary/50 col-span-2 w-full justify-start overflow-hidden border-2 border-dashed border-rich-master"
           ng-class="{'bg-primary': stock.shadow.invest.rsiHot}">
           <span ng-class="{'bg-secondary': !log.id}" ng-if="log.act" ng-repeat="log in stock.shadow.invest.logs"
             ng-click="invest.edit(log)" class="grid grid-cols-[50px_auto_auto] gap-2 p-3 items-center">

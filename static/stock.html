@@ -6,11 +6,11 @@
       <span ng-if="!stock.stared" class="text-base-300 hover:text-error transition-colors"><svg fill="currentColor"
           class="icon-heart size-[1.3em] ml-3 mr-1 stroke-base-content stroke-2">
           <use xlink:href="css/symbol-defs.svg#icon-heart"></use>
-      </svg></span>
+        </svg></span>
       <span ng-if="stock.stared" class="text-error"><svg fill="currentColor"
           class="icon-heart size-[1.3em] ml-3 mr-1 text-rich-red">
           <use xlink:href="css/symbol-defs.svg#icon-heart"></use>
-      </svg></span>
+        </svg></span>
     </h2>
     <div class="flex gap-2">
       <button class="btn btn-primary btn-sm" ng-click="invest.edit({ act: '買入' })">
@@ -212,7 +212,7 @@
   </ng-container>
   <!-- 大師操作紀錄 -->
   <ng-container ng-if="stock.shadow.length">
-    <div class="list-row cursor-pointer hover:bg-base-100 bg-secondary/10" ng-repeat="trade in stock.shadow">
+    <div class="list-row cursor-pointer hover:bg-base-100 bg-rich-master/30" ng-repeat="trade in stock.shadow">
       <span class="font-date text-xl text-info mr-4" ng-bind="trade.entryDate | date:'MM/dd'"></span>
       <div class="list-col-grow">
         👽 <span class="font-price text-2xl" ng-bind="trade.netProfit | number"></span>
