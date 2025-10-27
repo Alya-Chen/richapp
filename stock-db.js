@@ -176,7 +176,7 @@ Stock.trades = async function(where) {
 	const trades = await StockTrade.findAll({
 		where,
 		order: [
-			['id', 'ASC']
+			['code', 'ASC'], ['id', 'ASC']
 		]
 	});
 	const result = [];

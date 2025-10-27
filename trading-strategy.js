@@ -2,8 +2,9 @@ import * as dateFns from 'date-fns';
 import { Macd, Kdj, Rsi, BullBear, BollingerBands, Adx } from './static/js/macd-kdj.js';
 
 class Cache {
-	constructor(claz) {
+	constructor(claz, params) {
 		this.claz = claz;
+		this.params = params || {};
 		this.cache = {};
 		this.date = new Date().toDateString();
 	}
@@ -14,7 +15,7 @@ class Cache {
 			this.cache = {};
 		}
 		if (!this.cache[code]) {
-			this.cache[code] = new this.claz(data).calculate();
+			this.cache[code] = new this.claz(data, this.params).calculate();
 		}
 		return this.cache[code];
 	}
@@ -26,7 +27,6 @@ class Cache {
 const RSI_CACHE = new Cache(Rsi);
 const MACD_CACHE = new Cache(Macd);
 const KDJ_CACHE = new Cache(Kdj);
-const ADX_CACHE = new Cache(Adx);
 
 export class TwoDaysUpEntry {
 	constructor(data, params) {
@@ -240,6 +240,51 @@ export class RsiTigerExit {
 		return this.tigerExit.checkExit(day, index, position);
 	}
 }
+///////////////////////////////////////////////////////////////////////////////
+export class RsiExit {
+	static CACHE = {};
+
+	constructor(data, params) {
+		this.short = params.rsiShort || 5;
+		this.long = params.rsiLong || 10;
+		this.name = `RSI 長短週期死叉出場策略`;
+		this.enabled = true;
+		this.data = data;
+		this.params = params;
+
+		if (!RsiExit.CACHE[this.params.code + this.short]) {
+			RsiExit.CACHE[this.params.code + this.short] = new Cache(Rsi, { period: this.short });
+		}
+		if (!RsiExit.CACHE[this.params.code + this.long]) {
+			RsiExit.CACHE[this.params.code + this.long] = new Cache(Rsi, { period: this.long });
+		}
+		this.rsiShortValues = RsiExit.CACHE[this.params.code + this.short].get(this.params.code, this.data);
+		this.rsiLongValues = RsiExit.CACHE[this.params.code + this.long].get(this.params.code, this.data);
+	}
+
+	// 平倉條件檢查
+	checkExit(day, index, position) {
+		if (index < 1) return null;
+
+		// 從預先算好的陣列中取得 RSI 值
+		const rsiPrevShort = this.rsiShortValues[index - 1]?.rsi;
+		const rsiTodayShort = this.rsiShortValues[index]?.rsi;
+		const rsiPrevLong = this.rsiLongValues[index - 1]?.rsi;
+		const rsiTodayLong = this.rsiLongValues[index]?.rsi;
+
+		// 確保資料存在
+		if ([rsiPrevShort, rsiTodayShort, rsiPrevLong, rsiTodayLong].some(v => v == null)) {
+			return null;
+		}
+
+		// RSI 死叉：RSI 短線由上往下穿越長線
+		const cross = rsiPrevShort >= rsiPrevLong && rsiTodayShort < rsiTodayLong;
+		if (cross) {
+			return { reason: `RSI(${this.short}/${this.long}) 死叉出場：${rsiTodayShort.scale()} < ${rsiTodayLong.scale()}` }
+		}
+		return null;
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 export class MaCrossEntryExit {
@@ -280,9 +325,9 @@ export class MaCrossEntryExit {
 
 		const prev = this.data[index - 1];
 		const day = this.data[index];
-		const ma1 = `ma${this.params.ma1}`;
-		const ma2 = `ma${this.params.ma2}`;
-		const ma3 = `ma${this.params.ma3}`;
+		const ma1 = `ma${this.params.ma1}`; // 短線
+		const ma2 = `ma${this.params.ma2}`; // 中線
+		const ma3 = `ma${this.params.ma3}`; // 生命線
 		const rsiThreshold = this.params.rsiThreshold;
 
 		// 確保兩天的均線數據都存在
@@ -294,7 +339,11 @@ export class MaCrossEntryExit {
 		const rsi = this.rsi.find(r => r && r.time == time)?.rsi;
 		if (rsiThreshold && rsi > rsiThreshold) return null; // RSI 過熱不入場
 		// 黃金交叉：ma1 從下方穿越 ma2 且當日股價 >= ma3
-		const goldenCross = prev[ma1] <= prev[ma2] && day[ma1] > day[ma2] && day.close >= day[ma3];
+		let goldenCross = prev[ma1] <= prev[ma2] && day[ma1] > day[ma2] && day.close >= day[ma3];
+		if (!goldenCross) {
+			// 昨日收盤價在 ma3 以下，且昨日與今日 ma1 都在 ma2 上，且今日股價 >= ma3
+			goldenCross = prev.close < prev[ma3] && prev[ma1] > prev[ma2] && day[ma1] > day[ma2] && day.close >= day[ma3];
+		}
 		return goldenCross ? { reason: `黃金交叉: ${ma1} > ${ma2} 且 ${day.close.scale()} >= ${day[ma3].scale()} RSI: ${rsi?.scale()}` } : null;
 	}
 
@@ -304,8 +353,9 @@ export class MaCrossEntryExit {
 
 		const prev = this.data[index - 1];
 		const day = this.data[index];
-		const ma1 = `ma${this.params.ma1}`;
-		const ma2 = `ma${this.params.ma2}`;
+		const ma1 = `ma${this.params.ma1}`; // 短線
+		const ma2 = `ma${this.params.ma2}`; // 中線
+		const ma3 = `ma${this.params.ma3}`; // 生命線
 
 		// 確保兩天的均線數據都存在
 		if (day[ma1] == null || day[ma2] == null || prev[ma1] == null || prev[ma2] == null) {
@@ -313,8 +363,15 @@ export class MaCrossEntryExit {
 		}
 
 		// 死亡交叉：ma1 從上方穿越 ma2 且當日股價 <= ma3
-		const deathCross = prev[ma1] >= prev[ma2] && day[ma1] < day[ma2];
-		return deathCross ? { reason: `死亡交叉: ${ma1} < ${ma2}` } : null;
+		let deathCross = prev[ma1] >= prev[ma2] && day[ma1] < day[ma2];
+		//return deathCross ? { reason: `死亡交叉: ${ma1} < ${ma2}` } : null;
+		if (deathCross) {
+			return { reason: `死亡交叉: ${ma1} < ${ma2}` };
+		}
+		else {
+			deathCross = prev.close < prev[ma3] && day.close < day[ma3];
+			return deathCross ? { reason: `連續兩日破生命線: ${prev.close.scale()} < ${prev[ma3].scale()} 且 ${day.close.scale()} < ${day[ma3].scale()}` } : null;
+		}
 	}
 }
 

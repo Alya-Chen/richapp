@@ -337,7 +337,11 @@ class Service {
 				code
 			}
 		});
-		return stock ? Object.assign(stock.toJSON(), { trades: await db.Stock.trades({ code: stock.code }) }) : {};
+		const where = {
+			code: stock.code,
+			shadow: false
+		};
+		return stock ? Object.assign(stock.toJSON(), { trades: await db.Stock.trades(where) }) : {};
 	}
 
 	async findStock(code) {
@@ -362,7 +366,11 @@ class Service {
 		})).map(s => s.toJSON());
 		for (let i = 0; i < stocks.length; i++) {
 			const stock = stocks[i];
-			stock.trades = await db.Stock.trades({ code: stock.code });
+			const where = {
+				code: stock.code,
+				shadow: false
+			};
+			stock.trades = await db.Stock.trades(where);
 		}
 		return stocks;
 	}
@@ -479,6 +487,12 @@ class Service {
 	async lastDailies() {
 		const result = await db.StockDaily.last();
 		return result.map(s => s.toJSON());
+	}
+
+	async getDaily(code, date) {
+		const startDate = dateFns.addYears(date, -7);
+		const result = await db.StockDaily.query(code, startDate, date);
+		return result.length ? result.pop().toJSON() : null;
 	}
 
 	async checkDailies() {

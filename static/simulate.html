@@ -73,7 +73,7 @@
           <input type="number" ng-model="params.ma1" step="1" />
           中線：
           <input type="number" ng-model="params.ma2" step="1" />
-          長線：
+          生命線：
           <input type="number" ng-model="params.ma3" step="1" />
           RSI 過熱閥值：
           <input type="number" ng-model="params.rsiThreshold" step="5" />
@@ -130,6 +130,9 @@
     <span class="stat-title text-base-200">最終資金</span>
     <span class="stat-value before:content-['$'] before:text-xs text-white"
       ng-bind="simulated.summary.finalMoney.scale()"></span>
+    <span ng-if="simulated.summary.unclosed"
+      class="stat-value before:content-['$'] before:text-xs text-white"
+      ng-bind="simulated.summary.unclosed.scale()"></span>
   </div>
   <div class="stat">
     <span class="stat-title text-base-200">總損益</span>

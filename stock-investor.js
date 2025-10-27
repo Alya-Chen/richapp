@@ -20,6 +20,7 @@ class Investor {
 		const exitStrategy = this.params.exitStrategy.map(s => st[s].name).join('＋');
 		const invested = {
 			money: this.money,
+			unclosed: 0,
 			profit: 0
 		};
 		const csv = [];
@@ -47,7 +48,7 @@ class Investor {
 			for (let i = 0; i < tests.length; i++) {
 				const test = tests[i];
 				test.trades = test.trades || test.result.trades;
-				let trade = test.trades.find(t => t.status == 'closed' && exitDate.isAfter(t.exitDate) && entryDate.isSameDay(t.entryDate));
+				let trade = test.trades.find(t => entryDate.isSameDay(t.entryDate));
 				if (trade && invested.money > 3000) {
 					trade.amount = parseInt(invested.money / trade.entryPrice);
 					trade.amount = trade.amount > 1000 ? 1000 : trade.amount;
@@ -98,14 +99,23 @@ class Investor {
 			};
 			entryDate.addDays(1);
 		}
+
 		// 完成摘要
-		data.summary.finalMoney = invested.money;
-		data.summary.totalProfit = invested.profit;
+		const unclosed = trades.filter(t => t.status != 'closed' && t.status != 'done');
+		for (const trade of unclosed) {
+			const day = await stockService.getDaily(trade.code, entryDate);
+			trade.profit = (day.close - trade.entryPrice) * trade.amount;
+			invested.profit += trade.profit;
+			invested.unclosed += day.close * trade.amount;
+		}
 		data.summary = Object.assign(data.summary, this.calculateMetrics(trades));
+		data.summary.finalMoney = invested.money;
+		data.summary.unclosed = invested.unclosed;
+		data.summary.totalProfit = invested.profit;
 		data.summary.profitRate = (data.summary.totalProfit / this.money);
 		data.summary.netProfitRate = (data.summary.netProfit / this.money);
-		csv.unshift(`${data.summary.finalMoney.scale()}	${data.summary.totalProfit.scale()}	${data.summary.profitRate.scale(2)}	${data.summary.tax.scale()}	${data.summary.netProfit.scale()}	${data.summary.netProfitRate.scale(2)}	${data.summary.tradeCount}	${data.summary.winRate.scale(2)}	${data.summary.pnl}	${data.summary.expectation}	${data.summary.reentry}	${data.summary.reentryWinRate.scale(2)}	${data.summary.reentryProfit.scale()}`);
-		csv.unshift(`最後本金	總獲利	總獲利率	總稅金	稅後淨利	淨利率	總交易次數	總勝率	盈虧比	期望值	返場次數	返場勝率	返場獲利`);
+		csv.unshift(`${data.summary.finalMoney.scale()}	${data.summary.unclosed.scale()}	${data.summary.totalProfit.scale()}	${data.summary.profitRate.scale(2)}	${data.summary.tax.scale()}	${data.summary.netProfit.scale()}	${data.summary.netProfitRate.scale(2)}	${data.summary.tradeCount}	${data.summary.winRate.scale(2)}	${data.summary.pnl}	${data.summary.expectation}	${data.summary.reentry}	${data.summary.reentryWinRate.scale(2)}	${data.summary.reentryProfit.scale()}`);
+		csv.unshift(`最後本金	未平倉	總獲利	總獲利率	總稅金	稅後淨利	淨利率	總交易次數	總勝率	盈虧比	期望值	返場次數	返場勝率	返場獲利`);
 		csv.unshift(`入場日期	${entryDate.toLocaleDateString()}	出場日期	${exitDate.toLocaleDateString()}	入場策略	${entryStrategy}	出場策略	${exitStrategy}`);
 		return {
 			csv: csv.join('\r\n'),

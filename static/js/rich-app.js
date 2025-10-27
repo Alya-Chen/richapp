@@ -78,12 +78,6 @@
 		}
 		trades(params, callback) {
 			this.$http.get('/trades', { params }).then((res) => {
-				/*res.data = (res.data || []).flat();
-				const comparer = (a, b) => Date.parse(b.entryDate) - Date.parse(a.entryDate);
-				const running = res.data.filter(t => t.entryDate && !t.exitDate).sort(comparer);
-				const exited = res.data.filter(t => t.entryDate && t.exitDate).sort(comparer);
-				const dividend = res.data.filter(t => t.type == 'dividend').sort(comparer);
-				if (callback) callback(running.concat(exited).concat(dividend));*/
 				if (callback) callback(res.data);
 			});
 		}
@@ -490,6 +484,7 @@
 				$$.openeds = $$.openeds.sort((a, b) => Date.parse(b.trade?.entryDate || 0) - Date.parse(a.trade?.entryDate || 0));
 				service.trades({ shadow: true }, (trades) => {
 					trades.forEach(trade => {
+						if (trade.exitDate) return; // 交易已經完成
 						const stock = $$.stocks.find(s => s.code == trade.logs[0].code);
 						if (!stock) return;
 						stock.shadow = trade;
