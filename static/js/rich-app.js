@@ -861,7 +861,7 @@
 			$$.$watch('maCrossChecked', (checked) => {
 				if (!checked) return;
 				$$.params.ma1 = $$.params.ma1 || 5;
-				$$.params.ma2 = $$.params.ma2 || 10;
+				$$.params.ma2 = $$.params.ma2 || 20;
 				$$.params.ma3 = $$.params.ma3 || 60;
 				$$.params.rsiThreshold = $$.params.rsiThreshold || 80;
 			});

@@ -211,9 +211,9 @@ app.get('/simulate{/:codes}', async (req, res) => {
 	if (codes == 'strategies') {
 		const strategies = { entryStrategies: [], exitStrategies: [] };
 		Object.keys(st).forEach(key => {
-			const strategy = new st[key]([], {});
-			if (strategy.checkEntry && strategy.enabled) strategies.entryStrategies.push({ key, name: strategy.name });
-			if (strategy.checkExit && strategy.enabled) strategies.exitStrategies.push({ key, name: strategy.name });
+			const strategy = st[key];
+			if (strategy.prototype.hasOwnProperty('checkEntry') && strategy.enabled) strategies.entryStrategies.push({ key, name: strategy.name });
+			if (strategy.prototype.hasOwnProperty('checkExit') && strategy.enabled) strategies.exitStrategies.push({ key, name: strategy.name });
 		});
 		return res.json(strategies);
 	}
