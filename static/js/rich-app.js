@@ -111,10 +111,13 @@
 			});
 		}
 		users(callback, userId) {
+			userId = userId || Cookies.get('userId');
 			const url = '/users' + (userId ? '/' + userId : '');
 			this.$http.get(url).then((res) => {
 				const users = res.data.users;
-				this.user = users.find(u => u.id == res.data.user.id);
+				userId = res.data.user.id;
+				Cookies.set('userId', userId);
+				this.user = users.find(u => u.id == userId);
 				callback(users, this.user, res.data.totalCapital);
 			});
 		}

@@ -48,7 +48,7 @@ export class TwoDaysUpEntry {
 		const prevDay = this.data[index - 1];
 		// 今日收盤價 > 今日 MA * 1.xx 而且 昨日收盤價 > 昨日 MA * 1.xx
 		const isUp = day.close > day.ma * (1 + threshold) && prevDay.close > prevDay.ma * (1 + threshold);
-		return isUp ? { reason: `${this.name} 高過 MA ${1 + threshold} 倍` } : null;
+		return isUp ? { reason: `${TwoDaysUpEntry.name} 高過 MA ${1 + threshold} 倍` } : null;
 	}
 }
 
@@ -168,7 +168,7 @@ export class TigerEntry {
 		// (prev.close > prev.ma * (1 + threshold));
 		// slopeCond > 0 均線【上彎】時，均線突破的機率會高很多
 		// return isUp && volumeCond && slopeCond;
-		return (isUp && breakout && volumeCond) ? { reason: `${this.name} ${day.close.scale()} > ${day.ma.scale()}` } : null;
+		return (isUp && breakout && volumeCond) ? { reason: `${TigerEntry.name} ${day.close.scale()} > ${day.ma.scale()}` } : null;
 	}
 }
 
@@ -390,14 +390,14 @@ export class MaEntry {
 	checkEntry(day, index, position) {
 		const macd = this.macd[index];
 		if (index < 1 || position.status != 'closed' || macd == null) return null;
-        return macd.golden ? { reason: `${this.name} 金叉` } : null;
+        return macd.golden ? { reason: `${MaEntry.name} 金叉` } : null;
 	}
 }
 
 export class MacdMaExit {
+	static name = 'MACD 出場策略';
+	static enabled = true;
 	constructor(data, params) {
-		this.name = 'MACD 出場策略';
-		this.enabled = true;
 		this.data = data || [];
 		this.params = params;
 		this.macd = MACD_CACHE.get(params.code, data);
@@ -409,7 +409,7 @@ export class MacdMaExit {
 	checkExit(day, index, position) {
 		const macd = this.macd[index];
 		if (index < 1 || macd == null) return null;
-        return macd.dead ? { reason: `${this.name} 死叉` } : null;
+        return macd.dead ? { reason: `${MacdMaExit.name} 死叉` } : null;
 	}
 }
 ///////////////////////////////////////////////////////////////////////////////
