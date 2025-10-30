@@ -341,31 +341,23 @@
               ng-class="{'text-rich-green': trade.profit < 0, 'text-rich-red': trade.profit > 0}"></span>
             <span class="font-pct" ng-bind="trade.profitRate | pct"></span>
           </div>
-        </div>
-        <div ng-if="trade.invest" class="border-l-2 border-primary">
-          <div ng-if="trade.invest.profit != 0" class="flex mt-8 items-end">
-            <div
-              class="w-0 h-0  border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[10px] border-l-primary">
+          <div ng-if="trade.invest">
+            <br />
+            <div>【分批進出操作模擬】</div>
+             <br />
+            <div ng-if="log.act" ng-repeat="log in trade.invest.logs">
+              <span class="font-date" ng-bind="log.day.date.toLocaleDateString()"></span>
+              <span class="font-price" ng-bind="log.day.close.scale(2)"></span>
+              <span ng-bind="log.act"></span>：<span class="" ng-bind="log.amount"></span>
+              持倉：<span class="" ng-bind="log.invested"></span><br />
+              成本：<span class="font-price" ng-bind="log.avgCost"></span>
+              停損價：<span class="font-price" ng-bind="(log.stopLossPrice || 0).scale(2)"></span>
+              <span class="block" ng-if="log.profit != 0">
+                <span ng-if="log.invested == 0">累計</span>損益
+                <span class="font-price text-2xl" ng-bind="log.profit"></span>（<span class="font-pct"
+                  ng-bind="log.profitRate"></span>）
+              </span>
             </div>
-            🤑 <span class="font-price text-4xl" ng-bind="trade.invest.profit"
-              ng-class="{'text-rich-green': trade.invest.profit < 0, 'text-rich-red': trade.invest.profit > 0}"></span>
-            <span ng-if="trade.invest.profit != 0" class="font-pct" ng-bind="trade.invest.profitRate | pct"></span>
-          </div>
-        </div>
-        <div class="col-start-2 border-l-2 border-primary pl-2 pd-5" ng-if="trade.invest"
-          ng-class="{'rich-stock-trade-rsi-hot': trade.invest.rsiHot}">
-          <div ng-if="log.act" ng-repeat="log in trade.invest.logs">
-            <span class="font-date" ng-bind="log.day.date.toLocaleDateString()"></span>
-            <span class="font-price" ng-bind="log.day.close.scale(2)"></span>
-            <span ng-bind="log.act"></span>：<span class="" ng-bind="log.amount"></span>
-            持倉：<span class="" ng-bind="log.invested"></span><br />
-            成本：<span class="font-price" ng-bind="log.avgCost"></span>
-            停損價：<span class="font-price" ng-bind="(log.stopLossPrice || 0).scale(2)"></span>
-            <span class="block" ng-if="log.profit != 0">
-              <span ng-if="log.invested > 0">當前</span>損益
-              <span class="font-price text-2xl" ng-bind="log.profit"></span>（<span class="font-pct"
-                ng-bind="log.profitRate"></span>）
-            </span>
           </div>
         </div>
       </div>
