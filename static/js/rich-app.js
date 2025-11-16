@@ -736,6 +736,10 @@
 					id: 'LSR',
 					visible: false
 				},*/ {
+					id: 'SAR',
+					visible: false,
+					url: 'https://t.ly/viY8S'
+				}, {
 					id: '20MA',
 					visible: false
 				}, {

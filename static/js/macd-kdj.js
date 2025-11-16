@@ -427,6 +427,205 @@ export class BollingerBands {
 	}
 }
 
+export class Sar {
+	/**
+	 * @param {Array<Object>} data - 價格資料陣列
+	 *   每筆格式例如：
+	 *   { date: '2025-01-01', high: 123.4, low: 120.1, close: 121.5 }
+	 *
+	 * @param {Object} options
+	 * @param {number} [options.step=0.02]       - AF 初始加速因子 (Wilder 建議 0.02)
+	 * @param {number} [options.maxStep=0.2]     - AF 最大值 (Wilder 建議 0.2)
+	 * @param {'auto'|'long'|'short'} [options.start='auto']
+	 *        - 初始方向：'auto' 由前兩日收盤決定，或強制 'long' / 'short'
+	 */
+	constructor(data, {
+		step = 0.02,
+		maxStep = 0.2,
+		start = 'auto'
+	} = {}) {
+		this.data = data;
+		this.step = step;
+		this.maxStep = maxStep;
+		this.start = start;
+	}
+
+	/**
+	 * 計算整段資料的 SAR
+	 * @returns {Array<Object>} 每日結果：
+	 *   {
+	 *     date,
+	 *     sar,            // 當日 SAR 值，前幾筆可能為 null
+	 *     direction,      // 'long' 或 'short'
+	 *     reversed        // 是否在這一天發生方向反轉
+	 *   }
+	 */
+	calculate() {
+		const {
+			data,
+			step,
+			maxStep,
+			start
+		} = this;
+		const len = data.length;
+		const results = [];
+
+		if (len < 2) {
+			// 資料太少，無法計算
+			return data.map(d => ({
+				date: d.date,
+				sar: null,
+				direction: null,
+				reversed: false
+			}));
+		}
+
+		// --- 初始化方向 direction / EP / SAR / AF ---
+
+		// 1. 初始方向
+		let direction;
+		if (start === 'long' || start === 'short') {
+			direction = start;
+		} else {
+			// auto：用前兩天收盤價決定
+			direction = data[1].close >= data[0].close ? 'long' : 'short';
+		}
+
+		// 2. 初始極值 EP (Extreme Point)
+		let ep; // 對多頭是最高價, 對空頭是最低價
+		if (direction === 'long') {
+			ep = Math.max(data[0].high, data[1].high);
+		} else {
+			ep = Math.min(data[0].low, data[1].low);
+		}
+
+		// 3. 初始 SAR (通常取前兩日的相對極端值)
+		let sar;
+		if (direction === 'long') {
+			sar = Math.min(data[0].low, data[1].low);
+		} else {
+			sar = Math.max(data[0].high, data[1].high);
+		}
+
+		// 4. 初始加速因子 AF
+		let af = step;
+
+		// 第一筆先塞一個空結果，因為幾乎無法計算 SAR
+		results.push({
+			date: data[0].date,
+			sar: null,
+			direction: direction,
+			reversed: false
+		});
+
+		// 第二筆開始有第一個 SAR 值
+		results.push({
+			date: data[1].date,
+			sar,
+			direction,
+			reversed: false
+		});
+
+		// --- 主迴圈：從第 3 筆資料開始計算 (index = 2) ---
+		for (let i = 2; i < len; i++) {
+			const today = data[i];
+			const prev = data[i - 1];
+
+			let prevSar = sar;
+			let prevEp = ep;
+			let prevAf = af;
+			let prevDirection = direction;
+
+			// 1. 按公式預估當日 SAR
+			let currentSar = prevSar + prevAf * (prevEp - prevSar);
+
+			// 2. SAR 不可「侵犯」前兩日的價位
+			//    多頭：SAR 不可高於前兩日最低價
+			//    空頭：SAR 不可低於前兩日最高價
+			const low1 = data[i - 1].low;
+			const low2 = data[i - 2].low;
+			const high1 = data[i - 1].high;
+			const high2 = data[i - 2].high;
+
+			if (prevDirection === 'long') {
+				const minLow = Math.min(low1, low2);
+				currentSar = Math.min(currentSar, minLow);
+			} else {
+				const maxHigh = Math.max(high1, high2);
+				currentSar = Math.max(currentSar, maxHigh);
+			}
+
+			let reversed = false;
+
+			// 3. 檢查是否反轉
+			if (prevDirection === 'long') {
+				// 多頭被跌破：今天最低價 < SAR，轉為空頭
+				if (today.low < currentSar) {
+					reversed = true;
+					direction = 'short';
+
+					// 反轉後的 SAR 設為上一個極值 (EP)
+					sar = prevEp;
+					// 新 EP 為今天的最低價
+					ep = today.low;
+					// AF 重置為 step
+					af = step;
+				} else {
+					// 未反轉，維持多頭
+					direction = 'long';
+					sar = currentSar;
+
+					// 更新 EP / AF
+					if (today.high > prevEp) {
+						ep = today.high;
+						af = Math.min(prevAf + step, maxStep);
+					} else {
+						ep = prevEp;
+						af = prevAf;
+					}
+				}
+			} else {
+				// prevDirection === 'short'
+				// 空頭被突破：今天最高價 > SAR，轉為多頭
+				if (today.high > currentSar) {
+					reversed = true;
+					direction = 'long';
+
+					// 反轉後的 SAR 設為上一個極值 (EP)
+					sar = prevEp;
+					// 新 EP 為今天的最高價
+					ep = today.high;
+					// AF 重置為 step
+					af = step;
+				} else {
+					// 未反轉，維持空頭
+					direction = 'short';
+					sar = currentSar;
+
+					// 更新 EP / AF
+					if (today.low < prevEp) {
+						ep = today.low;
+						af = Math.min(prevAf + step, maxStep);
+					} else {
+						ep = prevEp;
+						af = prevAf;
+					}
+				}
+			}
+
+			// 4. 寫入結果
+			results.push({
+                time: Date.parse(today.date),
+				sar,
+				direction,
+				reversed
+			});
+		}
+
+		return results;
+	}
+}
+
 // Average Directional Index
 export class Adx {
     constructor(data, {

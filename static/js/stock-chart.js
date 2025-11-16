@@ -36,7 +36,7 @@ class StockChart {
 		const rsiData = rsi.filter(i => i && i.rsi).map(i => [i.time, i.rsi]);
 		//console.log(rsi.filter(i => i && (i.bear || i.bull)).map(i => [i.time, i.bear, i.bull]))
 		const kdj = new Kdj(this.data).calculate(); // { period: 9, k: 3, d: 3 }
-		const kData = kdj.filter(i => i.k).map(i => [i.time, i.k]);		
+		const kData = kdj.filter(i => i.k).map(i => [i.time, i.k]);
 		//const rsiFlags = rsi.filter(i => i && (i.golden || i.dead)).map(i => ({
 		const rsiFlags = rsi.filter(i => i && i.dead).map(i => ({
 			x: i.time,
@@ -57,7 +57,7 @@ class StockChart {
 			title: i.golden ? '⭕' : '❌',
 			text: i.golden ? '金叉' : '死叉',
 			color: i.golden ? 'green' : 'red'
-		}));		
+		}));
 		const kdj = new Kdj(this.data).calculate(); // { period: 9, k: 3, d: 3 }
 		const kData = kdj.filter(i => i.k).map(i => [i.time, i.k]);
 		const dData = kdj.filter(i => i.d).map(i => [i.time, i.d]);
@@ -75,7 +75,7 @@ class StockChart {
 			}, // 預設顯示範圍
 			//title: {
 			//	text: 'K 線圖'
-			//},		
+			//},
 			yAxis: [{
 				labels: {
 					align: 'right'
@@ -107,7 +107,7 @@ class StockChart {
                             const close = `<span style="color:${color}">${this.close.scale(2)} ${diff}</span>`;
 							const prevVolume = stockData[stockData.findIndex(d => d[0] == this.x) - 1][5];
 							const isVolumeUp = this.volume > (prevVolume || 0);
-							const volume = `<span style="color:green">${(this.diff > 0 && !isVolumeUp) ? '（價漲量縮）' : (this.diff < 0 && isVolumeUp ? '（價跌量漲）' : '')}</span>`;						
+							const volume = `<span style="color:green">${(this.diff > 0 && !isVolumeUp) ? '（價漲量縮）' : (this.diff < 0 && isVolumeUp ? '（價跌量漲）' : '')}</span>`;
                             this.series.chart.setTitle({ text: `${Highcharts.dateFormat('%Y-%m-%d', this.x)} | ${close} | 開 ${this.open.scale(2)} | 高 ${this.high.scale(2)} | 低 ${this.low.scale(2)} | 量 ${this.volume}${volume}`});
 							return false;
 						}
@@ -206,7 +206,7 @@ class StockChart {
 				color: 'plum',
 				tooltip: {
 					valueDecimals: 3
-				} 
+				}
 			}, {
 				type: 'line',
 				name: 'RSI',
@@ -247,7 +247,7 @@ class StockChart {
 				color: 'tomato',
 				tooltip: {
 					valueDecimals: 3
-				} 
+				}
 			});
 		}
 		/*
@@ -364,6 +364,7 @@ class StockChart {
 		if (axes.find(a => a.id == '60MA')) this.addMa(60);
 		if (axes.find(a => a.id == '120MA')) this.addMa(120);
 		if (axes.find(a => a.id == '200MA')) this.addMa(200);
+		if (axes.find(a => a.id == 'SAR')) this.addSar();
 		if (axes.find(a => a.id == 'Bollinger')) this.addBollingerBands();
 		return this;
 	}
@@ -393,6 +394,21 @@ class StockChart {
 		});
 		return this;
 	}
+	addSar() {
+		const sarData = new Sar(this.data, {step: 0.014 }).calculate().map(i => [i.time, i.sar]);
+		this.chart.addSeries({
+			type: 'line',
+			name: 'SAR',
+			id: 'sar',
+			data: sarData,
+			color: 'LightSalmon',
+			lineWidth: 1.5,
+			marker: {
+				enabled: false
+			}
+		});
+		return this;
+	}
 	addBollingerBands() {
 		const bb = new BollingerBands(this.data, this.defaultMa).calculate();
 		const upperData = bb.map(i => [i.time, i.upper]);
@@ -410,11 +426,11 @@ class StockChart {
 			data: lowerData,
 			color: 'DeepSkyBlue',
 			tooltip: { valueDecimals: 2 }
-		});					
-	}	
+		});
+	}
 	reset() {
 		if (!this.chart.series) return;
-		this.addMa.count = 0;		
+		this.addMa.count = 0;
 		this.chart.series.forEach(series => {
 			if (series.options.id?.startsWith('ma-')) {
 				series.remove();
