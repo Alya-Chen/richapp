@@ -190,7 +190,7 @@ app.get('/backtest/:code{/:ma}', async (req, res) => {
 		return res.json({ success: true });
 	}
 	const user = await getUser(req);
-	const params = Object.assign({ userId: req.session.userId }, req.params);
+	const params = Object.assign({ userId: user.id }, req.params);
 	let result = await stockService.findTests(params, ['id', 'DESC']);
 	result = result.map(t => t.toJSON());
 	if (params.ma) {
