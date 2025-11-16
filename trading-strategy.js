@@ -1,5 +1,6 @@
 import * as dateFns from 'date-fns';
-import { Macd, Kdj, Rsi, BullBear, BollingerBands, Adx } from './static/js/macd-kdj.js';
+import { Macd, Kdj, Rsi, BullBear, BollingerBands } from './static/js/macd-kdj.js';
+import { ObvMacd } from './static/js/obv-macd.js';
 
 class Cache {
 	constructor(claz, params) {
@@ -410,6 +411,84 @@ export class MacdMaExit {
 		const macd = this.macd[index];
 		if (index < 1 || macd == null) return null;
         return macd.dead ? { reason: `${MacdMaExit.name} 死叉` } : null;
+	}
+}
+///////////////////////////////////////////////////////////////////////////////
+export class ObvMacdEntryExit {
+	static name = 'OBV MACD 策略';
+	static enabled = true;
+	constructor(data, params = {}) {
+		this.data = data || [];
+		this.params = Object.assign({
+			maType: 'DEMA',
+			maLength: 9,
+			slowLength: 26,
+			minConfidence: 0.6
+		}, params);
+
+		// 計算 OBV MACD 指標並取得所有信號
+		const obvMacd = new ObvMacd(this.data, {
+			maType: this.params.maType,
+			maLength: this.params.maLength,
+			slowLength: this.params.slowLength
+		});
+		this.signals = obvMacd.getAllSignals();
+	}
+
+	// 開倉條件檢查
+	checkEntry(day, index, position) {
+		if (index < 1 || position.status != 'closed') return null;
+
+		const currentSignal = this.signals[index];
+		const prevSignal = this.signals[index - 1];
+
+		if (!currentSignal || !prevSignal) return null;
+
+		// 買入條件：
+		// 1. signal 為 'buy'
+		// 2. confidence 達到最低要求
+		// 3. trend 為 'bullish' 或 'neutral'
+		const isBuySignal = currentSignal.signal === 'buy';
+		const hasConfidence = currentSignal.confidence >= this.params.minConfidence;
+		const isValidTrend = currentSignal.trend === 'bullish' || currentSignal.trend === 'neutral';
+
+		if (isBuySignal && hasConfidence && isValidTrend) {
+			return {
+				reason: `${ObvMacdEntryExit.name} ${currentSignal.signalSource} 信號`,
+				confidence: currentSignal.confidence,
+				signalSource: currentSignal.signalSource,
+				trend: currentSignal.trend
+			};
+		}
+
+		return null;
+	}
+
+	// 平倉條件檢查
+	checkExit(day, index, position) {
+		if (index < 1) return null;
+
+		const currentSignal = this.signals[index];
+		const prevSignal = this.signals[index - 1];
+
+		if (!currentSignal || !prevSignal) return null;
+
+		// 賣出條件：
+		// 1. signal 為 'sell'
+		// 2. confidence 達到最低要求
+		// 3. trend 為 'bearish' 或 'neutral'
+		const isSellSignal = currentSignal.signal === 'sell';
+		const hasConfidence = currentSignal.confidence >= this.params.minConfidence;
+		const isValidTrend = currentSignal.trend === 'bearish' || currentSignal.trend === 'neutral';
+		if (isSellSignal && hasConfidence && isValidTrend) {
+			return {
+				reason: `${ObvMacdEntryExit.name} ${currentSignal.signalSource} 信號`,
+				confidence: currentSignal.confidence,
+				signalSource: currentSignal.signalSource,
+				trend: currentSignal.trend
+			};
+		}
+		return null;
 	}
 }
 ///////////////////////////////////////////////////////////////////////////////
