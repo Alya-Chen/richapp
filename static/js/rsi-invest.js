@@ -6,7 +6,7 @@ class RsiInvest extends TigerInvest {
 	}
 	withRsi(data) {
 		const rsi = new Rsi(data).calculate();
-		return data.map((day, idx) => ({ 
+		return data.map((day, idx) => ({
 			...day,
 			rsi: rsi[idx] && rsi[idx].rsi,
 			dead: rsi[idx] && rsi[idx].dead
@@ -18,9 +18,9 @@ class RsiInvest extends TigerInvest {
 		if (this.getTotalInvested() == 0 && priceStatus.isAboveMa) {
 			const amount = this.totalCapital;
 			this.buy(day.close, amount);
-			this.logStatus(day, { act: '建倉', amount });			
+			this.logStatus(day, { act: '建倉', amount });
 		}
-		if ((priceStatus.isStopLoss || priceStatus.isRsiDead || priceStatus.isDown) && this.getTotalInvested() > 0) { // 停損，停利優先
+		if ((priceStatus.isRsiDead || priceStatus.isDown) && this.getTotalInvested() > 0) { // 停損 priceStatus.isStopLoss，停利優先
 			const act = priceStatus.isRsiDead ? 'RSI 過熱出場' : '清倉';
 			const amount = this.sell(day.close, 1.0);
 			if (amount) this.logStatus(day, { act, amount });
@@ -32,10 +32,10 @@ class RsiInvest extends TigerInvest {
 		summary.stopProfitPrice = this.stopProfitPrice;
 		if (this.data.length) {
 			summary.rsiHot = this.data[this.data.length - 1].rsi >= 80;
-			summary.rsiHot = summary.rsiHot || (this.logs[this.logs.length - 1].act || '').includes('過熱');			
+			summary.rsiHot = summary.rsiHot || (this.logs[this.logs.length - 1].act || '').includes('過熱');
 		}
 		return summary;
-	}	
+	}
 	// 價格狀態分析
 	priceStatus(day) {
 		return {
