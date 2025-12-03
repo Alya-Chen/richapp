@@ -738,7 +738,6 @@ export class Adx {
             // 我們需要 'period' 個 DX 值來計算第一個 ADX
             // 第一個 DX 在 i = period 時算出
             // 第 'period' 個 DX 在 i = period + (period - 1) = (2 * period) - 1 時算出
-
             if (i < (2 * this.period) - 1) {
                 // 數據不足以計算 ADX
                 currentAdx = null;
@@ -764,31 +763,55 @@ export class Adx {
         for (let i = 1; i < adxArray.length; i++) {
             const current = adxArray[i];
             const prev = adxArray[i - 1];
+
             // 確保有足夠的資料
             if (!current || !prev ||
-                current.plusDi == null || current.minusDi == null || current.adx == null ||
-                prev.plusDi == null || prev.minusDi == null || prev.adx == null) {
+                current.plusDi == null || current.minusDi == null || current.val == null ||
+                prev.plusDi == null || prev.minusDi == null || prev.val == null) {
                 continue;
             }
-            // 檢查 ADX 趨勢（上升或下降）
-            const adxRising = i > 1 && adxArray[i - 1].adx != null && adxArray[i - 2]?.adx != null
-                ? current.adx > prev.adx
-                : false;
 
-            // +DI 向上穿越 -DI（黃金交叉）
-            if (prev.plusDi <= prev.minusDi && current.plusDi > current.minusDi) {
-                current.diGolden = true;
-                // 強烈買入訊號：ADX > 20 且正在上升
-                if (current.adx > 20 && adxRising) {
-                    current.strongBuy = true;
+            // 檢查 ADX 趨勢（使用 3 日趨勢更穩定）
+            current.rising = false;
+            if (i >= 3) {
+                const prevAdx1 = adxArray[i-1]?.val;
+                const prevAdx2 = adxArray[i-2]?.val;
+                const prevAdx3 = adxArray[i-3]?.val;
+                if (prevAdx1 != null && prevAdx2 != null && prevAdx3 != null) {
+                    current.rising = (current.val > prevAdx1) && (prevAdx1 > prevAdx2);
                 }
             }
-            // -DI 向上穿越 +DI（死亡交叉）
-            if (prev.minusDi <= prev.plusDi && current.minusDi > current.plusDi) {
-                current.diDead = true;
-                // 強烈賣出訊號：ADX > 20 且正在上升
-                if (current.adx > 20 && adxRising) {
-                    current.strongSell = true;
+
+            // 重置信號
+            current.golden = false;
+            current.dead = false;
+            current.buy = false;
+            current.sell = false;
+            if (current.val >= 20) {
+                if (prev.val < 20) {
+                    // ADX 剛穿越 20 時
+                    if (current.plusDi > current.minusDi) {
+                        current.golden = true;
+                    }
+                    else if (current.minusDi > current.plusDi) {
+                        current.dead = true;
+                    }
+                }
+                else {
+                    // +DI 向上穿越 -DI（黃金交叉）
+                    if (prev.plusDi <= prev.minusDi && current.plusDi > current.minusDi) {
+                        current.golden = true;
+                        if (current.rising) {
+                            current.buy = true;
+                        }
+                    }
+                    // -DI 向上穿越 +DI（死亡交叉）
+                    else if (prev.minusDi <= prev.plusDi && current.minusDi > current.plusDi) {
+                        current.dead = true;
+                        if (current.rising) {
+                            current.sell = true;
+                        }
+                    }
                 }
             }
         }

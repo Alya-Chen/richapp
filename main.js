@@ -38,11 +38,11 @@ const params = {
     volumeRate: 1.2, // 交易需增量倍數
     breakout: true, // 入場需符合二日法則
     reentry: true, // 出場後是否要重複入場
-    entryDate: new Date('2024-01-01'), //dateFns.addYears(dateFns.addMonths(new Date(), -6), -1), // 取前一年半資料
+    entryDate: new Date('2025-06-01'), //dateFns.addYears(dateFns.addMonths(new Date(), -6), -1), // 取前一年半資料
     exitDate: new Date(),
     //entryStrategy: st.BullTigerEntry, BBEntryExit, TwoDaysUpEntry
-    entryStrategy: 'BullTigerEntry',
-    exitStrategy: ['DynamicStopExit'], //['DynamicStopExit', 'RsiTigerExit'],
+    entryStrategy: 'TwoDaysUpEntry',
+    exitStrategy: ['RsiTigerExit'], //['DynamicStopExit', 'RsiTigerExit'],
     //entryStrategy: 'MacdMaEntry',
     //exitStrategy: ['MacdMaExit'],
     stopLossPct: 0.03, // 止損小於入場價格的 3%
@@ -81,7 +81,7 @@ async function main() {
     //await service.sync();
     const TODAY = new Date().toLocaleDateString().replaceAll('/', '');
     const TOP10 = ['2382', '2330', '2317', '6805', '2404', '4728', '6183', '3130', '6754', '2308'];
-	
+
     if (STOCK_CODE && STOCK_CODE != 'all' && STOCK_CODE != 'csv' && STOCK_CODE != 'invest') {
         //const tests = await service.findTest(STOCK_CODE);
         //console.log(tests[0].params);
@@ -98,7 +98,7 @@ async function main() {
     if (STOCK_CODE == 'all') {
 		const stock = await service.getStock('3130');
 		console.log(await service.fetchDividendData(stock));
-		
+
         //console.log(await service.realtime(['0050', '3131', 'AAPL']));
         //const stocks = await service.stocks();
         //const codes = stocks.filter(s => s.country == 'tw').map(s => s.code);
@@ -107,7 +107,7 @@ async function main() {
         //console.log(await service.findStock('AAPL'));
 		//const result = await service.backtest('all');
 		//console.log(result);
-        
+
 		//const result = await service.backtest(['AAPL', '6721'], {
         //    transient: true
 		//});
@@ -121,7 +121,7 @@ async function main() {
         	const dailies = await service.dailies(stock.code, startDate);
         	stock.financial = Object.assign(stock.financial || {}, new BullBear(dailies).calculate());
         	console.log(`${stock.code} ${JSON.stringify(stock.financial.bullscore)}`);
-        	service.saveStock(stock);			
+        	service.saveStock(stock);
         }*/
     }
     if (STOCK_CODE == 'csv') {
@@ -134,39 +134,41 @@ async function main() {
 			params.entryDate = new Date(year + '-01-01');
 			params.exitDate = new Date(year + '-12-31');
 			params.transient = true;
-			const tests = await service.backtest(codes, params);	
+			const tests = await service.backtest(codes, params);
         	const csv = await service.exportCsv(tests);
 	        //console.log(csv);
-	        fs.writeFileSync(`${TODAY}-${year}-TOP10-金牛5％止盈不止損.csv`, csv);		
+	        fs.writeFileSync(`${TODAY}-${year}-TOP10-金牛5％止盈不止損.csv`, csv);
 		}
     }
     if (STOCK_CODE == 'invest') {
-		for (const year of [2024]) { //, 2024, 2025
-			params.entryDate = new Date(year + '-10-04');
-			params.exitDate = new Date(year + 1 + '-10-04');
-			//params.transient = true;
-			//let	tests = await service.backtest(TOP10, params);	
-	        //let result = service.invest(tests, null, params.entryDate, params.exitDate);
-            const investor = new Investor(['2324'], 555022, params);
-            const result = await investor.invest(TOP10, params);
-	        //console.log(result);
-            console.log(JSON.stringify(result.data));
-	        console.log('==========');
-	        //fs.writeFileSync(`${TODAY}-${year}-TOP10-布林策略返場不止盈不止損-invest.csv`, result.csv);
-
-	        /*const stocks = await service.stocks();
-			codes = stocks.map(s => s.code);
-		    // Fisher-Yates 洗牌
-		    for (let i = codes.length - 1; i > 0; i--) {
-		      const j = Math.floor(Math.random() * (i + 1));
-		      [codes[i], codes[j]] = [codes[j], codes[i]];
-		    }
-			//tests = await service.findTests({ code: { [Op.in]: codes.slice(0, 20) } });
-			tests = await service.backtest(codes.slice(0, 20), { transient: true });	
-			result = service.invest(tests);
-			console.log(result);
-			fs.writeFileSync(today + '-random-不止盈重新入場-invest.csv', result.csv);*/			
-		}
+		const stocks = await service.stocks();
+        stocks.filter(s => s.trades).forEach(s => {
+            console.log(s.code, s.name);
+            s.trades.forEach(l => {
+                if (!l.logs) return;
+                console.log(l.id, l.ma, l.entryDate, l.exitDate);
+                l.logs.forEach(t => {
+                    t.id = null;
+                    t.code = s.code;
+                    t.ma = l.ma;
+                    t.userId = 1;
+                    console.log(t.act, t.date, t.price, t.amount, t.ma);
+                    service.saveTrade(t);
+                });
+            });
+        });
+        /*
+        const money = 555022;
+        params.transient = true;
+        //params.dynamic = true;
+        //params.usingTigerMa = true;
+        for (const code of TOP10) {
+            params.entryDate = new Date('2025-01-01');
+            const investor = new Investor([code], money, params);
+            const result = await investor.invest();
+            console.log(result.csv);
+        }
+        */
     }
 }
 

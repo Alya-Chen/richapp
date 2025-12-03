@@ -1,5 +1,5 @@
 import * as dateFns from 'date-fns';
-import { Macd, Kdj, Rsi, BullBear, BollingerBands } from './static/js/macd-kdj.js';
+import { Macd, Kdj, Rsi, BullBear, BollingerBands, Adx } from './static/js/macd-kdj.js';
 import { ObvMacd } from './static/js/obv-macd.js';
 
 class Cache {
@@ -28,6 +28,7 @@ class Cache {
 const RSI_CACHE = new Cache(Rsi);
 const MACD_CACHE = new Cache(Macd);
 const KDJ_CACHE = new Cache(Kdj);
+const ADX_CACHE = new Cache(Adx);
 
 export class TwoDaysUpEntry {
 	static name = '連兩日走高進場策略';
@@ -377,6 +378,40 @@ export class MaCrossEntryExit {
 	}
 }
 
+///////////////////////////////////////////////////////////////////////////////
+export class AdxEntry {
+	static name = 'ADX 進場策略';
+	static enabled = true;
+	constructor(data, params) {
+		this.data = data || [];
+		this.params = params;
+		this.adx = ADX_CACHE.get(params.code, data);
+	}
+
+	// 開倉條件檢查
+	checkEntry(day, index, position) {
+		const adx = this.adx[index];
+		if (index < 1 || position.status != 'closed' || adx == null) return null;
+        return adx.golden ? { reason: `${AdxEntry.name} ${adx.plusDi.scale(2)} > ${adx.minusDi.scale(2)} ADX：${adx.val.scale(2)} 金叉${adx.rising ? '趨勢強烈' : ''}` } : null;
+	}
+}
+
+export class AdxExit {
+	static name = 'ADX 出場策略';
+	static enabled = true;
+	constructor(data, params) {
+		this.data = data || [];
+		this.params = params;
+		this.adx = ADX_CACHE.get(params.code, data);
+	}
+
+	// 平倉條件檢查
+	checkExit(day, index, position) {
+		const adx = this.adx[index];
+		if (index < 1 || adx == null) return null;
+        return adx.dead ? { reason: `${AdxExit.name} ${adx.minusDi.scale(2)} > ${adx.plusDi.scale(2)} ADX：${adx.val.scale(2)}  死叉${adx.rising ? '趨勢強烈' : ''}` } : null;
+	}
+}
 ///////////////////////////////////////////////////////////////////////////////
 export class MaEntry {
 	static name = 'MACD 進場策略';
