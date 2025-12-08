@@ -31,7 +31,7 @@ class StockChart {
 			text: i.golden ? '金叉' : '死叉',
 			color: i.golden ? 'green' : 'red'
 		}));
-		const lsrData = this.data.filter(i => i.lsr).map(i => [i.date.getTime(), i.lsr]);
+		//const lsrData = this.data.filter(i => i.lsr).map(i => [i.date.getTime(), i.lsr]);
 		const rsi = new Rsi(this.data).calculate();
 		const rsiData = rsi.filter(i => i && i.rsi).map(i => [i.time, i.rsi]);
 		//console.log(rsi.filter(i => i && (i.bear || i.bull)).map(i => [i.time, i.bear, i.bull]))
@@ -44,6 +44,11 @@ class StockChart {
 			text: i.golden ? 'RSI 金叉' : 'RSI 死叉',
 			color: i.golden ? 'green' : 'red'
 		}));
+		const adx = new Adx(this.data).calculate();
+		const adxData = adx.map(i => [i.time, i.adx]);
+		const adxDiffData = adx.map(i => [i.time, i.diff]);
+		const adxPlusDiData = adx.map(i => [i.time, i.plusDi]);
+		const adxMinusDiData = adx.map(i => [i.time, i.minusDi]);
 		/*kdj.filter(i => i.golden).forEach(i => rsiFlags.push({
 			x: i.time,
 			title: '⭕',
@@ -172,13 +177,13 @@ class StockChart {
 				y: -20
 			});
 		}
-		//if (axes.find(a => a.id == 'RSI')) {
+		if (axes.find(a => a.id == 'RSI')) {
 			params.yAxis.push({
 				labels: {
 					align: 'left'
 				},
-				top: '75%',
-				height: '25%',
+				top: '80%',
+				height: '20%',
 				plotLines: [{
 						value: 20,
 						color: 'green',
@@ -223,33 +228,40 @@ class StockChart {
 				color: Highcharts.getOptions().colors[0],
 				y: -40
 			});
-		//}
-		if (axes.find(a => a.id == 'LSR')) {
+		}
+		//if (axes.find(a => a.id == 'ADX')) {
 			params.yAxis.push({
 				labels: {
 					align: 'left'
 				},
-				top: '75%',
-				height: '25%',
+				top: '80%',
+				height: '20%',
 				plotLines: [{
-						value: 0,
-						color: 'green',
+						value: 20,
+						color: 'tomato',
 						width: 1,
 						dashStyle: 'Dash'
 					}
 				]
 			});
 			params.series.push({
-				type: 'line',
-				name: 'LSR',
-				data: lsrData,
+				type: 'column',
+				name: 'DI 柱狀圖',
+				data: adxDiffData,
 				yAxis: params.yAxis.length - 1,
-				color: 'tomato',
+				color: 'lightcoral',
+				negativeColor: 'green'
+			}, {
+				type: 'line',
+				name: 'ADX',
+				data: adxData,
+				yAxis: params.yAxis.length - 1,
+				color: 'lightgray',
 				tooltip: {
 					valueDecimals: 3
 				}
 			});
-		}
+		//}
 		/*
 		if (axes.find(a => a.id == 'CCI')) {
 			params.yAxis.push({
@@ -364,7 +376,6 @@ class StockChart {
 		if (axes.find(a => a.id == '60MA')) this.addMa(60);
 		if (axes.find(a => a.id == '120MA')) this.addMa(120);
 		if (axes.find(a => a.id == '200MA')) this.addMa(200);
-		if (axes.find(a => a.id == 'SAR')) this.addSar();
 		if (axes.find(a => a.id == 'Bollinger')) this.addBollingerBands();
 		return this;
 	}

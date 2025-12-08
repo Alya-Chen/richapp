@@ -697,7 +697,7 @@ export class Adx {
     constructor(data, {
         period = 14,
         threshold = 20,
-        useWeekly = true,
+        useWeekly = false,
         strongTrend = 18, // 週線 ADX 強趨勢門檻（可調）
         softTrend = 14 // 週線 ADX 較寬鬆門檻（可調）
     } = {}) {
@@ -728,7 +728,7 @@ export class Adx {
             console.warn("ADX calculation needs at least 2 * period data points.");
             return this.data.map(d => ({
                 time: d.date ? Date.parse(d.date) : null,
-                val: null,
+                adx: null,
                 plusDi: null,
                 minusDi: null
             }));
@@ -738,7 +738,7 @@ export class Adx {
             if (i === 0) {
                 const day = this.data[i];
                 const time = day.date ? Date.parse(day.date) : null;
-                adxArray.push({ time, val: null, plusDi: null, minusDi: null });
+                adxArray.push({ time, adx: null, plusDi: null, minusDi: null });
                 continue;
             }
 
@@ -782,7 +782,7 @@ export class Adx {
 
             if (i < this.period) {
                 const time = current.date ? Date.parse(current.date) : null;
-                adxArray.push({ time, val: null, plusDi: null, minusDi: null });
+                adxArray.push({ time, adx: null, plusDi: null, minusDi: null });
                 continue;
             }
 
@@ -802,20 +802,20 @@ export class Adx {
             dxs.push(dx);
 
             const dxIndex = dxs.length - 1;
-            if (dxIndex < this.period - 1) {
-                currentAdx = null;
-            } else if (dxIndex === this.period - 1) {
-                adx = dxs.reduce((a, b) => a + b, 0) / this.period;
-                currentAdx = adx;
+            if (dxIndex >= this.period - 1) {
+                // 取最近period個DX值計算SMA
+                const startIdx = Math.max(0, dxIndex - this.period + 1);
+                const dxSlice = dxs.slice(startIdx, dxIndex + 1);
+                const sum = dxSlice.reduce((a, b) => a + b, 0);
+                currentAdx = sum / this.period;
             } else {
-                adx = (adx * (this.period - 1) + dx) / this.period;
-                currentAdx = adx;
+                currentAdx = null;
             }
 
             adxArray.push({
                 date: current.date,
                 time: current.date ? Date.parse(current.date) : null,
-                val: currentAdx,
+                adx: currentAdx,
                 plusDi: currentPlusDi,
                 minusDi: currentMinusDi,
                 diff: (currentPlusDi - currentMinusDi).scale(2)
@@ -826,11 +826,11 @@ export class Adx {
     }
 
     /**
-     * @param {Array<{time:number, val:number, plusDi:number, minusDi:number}>} adxArray 日線 ADX 結果
-     * @param {Array<{time:number, val:number}>} [weeklyAdxArray] 週線 ADX 結果（可選）
+     * @param {Array<{time:number, adx:number, plusDi:number, minusDi:number}>} adxArray 日線 ADX 結果
+     * @param {Array<{time:number, adx:number}>} [weeklyAdxArray] 週線 ADX 結果（可選）
      */
     detectCrossovers(adxArray, weeklyAdxArray = null) {
-        // weeklyAdxArray: [{ time, val }, ...] 依時間排序
+        // weeklyAdxArray: [{ time, adx }, ...] 依時間排序
         const hasWeekly = Array.isArray(weeklyAdxArray)
             && weeklyAdxArray.some(w => w && w.adx != null);
 
@@ -840,18 +840,18 @@ export class Adx {
             const prev = adxArray[i - 1];
 
             if (!current || !prev ||
-                current.plusDi == null || current.minusDi == null || current.val == null ||
-                prev.plusDi == null || prev.minusDi == null || prev.val == null) {
+                current.plusDi == null || current.minusDi == null || current.adx == null ||
+                prev.plusDi == null || prev.minusDi == null || prev.adx == null) {
                 continue;
             }
 
             // 1) 日線 ADX 是否上升
             current.rising = false;
             if (i >= 3) {
-                const prevAdx1 = adxArray[i - 1]?.val;
-                const prevAdx2 = adxArray[i - 2]?.val;
+                const prevAdx1 = adxArray[i - 1]?.adx;
+                const prevAdx2 = adxArray[i - 2]?.adx;
                 if (prevAdx1 != null && prevAdx2 != null) {
-                    current.rising = current.val > prevAdx1 && prevAdx1 > prevAdx2;
+                    current.rising = current.adx > prevAdx1 && prevAdx1 > prevAdx2;
                 }
             }
 
@@ -879,8 +879,8 @@ export class Adx {
                     // 有上一週的話，再看有沒有上升
                     if (weekIdx > 0) {
                         const prevW = weeklyAdxArray[weekIdx - 1];
-                        if (prevW && prevW.val != null) {
-                            const risingWeekAdx = w.adx > prevW.val;
+                        if (prevW && prevW.adx != null) {
+                            const risingWeekAdx = w.adx > prevW.adx;
                             softTrend = w.adx >= this.softTrend && risingWeekAdx;
                         }
                     }
@@ -894,15 +894,16 @@ export class Adx {
             }
 
             // 先清理舊旗標
-            current.golden = false;
-            current.dead   = false;
+            current.golden    = false;
+            current.dead      = false;
+            current.adxDead   = false;
             // 若週線濾網不通過 → 完全不打訊號（但保留 rising / week）
             if (!weekOk) {
                 continue;
             }
             // === 日線 ADX 的交叉邏輯 ===
-            if (current.val >= this.threshold) {
-                if (prev.val < this.threshold) {
+            if (current.adx >= this.threshold) {
+                if (prev.adx < this.threshold) {
                     // ADX 剛穿越 threshold
                     if (current.plusDi > current.minusDi) {
                         current.golden = true;
@@ -919,6 +920,9 @@ export class Adx {
                         current.dead = true;
                     }
                 }
+            }
+            if (!current.rising && prev.plusDi <= prev.adx && current.plusDi > current.adx) {
+                current.adxDead = true;
             }
         }
         return adxArray;
@@ -988,7 +992,7 @@ export class ExitAlert {
 /**
  * 波動性屬性分析器
  * @param {Object} options 配置選項
- * @param {number} [options.adxThreshold=25] ADX 趨勢強度閾值
+ * @param {number} [options.adxThreshold=20] ADX 趨勢強度閾值
  * @param {number} [options.natrThreshold=2.5] NATR 波動率閾值（%）
  * @param {number} [options.lookbackPeriod=20] 回看天數
  */
@@ -1004,7 +1008,7 @@ export class VolatilityAnalyzer {
 
         // 合併預設選項和使用者選項
         this.options = {
-            adxThreshold: 25,      // 預設 ADX 閾值
+            adxThreshold: 20,      // 預設 ADX 閾值
             natrThreshold: 2.5,    // 預設 NATR 閾值 (%)
             lookbackPeriod: 20,    // 預設回看 20 天
             ...options
@@ -1099,7 +1103,7 @@ export class VolatilityAnalyzer {
         let validCount = 0;
 
         for (let i = startIdx; i <= targetIndex; i++) {
-            const adxVal = this.adxData[i]?.val;
+            const adxVal = this.adxData[i]?.adx;
             const natrVal = this.atrData[i]?.natr;
 
             if (adxVal !== undefined && natrVal !== undefined) {
@@ -1118,7 +1122,7 @@ export class VolatilityAnalyzer {
         avgNatr /= validCount;
 
         // 使用目標日的當前值
-        const currentAdx = targetAdx.val;
+        const currentAdx = targetAdx.adx;
         const currentNatr = targetAtr.natr;
 
         // 判斷趨勢和波動性
@@ -1437,18 +1441,16 @@ class Calculator {
                 (r.diPlus + r.diMinus);
         }
 
-        // ADX: 平滑化 DX
-        let adx = 0;
-        for (let i = period; i < period * 2; i++) {
-            adx += result[i].dx;
-        }
-
-        adx = adx / period;
-        result[period * 2 - 1].adx = adx;
-
-        for (let i = period * 2; i < n; i++) {
-            adx = ((adx * (period - 1)) + result[i].dx) / period;
-            result[i].adx = adx;
+        // ADX: 對DX進行簡單移動平均
+        for (let i = period * 2 - 1; i < n; i++) {
+            // 取最近period個DX值計算SMA
+            let sum = 0;
+            for (let j = i - (period - 1); j <= i; j++) {
+                if (result[j] && result[j].dx !== null) {
+                    sum += result[j].dx;
+                }
+            }
+            result[i].adx = sum / period;
         }
 
         return result;

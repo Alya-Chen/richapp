@@ -19,9 +19,10 @@ class Investor {
 		const entryStrategy = st[this.params.entryStrategy].name;
 		const exitStrategy = this.params.exitStrategy.map(s => st[s].name).join('＋');
 		const invested = {
-			money: this.money,
+			balance: this.money, // 當前餘額
 			unclosed: 0,
-			profit: 0
+			profit: 0,
+			maxDrawdown: 0
 		};
 		const csv = [];
 		// 結構化的 JSON 回傳內容
@@ -49,24 +50,24 @@ class Investor {
 				const test = tests[i];
 				test.trades = test.trades || test.result.trades;
 				let trade = test.trades.find(t => entryDate.isSameDay(t.entryDate));
-				if (trade && invested.money > 3000) {
-					trade.amount = parseInt(invested.money / trade.entryPrice);
+				if (trade && invested.balance > 3000) {
+					trade.amount = parseInt(invested.balance / trade.entryPrice);
 					trade.amount = trade.amount > 1000 ? 1000 : trade.amount;
 					if (trade.amount > 0) {
 						runningTests.push(test);
 						const money = trade.amount * trade.entryPrice;
-						invested.money -= money;
+						invested.balance -= money;
 						trade.tax = trade.amount * trade.entryPrice * 0.001425;
 						trade.tax = Math.max(trade.tax, 20).scale(2);
 						trades.push({
 							code: test.code,
 							name: test.name,
 							ma: test.ma,
-							entryRemain: invested.money,
+							entryRemain: invested.balance,
 							...trade
 						});
 						// 事件與分組
-						data.events.push({ type: 'buy', date: trade.entryDate, code: test.code, name: test.name, ma: test.ma, price: trade.entryPrice, amount: trade.amount, tax: trade.tax, remainMoney: invested.money, reason: trade.entryReason });
+						data.events.push({ type: 'buy', date: trade.entryDate, code: test.code, name: test.name, ma: test.ma, price: trade.entryPrice, amount: trade.amount, tax: trade.tax, remainMoney: invested.balance, reason: trade.entryReason });
 						if (!data.byCode[test.code]) data.byCode[test.code] = { code: test.code, name: test.name, ma: test.ma, trades: [] };
 						data.byCode[test.code].trades.push({
 							amount: trade.amount,
@@ -86,15 +87,16 @@ class Investor {
 				trade = trades.find(t => t.code == test.code && t.status == 'closed' && entryDate.isSameDay(t.exitDate));
 				if (trade) {
 					const money = trade.amount * trade.exitPrice;
-					invested.money += money;
+					invested.balance += money;
 					trade.profit = (trade.amount * trade.profit).scale();
 					trade.tax += (trade.amount * trade.exitPrice * 0.004425).scale(2);
 					invested.profit += trade.profit;
 					trades.find(t => t.code == trade.code).status = 'done';
 					const reason = trade.exitReason + (trade.reentry ? '（返場）' : '');
-					csv.push(`${trade.code}	${trade.name}	${trade.ma}	${trade.entryDate.toLocaleDateString()}	${trade.entryPrice.scale(2)}	${trade.amount}	${trade.entryRemain.scale()}	${trade.exitDate.toLocaleDateString()}	${trade.exitPrice.scale()}	${trade.profit.scale()}	${trade.tax.scale()}	${invested.profit.scale()}	${invested.money.scale()}	${reason}`);
-					data.events.push({ type: 'sell', date: trade.exitDate, code: trade.code, name: trade.name, ma: trade.ma, price: trade.exitPrice, amount: trade.amount, profit: trade.profit, tax: trade.tax, remainMoney: invested.money, reason });
+					csv.push(`${trade.code}	${trade.name}	${trade.ma}	${trade.entryDate.toLocaleDateString()}	${trade.entryPrice.scale(2)}	${trade.amount}	${trade.entryRemain.scale()}	${trade.exitDate.toLocaleDateString()}	${trade.exitPrice.scale()}	${trade.profit.scale()}	${trade.tax.scale()}	${invested.profit.scale()}	${invested.balance.scale()}	${reason}`);
+					data.events.push({ type: 'sell', date: trade.exitDate, code: trade.code, name: trade.name, ma: trade.ma, price: trade.exitPrice, amount: trade.amount, profit: trade.profit, tax: trade.tax, remainMoney: invested.balance, reason });
 					runningTests = runningTests.filter(t => t.code != trade.code);
+					invested.maxDrawdown = this.calculateMDD(invested, trades);
 				}
 			};
 			entryDate.addDays(1);
@@ -107,23 +109,31 @@ class Investor {
 			trade.profit = (day.close - trade.entryPrice) * trade.amount;
 			invested.profit += trade.profit;
 			invested.unclosed += day.close * trade.amount;
+			csv.push(`${trade.code}	${trade.name}	${trade.ma}	${trade.entryDate.toLocaleDateString()}	${trade.entryPrice.scale(2)}	${trade.amount}	${trade.entryRemain.scale()}`);
 		}
 		data.summary = Object.assign(data.summary, this.calculateMetrics(trades));
-		data.summary.finalMoney = invested.money;
+		data.summary.finalMoney = invested.balance;
 		data.summary.unclosed = invested.unclosed;
 		data.summary.totalProfit = invested.profit;
 		data.summary.profitRate = (data.summary.totalProfit / this.money);
 		data.summary.netProfitRate = (data.summary.netProfit / this.money);
-		csv.unshift(`${data.summary.finalMoney.scale()}	${data.summary.unclosed.scale()}	${data.summary.totalProfit.scale()}	${data.summary.profitRate.scale(2)}	${data.summary.tax.scale()}	${data.summary.netProfit.scale()}	${data.summary.netProfitRate.scale(2)}	${data.summary.tradeCount}	${data.summary.winRate.scale(2)}	${data.summary.pnl}	${data.summary.expectation}	${data.summary.reentry}	${data.summary.reentryWinRate.scale(2)}	${data.summary.reentryProfit.scale()}`);
-		csv.unshift(`最後本金	未平倉	總獲利	總獲利率	總稅金	稅後淨利	淨利率	總交易次數	總勝率	盈虧比	期望值	返場次數	返場勝率	返場獲利`);
+		data.summary.maxDrawdown = invested.maxDrawdown?.scale(2);
+		csv.unshift(`${data.summary.finalMoney.scale()}	${data.summary.unclosed.scale()}	${data.summary.totalProfit.scale()}	${data.summary.profitRate.scale(2)}	${data.summary.tax.scale()}	${data.summary.netProfit.scale()}	${data.summary.netProfitRate.scale(2)}	${data.summary.tradeCount}	${data.summary.winRate.scale(2)}	${data.summary.pnl}	${data.summary.expectation}	${data.summary.maxDrawdown.scale(2)}	${data.summary.reentry}	${data.summary.reentryWinRate.scale(2)}	${data.summary.reentryProfit.scale()}`);
+		csv.unshift(`最後本金	未平倉	總獲利	總獲利率	總稅金	稅後淨利	淨利率	總交易次數	總勝率	盈虧比	期望值	最大回撤率	返場次數	返場勝率	返場獲利`);
 		csv.unshift(`入場日期	${entryDate.toLocaleDateString()}	出場日期	${exitDate.toLocaleDateString()}	入場策略	${entryStrategy}	出場策略	${exitStrategy}`);
 		return {
 			csv: csv.join('\r\n'),
 			data,
-			money: invested.money.scale(),
+			money: invested.balance.scale(),
 			profit: invested.profit.scale(),
 			trades
 		};
+	}
+	calculateMDD(invested, trades) {
+		const profit = trades.reduce((sum, t) => sum + t.profit, 0); // 交易中的獲利金額
+		invested.minProfit = Math.min(profit, invested.minProfit || 0);
+		invested.maxProfit = Math.max(profit, invested.maxProfit || 0);
+		return (invested.maxProfit - invested.minProfit) / invested.maxProfit;
 	}
 	// 績效指標計算
 	calculateMetrics(trades) {
@@ -168,7 +178,6 @@ class Investor {
 		);
 	}
 }
-
 
 export {
 	Investor

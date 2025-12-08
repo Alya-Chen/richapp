@@ -389,10 +389,11 @@ export class AdxEntry {
 	}
 
 	// 開倉條件檢查
-	checkEntry(day, index, position) {
+	checkEntry(_, index, position) {
 		const adx = this.adx[index];
 		if (index < 1 || position.status != 'closed' || adx == null) return null;
-        return adx.golden ? { reason: `${AdxEntry.name} ${adx.plusDi.scale(2)} > ${adx.minusDi.scale(2)} ADX：${adx.val.scale(2)} 金叉${adx.rising ? '趨勢強烈' : ''}` } : null;
+		const adxNote = `日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
+        return adx.golden ? { reason: `${AdxEntry.name} ${adx.plusDi.scale(2)} > ${adx.minusDi.scale(2)} 金叉${adx.rising ? '趨勢強烈' : ''} ${adxNote}` } : null;
 	}
 }
 
@@ -406,10 +407,11 @@ export class AdxExit {
 	}
 
 	// 平倉條件檢查
-	checkExit(day, index, position) {
+	checkExit(_, index, position) {
 		const adx = this.adx[index];
 		if (index < 1 || adx == null) return null;
-        return adx.dead ? { reason: `${AdxExit.name} ${adx.minusDi.scale(2)} > ${adx.plusDi.scale(2)} ADX：${adx.val.scale(2)}  死叉${adx.rising ? '趨勢強烈' : ''}` } : null;
+		const adxNote = `日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
+        return adx.dead ? { reason: `${AdxExit.name} ${adx.minusDi.scale(2)} > ${adx.plusDi.scale(2)} 死叉${adx.rising ? '趨勢強烈' : ''} ${adxNote}` } : null;
 	}
 }
 ///////////////////////////////////////////////////////////////////////////////

@@ -444,7 +444,7 @@
 			};
 			$$.invest = function(stock) {
 				service.dailies(stock, (dailies) => {
-					stock.trade.invest = new RsiInvest(dailies, stock.defaultMa).start(stock.trade);
+					stock.trade.invest = new AdxInvest(dailies, stock.defaultMa).start(stock.trade);
 					if (!$$.invested.stocks.find(i => i.code == stock.code)) {
 						$$.invested.stocks.push({ code: stock.code, invest: stock.trade.invest });
 						$$.invested.profit += stock.trade.invest.netProfit;
@@ -457,7 +457,7 @@
 			};
 			$$.shadow = function(stock) {
 				service.dailies(stock, (dailies) => {
-					stock.shadow.invest = new RsiInvest(dailies, stock.defaultMa).start(stock.shadow);
+					stock.shadow.invest = new AdxInvest(dailies, stock.defaultMa).start(stock.shadow);
 					if (!$$.shadowed.stocks.find(i => i.code == stock.code)) {
 						$$.shadowed.stocks.push({ code: stock.code, invest: stock.shadow.invest });
 						$$.shadowed.profit += stock.shadow.invest.netProfit;
@@ -588,13 +588,13 @@
 				simulate: function(trade) {
 					if (!trade) return;
 					trade.ma = trade.ma || $$.stock.defaultMa;
-					trade.invest = new RsiInvest($$.stock.dailies, trade.ma).start(trade);
+					trade.invest = new AdxInvest($$.stock.dailies, trade.ma).start(trade);
 					console.log(trade.invest);
 				},
 				done: function(trades) {
 					$$.stock.done = $$.stock.done || [];
 					trades.forEach(trade => {
-						const invest = new RsiInvest($$.stock.dailies, trade.ma).start(trade);
+						const invest = new AdxInvest($$.stock.dailies, trade.ma).start(trade);
 						$$.stock.done.push(invest);
 					});
 				},
@@ -720,25 +720,29 @@
 					visible: false,
 					url: 'https://t.ly/PPRaC'
 				}, {
-					id: 'CCI',
-					visible: false,
-					url: 'https://t.ly/G4dSi'
-				}, {
 					id: 'Bollinger',
 					visible: false,
 					url: 'https://t.ly/aDzD9'
 				},
-				/*{
-					id: 'RSI',
+				/* {
+					id: 'CCI',
 					visible: false,
-					url: 'https://t.ly/GHeUp'
+					url: 'https://t.ly/G4dSi'
+				}, {
+					id: 'ADX',
+					visible: false,
+					url: 'https://t.ly/sgcOP'
 				}, {
 					id: 'LSR',
 					visible: false
-				},*/ {
+				}, {
 					id: 'SAR',
 					visible: false,
 					url: 'https://t.ly/viY8S'
+				},*/ {
+					id: 'RSI',
+					visible: false,
+					url: 'https://t.ly/GHeUp'
 				}, {
 					id: '20MA',
 					visible: false
@@ -772,7 +776,7 @@
 					service.trades({ code: $$.stock.code, shadow: true }, trades => {
 						$$.stock.shadow = $$.stock.shadow || [];
 						trades.forEach(trade => {
-							const invest = new RsiInvest(dailies, trade.ma).start(trade);
+							const invest = new AdxInvest(dailies, trade.ma).start(trade);
 							$$.stock.shadow.push(invest);
 						});
 					});

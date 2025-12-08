@@ -16,7 +16,7 @@ import {
     Op
 } from 'sequelize';
 import {
-    BullBear
+    BullBear, Adx, Atr, VolatilityAnalyzer
 } from './static/js/macd-kdj.js';
 
 //https://openapi.twse.com.tw/
@@ -40,9 +40,9 @@ const params = {
     reentry: true, // 出場後是否要重複入場
     entryDate: new Date('2025-06-01'), //dateFns.addYears(dateFns.addMonths(new Date(), -6), -1), // 取前一年半資料
     exitDate: new Date(),
-    //entryStrategy: st.BullTigerEntry, BBEntryExit, TwoDaysUpEntry
-    entryStrategy: 'TwoDaysUpEntry',
-    exitStrategy: ['RsiTigerExit'], //['DynamicStopExit', 'RsiTigerExit'],
+    //entryStrategy: AdxEntry, BullTigerEntry, BBEntryExit, TwoDaysUpEntry
+    entryStrategy: 'AdxEntry',
+    exitStrategy: ['AdxExit'], //['DynamicStopExit', 'RsiTigerExit'],
     //entryStrategy: 'MacdMaEntry',
     //exitStrategy: ['MacdMaExit'],
     stopLossPct: 0.03, // 止損小於入場價格的 3%
@@ -80,9 +80,9 @@ async function main() {
     //console.log(dailies);
     //await service.sync();
     const TODAY = new Date().toLocaleDateString().replaceAll('/', '');
-    const TOP10 = ['2382', '2330', '2317', '6805', '2404', '4728', '6183', '3130', '6754', '2308'];
+    const TOP10 = ['2382', '2330', '2317', '6805', '2404', '4728', '6183', '3130', '6754', '2308', '6669', '2376', '2454'];
 
-    if (STOCK_CODE && STOCK_CODE != 'all' && STOCK_CODE != 'csv' && STOCK_CODE != 'invest') {
+    if (STOCK_CODE && STOCK_CODE != 'all' && STOCK_CODE != 'csv' && STOCK_CODE != 'invest' && STOCK_CODE != 'analysis') {
         //const tests = await service.findTest(STOCK_CODE);
         //console.log(tests[0].params);
         const stock = await service.getStock(STOCK_CODE);
@@ -96,8 +96,8 @@ async function main() {
         //await service.saveTest(stock, result);
     }
     if (STOCK_CODE == 'all') {
-		const stock = await service.getStock('3130');
-		console.log(await service.fetchDividendData(stock));
+		//const stock = await service.getStock('3130');
+		//console.log(await service.fetchDividendData(stock));
 
         //console.log(await service.realtime(['0050', '3131', 'AAPL']));
         //const stocks = await service.stocks();
@@ -105,9 +105,12 @@ async function main() {
         //const result = await service.realtime(codes);
         //await service.sync();
         //console.log(await service.findStock('AAPL'));
-		//const result = await service.backtest('all');
-		//console.log(result);
-
+        const user = await service.getUser(1);
+        const params = user.settings.params;
+        params.userId = user.id;
+        console.log(params);
+        const result = await service.backtest('all', params);
+        console.log(result.length);
 		//const result = await service.backtest(['AAPL', '6721'], {
         //    transient: true
 		//});
@@ -142,33 +145,48 @@ async function main() {
     }
     if (STOCK_CODE == 'invest') {
 		const stocks = await service.stocks();
-        stocks.filter(s => s.trades).forEach(s => {
-            console.log(s.code, s.name);
-            s.trades.forEach(l => {
-                if (!l.logs) return;
-                console.log(l.id, l.ma, l.entryDate, l.exitDate);
-                l.logs.forEach(t => {
-                    t.id = null;
-                    t.code = s.code;
-                    t.ma = l.ma;
-                    t.userId = 1;
-                    console.log(t.act, t.date, t.price, t.amount, t.ma);
-                    service.saveTrade(t);
-                });
-            });
-        });
-        /*
         const money = 555022;
         params.transient = true;
         //params.dynamic = true;
         //params.usingTigerMa = true;
+        const startDate = dateFns.addYears(new Date(), -2);
+        const csv = [];
         for (const code of TOP10) {
+            console.log(`Investing ${code}`);
             params.entryDate = new Date('2025-01-01');
             const investor = new Investor([code], money, params);
             const result = await investor.invest();
             console.log(result.csv);
+            csv.push(result.csv);
         }
-        */
+        fs.writeFileSync(`data/${TODAY}-TOP10.csv`, csv.join('\r\n\r\n'));
+    }
+    if (STOCK_CODE == 'analysis') {
+        const startDate = dateFns.addYears(new Date(), -2);
+        const csv = [];
+        for (const code of ['6669']) {
+            console.log(`Investing ${code}`);
+            const data = await service.dailies(code, startDate);
+            const adxResults = new Adx(data, { period: 14 }).calculate();
+            const atrResults = new Atr(data, { period: 14 }).calculate();
+            const analyzer = new VolatilityAnalyzer(adxResults, atrResults);
+            const today = new Date().toISOString().substring(0, 10);
+            const oneYearAgo = dateFns.addYears(new Date(), -1);
+            for (let i = 0; i <= 3600; i++) {
+                const targetDate = dateFns.addDays(oneYearAgo, i);
+                if (targetDate.toISOString().substring(0, 10) > today) break;
+                const result = analyzer.run(targetDate);
+                if (result.error) continue;
+                const note = JSON.stringify(result.note) + result.diSignal.split(' ')[0];
+                if (note != analyzer.note) {
+                    result.code = code;
+                    result.name = (await service.getStock(code)).name;
+                    analyzer.note = note;
+                    csv.push(JSON.stringify(result));
+                }
+            }
+        }
+        fs.writeFileSync(`data/${TODAY}-9996.csv`, csv.join('\r\n\r\n'));
     }
 }
 
