@@ -626,15 +626,92 @@ export class Sar {
 	}
 }
 
-// Average Directional Index
-export class Adx {
-    constructor(data, {
-        period = 14
-    } = {}) {
-        this.data = data; // 每個元素應該包含 { high, low, close }
+// ATR 指標 (平均真實區間)
+export class Atr {
+    constructor(data, { period = 14 } = {}) {
+        this.data = data;
         this.period = period;
     }
 
+    /**
+     * 計算 True Range (TR)
+     * @param {object[]} data 包含 high, low, close 的 K 線數據
+     * @returns {number[]} True Range 數值陣列
+     */
+    calculateTR() {
+        const trArray = [];
+        for (let i = 0; i < this.data.length; i++) {
+            const h = this.data[i].high;
+            const l = this.data[i].low;
+            const cPrev = i > 0 ? this.data[i - 1].close : null;
+
+            // TR = Max([H - L], [|H - C_prev|], [|L - C_prev|])
+            const tr1 = h - l;
+            const tr2 = cPrev !== null ? Math.abs(h - cPrev) : 0;
+            const tr3 = cPrev !== null ? Math.abs(l - cPrev) : 0;
+
+            trArray.push(Math.max(tr1, tr2, tr3));
+        }
+        return trArray;
+    }
+
+    /**
+     * 計算 ATR (True Range 的 Wilders Smoothing 平均)
+     * @returns {object[]} 包含 date, atr, natr 的結果陣列
+     */
+    calculate() {
+        const trArray = this.calculateTR();
+        const period = this.period;
+
+        // 使用 Wilder Smoothing 總和
+        const wildersSumTR = Calculator.wildersSmoothing(trArray, period);
+
+        const results = [];
+        for (let i = 0; i < this.data.length; i++) {
+            const sumTR = wildersSumTR[i];
+            let atr = null;
+            let natr = null; // Normalized ATR
+
+            // ATR = Smoothed Sum / Period
+            if (sumTR !== null) {
+                atr = sumTR / period;
+                const closePrice = this.data[i].close;
+                // NATR = (ATR / Close) * 100%
+                natr = (atr / closePrice) * 100;
+            }
+
+            results.push({
+                date: this.data[i].date,
+                close: this.data[i].close,
+                tr: trArray[i],
+                atr: atr,
+                natr: natr
+            });
+        }
+        return results;
+    }
+}
+
+// Average Directional Index
+export class Adx {
+    constructor(data, {
+        period = 14,
+        threshold = 20,
+        useWeekly = true,
+        strongTrend = 18, // 週線 ADX 強趨勢門檻（可調）
+        softTrend = 14 // 週線 ADX 較寬鬆門檻（可調）
+    } = {}) {
+        this.data = data; // 每個元素應該包含 { high, low, close }
+        this.period = period;
+        this.threshold = threshold;
+        this.useWeekly = useWeekly;
+        this.strongTrend = strongTrend;
+        this.softTrend = softTrend;
+    }
+
+    /**
+     * time 建議是週 K 的結束日期 (Date.parse)
+     */
     calculate() {
         let adxArray = [];
         let plusDms = [];
@@ -649,75 +726,66 @@ export class Adx {
 
         if (this.data.length < this.period * 2) {
             console.warn("ADX calculation needs at least 2 * period data points.");
-            // 即使數據不足，也返回與 data 等長的 null 陣列
-            return this.data.map(() => ({ adx: null, plusDi: null, minusDi: null }));
+            return this.data.map(d => ({
+                time: d.date ? Date.parse(d.date) : null,
+                val: null,
+                plusDi: null,
+                minusDi: null
+            }));
         }
 
         for (let i = 0; i < this.data.length; i++) {
-            // --- 1. 計算 +DM, -DM, 和 TR ---
-            // 從第二根 K 棒開始 (i=1)
             if (i === 0) {
-                adxArray.push({ adx: null, plusDi: null, minusDi: null });
+                const day = this.data[i];
+                const time = day.date ? Date.parse(day.date) : null;
+                adxArray.push({ time, val: null, plusDi: null, minusDi: null });
                 continue;
             }
 
             const current = this.data[i];
             const prev = this.data[i - 1];
-            // 計算 Directional Movement (DM)
-            let upMove = current.high - prev.high;
-            let downMove = prev.low - current.low;
+            const upMove = current.high - prev.high;
+            const downMove = prev.low - current.low;
 
             let plusDm = 0;
             let minusDm = 0;
-            if (upMove > downMove && upMove > 0) {
-                plusDm = upMove;
-            }
-            if (downMove > upMove && downMove > 0) {
-                minusDm = downMove;
-            }
+            if (upMove > downMove && upMove > 0) plusDm = upMove;
+            if (downMove > upMove && downMove > 0) minusDm = downMove;
 
-            // 計算 True Range (TR)
-            let tr = Math.max(
+            const tr = Math.max(
                 current.high - current.low,
                 Math.abs(current.high - prev.close),
                 Math.abs(current.low - prev.close)
             );
 
-            // 儲存原始值以供後續平滑
             plusDms.push(plusDm);
             minusDms.push(minusDm);
             trs.push(tr);
 
-            // --- 2. 平滑 DM 和 TR ---
-            // 我們需要 'period' 個數值來開始平滑
-
             let currentPlusDi = null;
             let currentMinusDi = null;
             let currentAdx = null;
+
             if (i < this.period) {
-                // 在第一個 'period' 週期內，僅累積初始總和
                 smoothPlusDm += plusDm;
                 smoothMinusDm += minusDm;
                 smoothTr += tr;
-                adxArray.push({ adx: null, plusDi: null, minusDi: null });
-                continue;
-            }
-            else if (i === this.period) {
-                // 在第 'period' 根 K 棒，完成第一次加總 (使用 i=1 到 i=period 的數據)
+            } else if (i === this.period) {
                 smoothPlusDm += plusDm;
                 smoothMinusDm += minusDm;
                 smoothTr += tr;
-            }
-            else {
-                // 'period' 之後，使用 Wilder's Smoothing (EMA with alpha = 1/period)
-                // 範例 (14天): (前值 * 13 + 現值) / 14
+            } else {
                 smoothPlusDm = (smoothPlusDm * (this.period - 1) + plusDm) / this.period;
                 smoothMinusDm = (smoothMinusDm * (this.period - 1) + minusDm) / this.period;
                 smoothTr = (smoothTr * (this.period - 1) + tr) / this.period;
             }
 
-            // --- 3. 計算 +Di 和 -Di ---
-            // 避免除以零
+            if (i < this.period) {
+                const time = current.date ? Date.parse(current.date) : null;
+                adxArray.push({ time, val: null, plusDi: null, minusDi: null });
+                continue;
+            }
+
             if (smoothTr === 0) {
                 currentPlusDi = 0;
                 currentMinusDi = 0;
@@ -726,91 +794,129 @@ export class Adx {
                 currentMinusDi = 100 * (smoothMinusDm / smoothTr);
             }
 
-            // --- 4. 計算 DX ---
-            let diSum = currentPlusDi + currentMinusDi;
+            const diSum = currentPlusDi + currentMinusDi;
             let dx = 0;
             if (diSum !== 0) {
                 dx = 100 * (Math.abs(currentPlusDi - currentMinusDi) / diSum);
             }
-            dxs.push(dx); // 儲存 DX 值以計算 ADX
+            dxs.push(dx);
 
-            // --- 5. 計算 ADX (DX 的平滑移動平均) ---
-            // 我們需要 'period' 個 DX 值來計算第一個 ADX
-            // 第一個 DX 在 i = period 時算出
-            // 第 'period' 個 DX 在 i = period + (period - 1) = (2 * period) - 1 時算出
-            if (i < (2 * this.period) - 1) {
-                // 數據不足以計算 ADX
+            const dxIndex = dxs.length - 1;
+            if (dxIndex < this.period - 1) {
                 currentAdx = null;
-            }
-            else if (i === (2 * this.period) - 1) {
-                // 計算第一個 ADX (DXs 陣列中現在有 period 個值)
+            } else if (dxIndex === this.period - 1) {
                 adx = dxs.reduce((a, b) => a + b, 0) / this.period;
                 currentAdx = adx;
-            }
-            else {
-                // 計算後續的 ADX (使用 Wilder's Smoothing)
+            } else {
                 adx = (adx * (this.period - 1) + dx) / this.period;
                 currentAdx = adx;
             }
-            const day = this.data[i];
-            const time = day.date ? Date.parse(day.date) : null;
-            adxArray.push({ time, val: currentAdx, plusDi: currentPlusDi, minusDi: currentMinusDi });
+
+            adxArray.push({
+                date: current.date,
+                time: current.date ? Date.parse(current.date) : null,
+                val: currentAdx,
+                plusDi: currentPlusDi,
+                minusDi: currentMinusDi,
+                diff: (currentPlusDi - currentMinusDi).scale(2)
+            });
         }
-        return this.detectCrossovers(adxArray);
+        const weeklyAdxArray = this.useWeekly ? Calculator.toWeeklyAdx(Calculator.convertToWeekly(this.data), this.period) : null;
+        return this.detectCrossovers(adxArray, weeklyAdxArray);
     }
 
-    detectCrossovers(adxArray) {
+    /**
+     * @param {Array<{time:number, val:number, plusDi:number, minusDi:number}>} adxArray 日線 ADX 結果
+     * @param {Array<{time:number, val:number}>} [weeklyAdxArray] 週線 ADX 結果（可選）
+     */
+    detectCrossovers(adxArray, weeklyAdxArray = null) {
+        // weeklyAdxArray: [{ time, val }, ...] 依時間排序
+        const hasWeekly = Array.isArray(weeklyAdxArray)
+            && weeklyAdxArray.some(w => w && w.adx != null);
+
+        let weekIdx = 0;
         for (let i = 1; i < adxArray.length; i++) {
             const current = adxArray[i];
             const prev = adxArray[i - 1];
 
-            // 確保有足夠的資料
             if (!current || !prev ||
                 current.plusDi == null || current.minusDi == null || current.val == null ||
                 prev.plusDi == null || prev.minusDi == null || prev.val == null) {
                 continue;
             }
 
-            // 檢查 ADX 趨勢（使用 3 日趨勢更穩定）
+            // 1) 日線 ADX 是否上升
             current.rising = false;
             if (i >= 3) {
-                const prevAdx1 = adxArray[i-1]?.val;
-                const prevAdx2 = adxArray[i-2]?.val;
-                const prevAdx3 = adxArray[i-3]?.val;
-                if (prevAdx1 != null && prevAdx2 != null && prevAdx3 != null) {
-                    current.rising = (current.val > prevAdx1) && (prevAdx1 > prevAdx2);
+                const prevAdx1 = adxArray[i - 1]?.val;
+                const prevAdx2 = adxArray[i - 2]?.val;
+                if (prevAdx1 != null && prevAdx2 != null) {
+                    current.rising = current.val > prevAdx1 && prevAdx1 > prevAdx2;
                 }
             }
 
-            // 重置信號
+            // 2) 週線 ADX 濾網
+            let weekOk = true;     // 預設 = 通過
+            current.week = null;
+
+            if (hasWeekly && current.time != null) {
+                // 對齊最新一根 time <= current.time 的週線
+                while (
+                    weekIdx + 1 < weeklyAdxArray.length &&
+                    weeklyAdxArray[weekIdx + 1].time <= current.time
+                ) {
+                    weekIdx++;
+                }
+
+                const w = weeklyAdxArray[weekIdx];
+                if (w && w.adx != null) {
+                    current.week = w.adx;
+
+                    // 判斷週線 ADX 是否「足夠」
+                    let strongTrend = w.adx >= this.strongTrend;
+                    let softTrend   = false;
+
+                    // 有上一週的話，再看有沒有上升
+                    if (weekIdx > 0) {
+                        const prevW = weeklyAdxArray[weekIdx - 1];
+                        if (prevW && prevW.val != null) {
+                            const risingWeekAdx = w.adx > prevW.val;
+                            softTrend = w.adx >= this.softTrend && risingWeekAdx;
+                        }
+                    }
+
+                    // 只要符合 strong 或 soft 任一種就通過
+                    weekOk = strongTrend || softTrend;
+                } else {
+                    // ⚠ 沒有週線 ADX 的情況：放行，不當作失敗
+                    weekOk = true;
+                }
+            }
+
+            // 先清理舊旗標
             current.golden = false;
-            current.dead = false;
-            current.buy = false;
-            current.sell = false;
-            if (current.val >= 20) {
-                if (prev.val < 20) {
-                    // ADX 剛穿越 20 時
+            current.dead   = false;
+            // 若週線濾網不通過 → 完全不打訊號（但保留 rising / week）
+            if (!weekOk) {
+                continue;
+            }
+            // === 日線 ADX 的交叉邏輯 ===
+            if (current.val >= this.threshold) {
+                if (prev.val < this.threshold) {
+                    // ADX 剛穿越 threshold
                     if (current.plusDi > current.minusDi) {
                         current.golden = true;
-                    }
-                    else if (current.minusDi > current.plusDi) {
+                    } else if (current.minusDi > current.plusDi) {
                         current.dead = true;
                     }
-                }
-                else {
+                } else {
                     // +DI 向上穿越 -DI（黃金交叉）
                     if (prev.plusDi <= prev.minusDi && current.plusDi > current.minusDi) {
                         current.golden = true;
-                        if (current.rising) {
-                            current.buy = true;
-                        }
                     }
                     // -DI 向上穿越 +DI（死亡交叉）
                     else if (prev.minusDi <= prev.plusDi && current.minusDi > current.plusDi) {
                         current.dead = true;
-                        if (current.rising) {
-                            current.sell = true;
-                        }
                     }
                 }
             }
@@ -876,5 +982,503 @@ export class ExitAlert {
         });
 
         return alerts.filter(a => a.score >= 2);
+    }
+}
+
+/**
+ * 波動性屬性分析器
+ * @param {Object} options 配置選項
+ * @param {number} [options.adxThreshold=25] ADX 趨勢強度閾值
+ * @param {number} [options.natrThreshold=2.5] NATR 波動率閾值（%）
+ * @param {number} [options.lookbackPeriod=20] 回看天數
+ */
+export class VolatilityAnalyzer {
+    constructor(adxData, atrData, options = {}) {
+        // 參數驗證
+        if (!Array.isArray(adxData) || !Array.isArray(atrData) || adxData.length !== atrData.length) {
+            throw new Error('ADX 和 ATR 數據必須是長度相同的陣列');
+        }
+
+        this.adxData = adxData;
+        this.atrData = atrData;
+
+        // 合併預設選項和使用者選項
+        this.options = {
+            adxThreshold: 25,      // 預設 ADX 閾值
+            natrThreshold: 2.5,    // 預設 NATR 閾值 (%)
+            lookbackPeriod: 20,    // 預設回看 20 天
+            ...options
+        };
+
+        // 快取分析結果
+        this._analysisCache = null;
+    }
+
+    /**
+     * 分析指定日期的波動性屬性
+     * @param {Date|string} [targetDate] 目標日期，可以是 Date 物件或日期字串（YYYY-MM-DD）
+     * @returns {Object} 包含波動性屬性和建議的物件
+     */
+    run(targetDate) {
+        const dataLength = this.adxData.length;
+
+        // 檢查數據是否足夠
+        if (dataLength === 0) {
+            return this._createInsufficientDataResult('無可用數據');
+        }
+
+        // 如果沒有指定日期，使用最近一天
+        if (!targetDate) {
+            return this._analyzeByIndex(0);
+        }
+
+        // 將目標日期轉換為標準日期字串（YYYY/MM/DD）
+        const targetDateStr = typeof targetDate === 'string'
+            ? new Date(targetDate).toLocaleDateString('zh-TW')
+            : targetDate.toLocaleDateString('zh-TW');
+
+        // 找到匹配的日期
+        for (let i = 0; i < this.adxData.length; i++) {
+            const currentDate = new Date(this.adxData[i].date);
+            if (currentDate.toLocaleDateString('zh-TW') === targetDateStr) {
+                const lookbackIndex = dataLength - 1 - i;
+                return this._analyzeByIndex(lookbackIndex);
+            }
+        }
+        return this._createInsufficientDataResult(`找不到 ${targetDateStr} 的數據`);
+    }
+
+    /**
+     * 分析指定日期的波動性屬性
+     * @param {number} [lookbackIndex=0] 回看天數索引，0 表示最近一天，1 表示前一個交易日，依此類推
+     * @returns {Object} 包含波動性屬性和建議的物件
+     */
+    _analyzeByIndex(lookbackIndex = 0) {
+        // 使用快取結果（如果可用且查詢的是最近一天）
+        if (lookbackIndex === 0 && this._analysisCache) {
+            return this._analysisCache;
+        }
+
+        const { adxThreshold, natrThreshold, lookbackPeriod } = this.options;
+        const dataLength = this.adxData.length;
+
+        // 檢查數據是否足夠
+        if (dataLength === 0) {
+            return this._createInsufficientDataResult('無可用數據');
+        }
+
+        // 計算目標索引
+        const targetIndex = dataLength - 1 - lookbackIndex;
+        if (targetIndex < 0) {
+            return this._createInsufficientDataResult(`沒有第 ${lookbackIndex} 天前的數據`);
+        }
+
+        // 確保有足夠的數據進行分析
+        const startIdx = Math.max(0, targetIndex - lookbackPeriod + 1);
+        const analysisPeriod = targetIndex - startIdx + 1;
+
+        if (analysisPeriod < 5) {
+            const availableDays = dataLength - lookbackIndex - 1;
+            return this._createInsufficientDataResult(
+                `需要至少 5 天數據進行分析，目前只有 ${analysisPeriod} 天` +
+                (availableDays > analysisPeriod ? `（總共有 ${availableDays} 天數據，但範圍不足）` : '')
+            );
+        }
+
+        // 獲取目標日數據
+        const targetAdx = this.adxData[targetIndex];
+        const targetAtr = this.atrData[targetIndex];
+
+        if (!targetAdx || !targetAtr) {
+            return this._createInsufficientDataResult('目標日數據不完整');
+        }
+
+        // 計算平均 ADX 和 NATR
+        let avgAdx = 0;
+        let avgNatr = 0;
+        let validCount = 0;
+
+        for (let i = startIdx; i <= targetIndex; i++) {
+            const adxVal = this.adxData[i]?.val;
+            const natrVal = this.atrData[i]?.natr;
+
+            if (adxVal !== undefined && natrVal !== undefined) {
+                avgAdx += adxVal;
+                avgNatr += natrVal;
+                validCount++;
+            }
+        }
+
+        if (validCount === 0) {
+            return this._createInsufficientDataResult('無有效數據點');
+        }
+
+        // 計算平均值
+        avgAdx /= validCount;
+        avgNatr /= validCount;
+
+        // 使用目標日的當前值
+        const currentAdx = targetAdx.val;
+        const currentNatr = targetAtr.natr;
+
+        // 判斷趨勢和波動性
+        const isStrongTrend = currentAdx >= adxThreshold;
+        const isHighVolatility = currentNatr >= natrThreshold;
+
+        // 決定市場狀態
+        let market, note, risk, sizing;
+
+        if (isStrongTrend && isHighVolatility) {
+            market = '趨勢明顯，波動大';
+            note = '順勢交易，使用追蹤停損';
+            risk = '中高';
+            sizing = '標準倉位';
+        } else if (isStrongTrend && !isHighVolatility) {
+            market = '趨勢明顯，波動小';
+            note = '順勢交易，可適度加碼';
+            risk = '中低';
+            sizing = '標準至加碼倉位';
+        } else if (!isStrongTrend && isHighVolatility) {
+            market = '趨勢不明，波動大';
+            note = '區間操作，嚴守停損';
+            risk = '高';
+            sizing = '減碼操作';
+        } else {
+            market = '趨勢不明，波動小';
+            note = '觀望或使用突破策略';
+            risk = '低';
+            sizing = '小倉位或觀望';
+        }
+
+        // ✅ 新增：判斷趨勢動向（增強/減弱）
+        let trendDirection = '穩定';
+        if (currentAdx > avgAdx * 1.1) {
+            trendDirection = '增強中';
+        } else if (currentAdx < avgAdx * 0.9) {
+            trendDirection = '減弱中';
+        }
+
+        // ✅ 新增：判斷波動性變化
+        let volatilityDirection = '穩定';
+        if (currentNatr > avgNatr * 1.1) {
+            volatilityDirection = '增加中';
+        } else if (currentNatr < avgNatr * 0.9) {
+            volatilityDirection = '減少中';
+        }
+
+        // 準備結果
+        const result = {
+            date: targetAdx.date.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+            lookbackIndex,
+            market,
+
+            // ✅ 修正：明確標示分類使用的數值
+            adx: {
+                current: currentAdx.scale(2),       // 用於分類
+                average: avgAdx.scale(2),           // 僅供參考
+                threshold: adxThreshold,
+                trendStrength: isStrongTrend ? '強' : '弱',
+                trendDirection,                     // 新增：趨勢動向
+                note: '分類依據：current ≥ threshold'
+            },
+
+            natr: {
+                current: currentNatr.scale(2) + '%',  // 用於分類
+                average: avgNatr.scale(2) + '%',      // 僅供參考
+                threshold: natrThreshold + '%',
+                volatility: isHighVolatility ? '高' : '低',
+                volatilityDirection,                 // 新增：波動變化
+                note: '分類依據：current ≥ threshold'
+            },
+
+            note: {
+                strategy: note,
+                risk,
+                sizing,
+                // ✅ 新增：分類說明
+                classification: this._getClassification(currentAdx, currentNatr, adxThreshold, natrThreshold)
+            },
+
+            diSignal: this._getDiSignal(targetAdx),
+
+            // ✅ 新增：趨勢狀態評估
+            trendAssessment: this._assessTrendState(currentAdx, avgAdx, currentNatr, avgNatr),
+
+            rawData: {
+                adx: targetAdx,
+                atr: targetAtr
+            }
+        };
+        // 如果是最近一天，則快取結果
+        if (lookbackIndex === 0) {
+            this._analysisCache = result;
+        }
+        return result;
+    }
+
+    // ✅ 新增輔助方法：取得分類標籤
+    _getClassification(currentAdx, currentNatr, adxThreshold, natrThreshold) {
+        if (currentAdx >= adxThreshold && currentNatr >= natrThreshold) {
+            return 'A類：強趨勢高波動';
+        } else if (currentAdx < adxThreshold && currentNatr >= natrThreshold) {
+            return 'B類：弱趨勢高波動';
+        } else if (currentAdx >= adxThreshold && currentNatr < natrThreshold) {
+            return 'C類：強趨勢低波動';
+        } else {
+            return 'D類：弱趨勢低波動';
+        }
+    }
+
+    // ✅ 新增輔助方法：評估趨勢狀態
+    _assessTrendState(currentAdx, avgAdx, currentNatr, avgNatr) {
+        const assessments = [];
+
+        // ADX 狀態評估
+        if (currentAdx > avgAdx * 1.15) {
+            assessments.push('ADX明顯高於平均，趨勢可能加速');
+        } else if (currentAdx < avgAdx * 0.85) {
+            assessments.push('ADX明顯低於平均，趨勢可能轉弱');
+        }
+
+        // NATR 狀態評估
+        if (currentNatr > avgNatr * 1.15) {
+            assessments.push('波動性明顯高於平均，需注意風險');
+        } else if (currentNatr < avgNatr * 0.85) {
+            assessments.push('波動性明顯低於平均，走勢可能趨於平穩');
+        }
+
+        // 交叉評估
+        if (currentAdx > avgAdx && currentNatr > avgNatr) {
+            assessments.push('趨勢與波動同步上升，可能進入劇烈趨勢階段');
+        } else if (currentAdx < avgAdx && currentNatr < avgNatr) {
+            assessments.push('趨勢與波動同步下降，可能進入盤整階段');
+        }
+
+        return assessments.length > 0 ? assessments : ['趨勢狀態穩定'];
+    }
+
+    // ✅ 新增：建立數據不足的結果
+    _createInsufficientDataResult(message) {
+        return {
+            date: new Date().toISOString().split('T')[0],
+            error: true,
+            message: message,
+            market: '數據不足，無法分析',
+            adx: {
+                current: 'N/A',
+                average: 'N/A',
+                threshold: this.options?.adxThreshold || 25,
+                trendStrength: '未知'
+            },
+            natr: {
+                current: 'N/A',
+                average: 'N/A',
+                threshold: (this.options?.natrThreshold || 2.5) + '%',
+                volatility: '未知'
+            },
+            note: {
+                strategy: '等待更多數據',
+                risk: '未知',
+                sizing: '觀望'
+            },
+            diSignal: '數據不足',
+            trendAssessment: ['需要更多數據進行分析']
+        };
+    }
+
+    // ✅ 新增：獲取DI信號（優化版）
+    _getDiSignal(adxData) {
+        if (!adxData || adxData.plusDi === undefined || adxData.minusDi === undefined) {
+            return 'DI數據不足';
+        }
+
+        const plusDi = adxData.plusDi;
+        const minusDi = adxData.minusDi;
+        const diff = Math.abs(plusDi - minusDi);
+        const avg = (plusDi + minusDi) / 2;
+
+        let strength = '弱';
+        if (diff > avg * 0.3) {
+            strength = '強';
+        } else if (diff > avg * 0.15) {
+            strength = '中';
+        }
+
+        if (plusDi > minusDi) {
+            return `${strength}多頭信號 ${plusDi.scale(2)} > ${minusDi.scale(2)}`;
+        } else if (minusDi > plusDi) {
+            return `${strength}空頭信號 ${minusDi.scale(2)} > ${plusDi.scale(2)}`;
+        } else {
+            return '多空平衡';
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+class Calculator {
+    static convertToWeekly(dailyData) {
+        const weekly = [];
+        let bucket = null;
+
+        for (const d of dailyData) {
+            const date = new Date(d.date);
+            const week = date.getFullYear() + "-W" + String(Calculator.getWeekNumber(date));
+
+            if (!bucket || bucket.week !== week) {
+                // 開新週
+                if (bucket) weekly.push(bucket);
+                bucket = {
+                    week,
+                    open: d.open,
+                    high: d.high,
+                    low: d.low,
+                    close: d.close,
+                    volume: d.volume,
+                    startDate: d.date, // ★ 新增：該週第一天
+                    endDate: d.date, // ★ 先暫存
+                    time: Date.parse(d.date), // ★ 用「週的最後一天時間」當 time（先暫存）
+                    raw: [d] // 可選：保留原始日資料
+                };
+            } else {
+                // 同一週內，更新高低收 & 結束日期
+                bucket.high = Math.max(bucket.high, d.high);
+                bucket.low = Math.min(bucket.low, d.low);
+                bucket.close = d.close;
+                bucket.volume += d.volume;
+                bucket.endDate = d.date; // ★ 每天更新到當前這天
+                bucket.time = Date.parse(d.date); // ★ 同步更新 time = 這週最後一天
+                bucket.raw.push(d);
+            }
+        }
+
+        if (bucket) weekly.push(bucket);
+
+        return weekly;
+    }
+
+    static getWeekNumber(date) {
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    }
+
+    static toWeeklyAdx(weekly, period = 14) {
+        const n = weekly.length;
+        const result = weekly.map(w => ({
+            ...w,
+            tr: null,
+            pdm: null,
+            ndm: null,
+            tr14: null,
+            pdm14: null,
+            ndm14: null,
+            diPlus: null,
+            diMinus: null,
+            dx: null,
+            adx: null
+        }));
+
+        for (let i = 1; i < n; i++) {
+            const prev = result[i - 1];
+            const curr = result[i];
+
+            // TR
+            const tr1 = curr.high - curr.low;
+            const tr2 = Math.abs(curr.high - prev.close);
+            const tr3 = Math.abs(curr.low - prev.close);
+            curr.tr = Math.max(tr1, tr2, tr3);
+
+            // +DM and -DM
+            const upMove = curr.high - prev.high;
+            const downMove = prev.low - curr.low;
+
+            curr.pdm = (upMove > downMove && upMove > 0) ? upMove : 0;
+            curr.ndm = (downMove > upMove && downMove > 0) ? downMove : 0;
+        }
+
+        // 初始14週平滑
+        let tr14 = 0,
+            pdm14 = 0,
+            ndm14 = 0;
+
+        for (let i = 1; i <= period; i++) {
+            tr14 += result[i].tr;
+            pdm14 += result[i].pdm;
+            ndm14 += result[i].ndm;
+        }
+
+        result[period].tr14 = tr14;
+        result[period].pdm14 = pdm14;
+        result[period].ndm14 = ndm14;
+
+        // 計算 DI、DX
+        for (let i = period; i < n; i++) {
+            const r = result[i];
+
+            if (i !== period) {
+                // Wilder smoothing
+                tr14 = tr14 - tr14 / period + r.tr;
+                pdm14 = pdm14 - pdm14 / period + r.pdm;
+                ndm14 = ndm14 - ndm14 / period + r.ndm;
+
+                r.tr14 = tr14;
+                r.pdm14 = pdm14;
+                r.ndm14 = ndm14;
+            }
+
+            // DI
+            r.diPlus = 100 * (r.pdm14 / r.tr14);
+            r.diMinus = 100 * (r.ndm14 / r.tr14);
+
+            // DX
+            r.dx = 100 * Math.abs(r.diPlus - r.diMinus) /
+                (r.diPlus + r.diMinus);
+        }
+
+        // ADX: 平滑化 DX
+        let adx = 0;
+        for (let i = period; i < period * 2; i++) {
+            adx += result[i].dx;
+        }
+
+        adx = adx / period;
+        result[period * 2 - 1].adx = adx;
+
+        for (let i = period * 2; i < n; i++) {
+            adx = ((adx * (period - 1)) + result[i].dx) / period;
+            result[i].adx = adx;
+        }
+
+        return result;
+    }
+    /**
+     * 輔助函式：計算 Wilders 平滑 (Wilders Smoothing)
+     * ADX/DMI 指標的標準平滑方法，與 EMA 類似。
+     * @param {number[]} data 原始數據陣列
+     * @param {number} period 週期
+     * @returns {number[]} 平滑後的總和 (Sum)，從第 period 天開始有值
+     */
+    static wildersSmoothing(data, period) {
+        if (data.length < period) return data.map(() => null);
+
+        const result = new Array(data.length).fill(null);
+        let sum = 0;
+        for (let i = 0; i < period; i++) {
+            sum += data[i];
+        }
+        result[period - 1] = sum;
+
+        for (let i = period; i < data.length; i++) {
+            const prevSmooth = result[i - 1];
+            if (prevSmooth === null) {
+                result[i] = data[i];
+            } else {
+                // Wilder smoothing 核心公式: PrevSum - (PrevSum / period) + CurrentValue
+                result[i] = prevSmooth - (prevSmooth / period) + data[i];
+            }
+        }
+        return result;
     }
 }
