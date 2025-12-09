@@ -172,9 +172,9 @@ class Service {
 				const users = await db.User.findAll();
 				for (let i = 0; i < users.length; i++) {
 					const user = users[i];
-					const params = user.settings.params;
-					params.userId = user.id;
+					const params = user?.settings?.params;
 					if (!params) continue;
+					params.userId = user.id;
 					console.log(`[${new Date().toLocaleString()}] 啟動 ${user.name} 股票回測任務`);
 					await this.backtest('all', params);
 				}
