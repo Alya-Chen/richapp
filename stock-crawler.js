@@ -116,12 +116,12 @@ export class Crawler {
 
 	async realtime(codes) {
 		// 先取回台灣股票資料
-		const results = await this.realtimeTw(codes.filter(c => this.country == 'tw'));
+		const results = await this.realtimeTw(codes);
 		const stocks = await db.Stock.findAll();
 		try {
 			for (const code of codes) {
 				const stock = stocks.find(s => s.code == code);
-				if (!stock || stock.country == 'tw') continue;
+				if (!stock || stock.country != 'us') continue;
 				// 只抓美股資料
 				const { data: q } = await axios.get(`${FINNHUB_V1}/quote`, {
 					params: { symbol: code, token: FINNHUB_KEY }
@@ -138,7 +138,7 @@ export class Crawler {
 					pre: q.pc,
 					volume: 0 // Finnhub quote 介面不提供即時累積成交量，需另接 API
 				});
-				await randomDelay(); // 避免過快請求
+				if (codes.length > 1) await randomDelay(); // 避免過快請求
 			}
 			console.log(`[${new Date().toLocaleString()}] 成功抓取 ${results.length} 筆即時股價資料`);
 			return results;
@@ -300,8 +300,10 @@ export class Crawler {
 		codes = codes.map(code => {
 			const stock = stocks.find(s => s.code == code);
 			if (!stock) throw new Error(`股票代碼 ${code} 不存在！`);
+			if (stock.country != 'tw') return null;
 			return stock.otc ? `otc_${code}.tw` : `tse_${code}.tw`;
-		}).join('|');
+		}).filter(code => code).join('|');
+		if (!codes) return []; // 沒有台灣股票的代碼
 		try {
 			const response = await axios.get(TWSE_REALTIME, {
 				params: {
@@ -345,7 +347,7 @@ export class Crawler {
 	}
 }
 
-async function randomDelay(min = 3000, max = 5000) {
+async function randomDelay(min = 1000, max = 2500) {
 	return new Promise(resolve =>
 		setTimeout(resolve, Math.random() * (max - min) + min)
 	);
