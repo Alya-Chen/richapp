@@ -101,7 +101,7 @@ export class Crawler {
 
 			return quotes;
 		} catch (error) {
-			db.Log.error(`抓取 ${this.stockNo} 歷史資料錯誤: ${error.message}`);
+			db.Log.error(`Stooq 抓取 ${this.stockNo} 歷史資料錯誤: ${error.message}`);
 			throw error;
 		}
 	}
@@ -121,8 +121,8 @@ export class Crawler {
 		try {
 			for (const code of codes) {
 				const stock = stocks.find(s => s.code == code);
-				if (!stock) continue;
-
+				if (!stock || stock.country == 'tw') continue;
+				// 只抓美股資料
 				const { data: q } = await axios.get(`${FINNHUB_V1}/quote`, {
 					params: { symbol: code, token: FINNHUB_KEY }
 				});
@@ -143,7 +143,7 @@ export class Crawler {
 			console.log(`[${new Date().toLocaleString()}] 成功抓取 ${results.length} 筆即時股價資料`);
 			return results;
 		} catch (error) {
-			db.Log.error(`抓取即時股價失敗: ${error.message}`);
+			db.Log.error(`Finnhub 抓取即時股價失敗: ${error.message}`);
 			throw error;
 		}
 	}
@@ -224,7 +224,7 @@ export class Crawler {
 			}
 			return result;
 		} catch (error) {
-			db.Log.error(`抓取 ${this.stockNo} 錯誤: ${error.message || '未知錯誤'}`);
+			db.Log.error(` 抓取 ${this.stockNo} 錯誤: ${error.message || '未知錯誤'}`);
 			throw error;
 		}
 	}
@@ -285,7 +285,7 @@ export class Crawler {
 			}
 			return result;
 		} catch (error) {
-			db.Log.error(`抓取 ${this.stockNo} 錯誤: ${error.message || '未知錯誤'}`);
+			db.Log.error(`TPEX 抓取 ${this.stockNo} 錯誤: ${error.message || '未知錯誤'}`);
 			throw error;
 		}
 	}
@@ -293,7 +293,7 @@ export class Crawler {
 	async realtimeTw(allCodes, start = 0, result = []) {
 		let codes = allCodes.slice(start, start + 100);
 		if (codes.length === 0) {
-			console.log(`[${new Date().toLocaleString()}] 成功抓取台灣即時股價資料`);
+			if (result.length) console.log(`[${new Date().toLocaleString()}] 成功抓取台灣即時股價資料`);
 			return result.flat();
 		}
 		const stocks = await db.Stock.findAll();
@@ -339,7 +339,7 @@ export class Crawler {
 			result.push(dailies);
 			return await this.realtimeTw(allCodes, start + 100, result);
 		} catch (error) {
-			db.Log.error(`抓取台灣即時股價資料失敗: ${error.message || '未知錯誤'}`);
+			db.Log.error(`TWSE 抓取台灣即時股價資料失敗: ${error.message || '未知錯誤'}`);
 			throw error;
 		}
 	}
