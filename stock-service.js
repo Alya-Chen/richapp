@@ -17,7 +17,6 @@ import {
 } from './static/js/macd-kdj.js';
 import { console } from 'inspector';
 
-const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const SLEEP = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 class Service {

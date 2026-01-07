@@ -1,16 +1,20 @@
 import axios from 'axios';
+import { parse } from 'csv-parse/sync';
 import * as cheerio from 'cheerio';
 import * as dateFns from 'date-fns';
 import * as dateUtils from './date-utils.js';
 import * as db from './stock-db.js';
-import yahooFinance from 'yahoo-finance2';
 
-const API_URL = 'https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY';
-const OTC_URL = 'https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock'; //code=1264&date=2025%2F04%2F01
-const REALTIME_URL = 'https://mis.twse.com.tw/stock/api/getStockInfo.jsp';
-const DIVIDEND_URL = `https://tw.stock.yahoo.com/quote/STOCK_NO/dividend`;
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
-const NUMBER = /^\d+$/;
+// --- https://finnhub.io/dashboard 設定 ---
+const FINNHUB_KEY = 'd5f04upr01qrb2hbc420d5f04upr01qrb2hbc42g'; // 建議放入環境變數
+const FINNHUB_V1 = 'https://finnhub.io/api/v1';
+const TWSE = 'https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY';
+const TPEX = 'https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock'; //code=1264&date=2025%2F04%2F01
+const TWSE_REALTIME = 'https://mis.twse.com.tw/stock/api/getStockInfo.jsp';
+const DIVIDEND = `https://tw.stock.yahoo.com/quote/STOCK_NO/dividend`;
+const HEADERS = {
+	'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+};
 
 export class Crawler {
 	constructor(stock) {
@@ -19,29 +23,15 @@ export class Crawler {
 			this.otc = stock.otc;
 			this.country = stock.country;
 		}
-		yahooFinance.suppressNotices(['yahooSurvey']);
-	}
-
-	async fetchMeta() {
-		const codes = !NUMBER.test(this.stockNo.charAt(0)) ? [this.stockNo] : [`${this.stockNo}.TW`, `${this.stockNo}.TWO`];
-		try {
-			const quotes = await yahooFinance.quote(codes);
-			return quotes.length ? quotes[0] : null;
-		} catch (error) {
-			db.Log.error(`抓取 ${this.stockNo} 錯誤: ${error.message || '未知錯誤'}`);
-			throw error;
-		}
 	}
 
 	async fetchDividendData() {
-		const url = DIVIDEND_URL.replace('STOCK_NO', (this.country == 'us') ? this.stockNo : (this.otc ? `${this.stockNo}.TWO` : `${this.stockNo}.TW`));
+		const url = DIVIDEND.replace('STOCK_NO', (this.country == 'us') ? this.stockNo : (this.otc ? `${this.stockNo}.TWO` : `${this.stockNo}.TW`));
 		try {
 			const {
 				data: html
 			} = await axios.get(url, {
-				headers: {
-					'User-Agent': USER_AGENT
-				},
+				headers: HEADERS
 			});
 
 			const $ = cheerio.load(html);
@@ -71,26 +61,47 @@ export class Crawler {
 		}
 	}
 
-	async fetchAll(period1, period2) {
-		period1 = period1 || new Date('2020-01-01');
-		period2 = period2 || new Date();
+	async fetchAll(period1 = new Date('2020-01-01'), period2 = new Date() ) {
+		if (this.country == 'tw') {
+			return this.fetchAllTw(period1);
+		}
+		const from = dateFns.format(period1, 'yyyyMMdd');
+    	const to = dateFns.format(period2, 'yyyyMMdd');
 		try {
-			const code = (this.country == 'us') ? this.stockNo : (this.otc ? `${this.stockNo}.TWO` : `${this.stockNo}.TW`);
-			const rawData = await yahooFinance.chart(code, {
-				period1,
-				period2
+			const url = `https://stooq.com/q/d/l/?s=${this.stockNo}.us&i=d&d1=${from}&d2=${to}`;
+			const { data } = await axios.get(url, {
+				responseType: 'text',
+				headers: HEADERS
 			});
-			if (!rawData || !rawData.quotes) return [];
-			// 轉換數據格式
-			const quotes = rawData.quotes.filter(d => d.open && !isNaN(d.open));
+			if (data.includes('No data')) {
+            	console.log(`${this.stockNo} 在 ${from}~${to} 區間無資料。`);
+            	return [];
+        	}
+
+			// 解析 CSV 資料
+			const records = parse(data, {
+				columns: true, // 自動將第一行作為物件的 Key (Date, Open, High...)
+				skip_empty_lines: true
+			});
+
+			const quotes = records.map(row => ({
+				date: new Date(row.Date),
+				open: parseFloat(row.Open),
+				high: parseFloat(row.High),
+				low: parseFloat(row.Low),
+				close: parseFloat(row.Close),
+				volume: parseInt(row.Volume) || 0
+			})).sort((a, b) => a.date - b.date); // 確保日期由舊到新排序
+
+			// 計算漲跌 (diff)
 			quotes.forEach((item, idx) => {
-				if (idx == 0) return;
+				if (idx === 0) return;
 				item.diff = item.close - quotes[idx - 1].close;
 			});
-			console.log(`${this.stockNo} 抓取成功共 ${quotes.length} 筆資料`);
+
 			return quotes;
 		} catch (error) {
-			db.Log.error(`抓取 ${this.stockNo} 錯誤: ${error.message || '未知錯誤'}`);
+			db.Log.error(`抓取 ${this.stockNo} 歷史資料錯誤: ${error.message}`);
 			throw error;
 		}
 	}
@@ -104,41 +115,40 @@ export class Crawler {
 	}
 
 	async realtime(codes) {
+		// 先取回台灣股票資料
+		const results = await this.realtimeTw(codes.filter(c => this.country == 'tw'));
 		const stocks = await db.Stock.findAll();
-		codes = codes.map(code => {
-			const stock = stocks.find(s => s.code == code);
-			if (!stock) throw new Error(`股票代碼 ${code} 不存在！`);
-			return (stock.country == 'us') ? code : (stock.otc ? `${code}.TWO` : `${code}.TW`);
-		});
 		try {
-			const quotes = await yahooFinance.quote(codes);
-			const preMarket = (quotes.length && quotes[0].marketState == 'PRE');
-			// 還沒有報價的資料先過濾掉
-			const dailies = quotes.filter(q => preMarket ? q.preMarketTime : q.regularMarketTime).map(q => {
-				const open = preMarket ? (q.preMarketPrice - q.preMarketChange) : q.regularMarketOpen;
-				return {
-					open,
-					code: q.symbol.replace('.TWO', '').replace('.TW', ''),
-					date: this.convertToUST(q.market, preMarket ? q.preMarketTime : q.regularMarketTime),
-					volume: preMarket ? 0 : q.regularMarketVolume,
-					high: preMarket ? Math.max(open, q.preMarketPrice) : q.regularMarketDayHigh,
-					low: preMarket ? Math.min(open, q.preMarketPrice) : q.regularMarketDayLow,
-					close: preMarket ? q.preMarketPrice : q.regularMarketPrice,
-					diff: preMarket ? q.preMarketChange : q.regularMarketChange,
-					diffRate: preMarket ? q.preMarketChangePercent : q.regularMarketChangePercent,
-					pre: q.regularMarketPreviousClose
-				};
-			});
-			console.log(`[${new Date().toLocaleString()}] 成功抓取 ${dailies.length} 筆即時股價資料`);
-			return dailies;
+			for (const code of codes) {
+				const stock = stocks.find(s => s.code == code);
+				if (!stock) continue;
+
+				const { data: q } = await axios.get(`${FINNHUB_V1}/quote`, {
+					params: { symbol: code, token: FINNHUB_KEY }
+				});
+				results.push({
+					code: code,
+					date: q.t ? new Date(q.t * 1000) : new Date(),
+					open: q.o,
+					high: q.h,
+					low: q.l,
+					close: q.c,
+					diff: q.d,
+					diffRate: q.dp,
+					pre: q.pc,
+					volume: 0 // Finnhub quote 介面不提供即時累積成交量，需另接 API
+				});
+				await randomDelay(); // 避免過快請求
+			}
+			console.log(`[${new Date().toLocaleString()}] 成功抓取 ${results.length} 筆即時股價資料`);
+			return results;
 		} catch (error) {
-			db.Log.error(`抓取即時股價資料失敗: ${error.message || '未知錯誤'}`);
+			db.Log.error(`抓取即時股價失敗: ${error.message}`);
 			throw error;
 		}
 	}
 
-	async fetchAllTw(startDate) {
-		startDate = startDate || new Date('2020-01-01');
+	async fetchAllTw(startDate = new Date('2020-01-01')) {
 		startDate.setDate(1);
 		const dates = [];
 		const today = new Date();
@@ -177,11 +187,9 @@ export class Crawler {
 			};
 
 			// 發送請求
-			const response = await axios.get(API_URL, {
+			const response = await axios.get(TWSE, {
 				params,
-				headers: {
-					'User-Agent': USER_AGENT
-				},
+				headers: HEADERS,
 				timeout: 10000
 			});
 
@@ -207,12 +215,12 @@ export class Crawler {
 				diff: parseFloat(item[7].replace('+', '').replace('X', '')),
 				transCount: parseInt(item[8].replace(/,/g, ''))
 			})).filter(d => !isNaN(d.open));
-			
+
 			if (result.data.length) {
 				result.dateRange = {
 					start: result.data[0].date,
 					end: result.data[result.data.length - 1].date
-				};				
+				};
 			}
 			return result;
 		} catch (error) {
@@ -235,11 +243,9 @@ export class Crawler {
 			};
 
 			// 發送請求
-			const response = await axios.get(OTC_URL, {
+			const response = await axios.get(TPEX, {
 				params,
-				headers: {
-					'User-Agent': USER_AGENT
-				},
+				headers: HEADERS,
 				responseType: 'blob',
 				timeout: 10000
 			});
@@ -251,7 +257,7 @@ export class Crawler {
 			if (response.data.includes('共0筆')) return result;
 			// 處理回應數據
 			const rawData = response.data.split('\r\n').slice(5);
-			//console.log(rawData); 
+			//console.log(rawData);
 			// 轉換數據格式，日 期,成交張數,成交仟元,開盤,最高,最低,收盤,漲跌,筆
 			rawData.forEach(item => {
 				item = [...item.matchAll(/"([^"]*)"/g)].map(match => {
@@ -275,7 +281,7 @@ export class Crawler {
 				result.dateRange = {
 					start: result.data[0].date,
 					end: result.data[result.data.length - 1].date
-				};				
+				};
 			}
 			return result;
 		} catch (error) {
@@ -287,7 +293,7 @@ export class Crawler {
 	async realtimeTw(allCodes, start = 0, result = []) {
 		let codes = allCodes.slice(start, start + 100);
 		if (codes.length === 0) {
-			console.log(`[${new Date().toLocaleString()}] 成功抓取即時股價資料`);
+			console.log(`[${new Date().toLocaleString()}] 成功抓取台灣即時股價資料`);
 			return result.flat();
 		}
 		const stocks = await db.Stock.findAll();
@@ -297,14 +303,12 @@ export class Crawler {
 			return stock.otc ? `otc_${code}.tw` : `tse_${code}.tw`;
 		}).join('|');
 		try {
-			const response = await axios.get(REALTIME_URL, {
+			const response = await axios.get(TWSE_REALTIME, {
 				params: {
 					ex_ch: codes,
 					_: new Date().getTime()
 				},
-				headers: {
-					'User-Agent': USER_AGENT
-				},
+				headers: HEADERS,
 				timeout: 10000
 			});
 
@@ -335,7 +339,7 @@ export class Crawler {
 			result.push(dailies);
 			return await this.realtimeTw(allCodes, start + 100, result);
 		} catch (error) {
-			db.Log.error(`抓取即時股價資料失敗: ${error.message || '未知錯誤'}`);
+			db.Log.error(`抓取台灣即時股價資料失敗: ${error.message || '未知錯誤'}`);
 			throw error;
 		}
 	}
