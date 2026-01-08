@@ -138,7 +138,7 @@ export class Crawler {
 					pre: q.pc,
 					volume: 0 // Finnhub quote 介面不提供即時累積成交量，需另接 API
 				});
-				if (codes.length > 1) await randomDelay(); // 避免過快請求
+				if (codes.length > 1) await randomDelay(1050, 1250); // 避免過快請求
 			}
 			console.log(`[${new Date().toLocaleString()}] 成功抓取 ${results.length} 筆即時股價資料`);
 			return results;
@@ -347,7 +347,7 @@ export class Crawler {
 	}
 }
 
-async function randomDelay(min = 1000, max = 2500) {
+async function randomDelay(min = 2000, max = 2500) {
 	return new Promise(resolve =>
 		setTimeout(resolve, Math.random() * (max - min) + min)
 	);
