@@ -347,7 +347,7 @@ export class Crawler {
 	}
 }
 
-async function randomDelay(min = 2000, max = 2500) {
+async function randomDelay(min = 3000, max = 4500) {
 	return new Promise(resolve =>
 		setTimeout(resolve, Math.random() * (max - min) + min)
 	);
