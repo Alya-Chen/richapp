@@ -293,7 +293,7 @@ export class Crawler {
 	async realtimeTw(allCodes, start = 0, result = []) {
 		let codes = allCodes.slice(start, start + 100);
 		if (codes.length === 0) {
-			if (result.length) console.log(`[${new Date().toLocaleString()}] 成功抓取台灣即時股價資料`);
+			if (result.length) console.log(`[${new Date().toLocaleString()}] 成功抓取台灣即時股價資料 ${result.length} 筆資料`);
 			return result.flat();
 		}
 		const stocks = await db.Stock.findAll();
