@@ -111,17 +111,17 @@ class Service {
 
 	async realtimeJob() {
 		const hour = new Date().getHours();
-		// 台：09:00-14:00，美：16:00-08:00
+		// 台：09:00-14:00，美：21:30-05:00
 		const country = (hour >= 9 && hour <= 14) ? 'tw' : 'us';
 		try {
 			const stocks = (await this.stocks()).filter(s => s.country == country);
 			const codes = stocks.map(s => s.code);
-			console.log(`[${new Date().toLocaleString()}] 啟動股票即時同步抓取任務`);
+			console.log(`[${new Date().toLocaleString()}] 啟動 ${country} 股票即時同步抓取任務`);
 			await this.realtime(codes);
 			await this.realtimeBacktest(codes);
-			console.log(`[${new Date().toLocaleString()}] 股票即時同步任務執行完成`);
+			console.log(`[${new Date().toLocaleString()}] ${country} 股票即時同步任務執行完成`);
 		} catch (error) {
-			db.Log.error(`股票即時同步任務執行失敗 ${error}`);
+			db.Log.error(`${country} 股票即時同步任務執行失敗 ${error}`);
 		}
 	}
 
@@ -145,7 +145,8 @@ class Service {
 	scheduleSync() {
 		const rule1 = new schedule.RecurrenceRule();
 		rule1.dayOfWeek = [1, 2, 3, 4, 5]; // 周一到周五
-		rule1.hour = new schedule.Range(0, 23); // 每小時執行
+		// 台：09:00-14:00，美：21:30-05:00
+		rule1.hour = [0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14, 21, 22, 23];
 		rule1.minute = new schedule.Range(0, 59, 3); // 每 3 分鐘
 		rule1.tz = 'Asia/Taipei'; // 設置時區
 		schedule.scheduleJob(rule1, this.realtimeJob.bind(this));
@@ -153,7 +154,7 @@ class Service {
 		// 配置交易日時間規則（以台灣股市為例）
 		const rule2 = new schedule.RecurrenceRule();
 		rule2.dayOfWeek = [1, 2, 3, 4, 5]; // 周一到周五
-		rule2.hour = 14; // 收盤後執行（14:10）
+		rule2.hour = [5, 14]; // 收盤後執行（05:10 美股，14:10 台股）
 		rule2.minute = 10;
 		rule2.tz = 'Asia/Taipei'; // 設置時區
 		// 初始化定時任務
