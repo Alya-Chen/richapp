@@ -487,7 +487,7 @@
 				$$.openeds = $$.openeds.sort((a, b) => Date.parse(b.trade?.entryDate || 0) - Date.parse(a.trade?.entryDate || 0));
 				service.trades({ shadow: true }, (trades) => {
 					trades.forEach(trade => {
-						if (trade.exitDate) return; // 交易已經完成
+						if (trade.exitDate && trade.remain == 0) return; // 交易已經完成
 						const stock = $$.stocks.find(s => s.code == trade.logs[0].code);
 						if (!stock) return;
 						stock.shadow = trade;
@@ -505,7 +505,7 @@
 				stock.winRate = test.winRate;
 				stock.profitRate = test.profitRate;
 				stock.expectation = test.expectation;
-				stock.trade = (stock.trades || []).find(t => t.entryDate && !t.exitDate);
+				stock.trade = (stock.trades || []).find(t => t.entryDate && t.remain);
 				if (stock.trade) {
 					$$.invest(stock);
 				}

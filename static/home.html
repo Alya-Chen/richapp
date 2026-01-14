@@ -88,7 +88,7 @@
     <span ng-bind="note.title" class=""></span>
   </div>
   <div class="list-row hover:bg-base-100" ng-repeat="log in logs">
-    <span ng-bind="log.date | date:'MM/dd'" class="font-date text-xl text-info"></span>
+    <span ng-bind="log.date | date:'MM/dd HH:mm'" class="font-date text-xl text-info"></span>
     <span ng-bind="log.msg"></span>
   </div>
 </div>

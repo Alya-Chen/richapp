@@ -185,11 +185,13 @@ Stock.trades = async function(where) {
 		if (t.act == '買入') {
 			trade.entryDate = t.date;
 			trade.ma = t.ma;
+			trade.remain = t.amount;
 			result.push(trade);
 		}
 		if (t.act == '賣出') {
 			trade = result.findLast(t => !t.exitDate);
 			trade.exitDate = t.date;
+			trade.remain -= t.amount;
 		}
 		trade.logs.push(t.toJSON());
 	});
