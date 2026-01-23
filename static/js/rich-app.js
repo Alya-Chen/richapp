@@ -680,7 +680,7 @@
 				$$.chart.get().xAxis[0].addPlotBand({
 					from: entryTime,
 					to: exitTime,
-					color: '#ffe6e6',
+					color: '#ffe6e699',
 					id: 'trade-band-' + entryTime,
 				});
 			};
@@ -691,7 +691,7 @@
 					$$.chart.get().xAxis[0].addPlotBand({
 						from: entryTime,
 						to: exitTime,
-						color: '#ffe6e6',
+						color: '#ffe6e699',
 						id: 'trade-band-' + entryTime,
 					});
 				});
