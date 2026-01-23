@@ -221,26 +221,20 @@ export class BullTigerEntry {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-export class RsiTigerExit {
-	static name = 'RSI＋金唬男均線出場場策略';
+export class RsiHotExit {
+	static name = 'RSI 過熱出場策略';
 	static enabled = true;
 	constructor(data, params) {
 		this.data = data;
 		this.params = params;
-		this.tigerExit = new TigerExit(data, params);
 		this.rsi = RSI_CACHE.get(params.code, data);
 	}
 
 	// 平倉條件檢查
-	checkExit(day, index, position) {
-		//const diffRate = (day.close - position.entryPrice) / position.entryPrice;
-		//if (diffRate <= -0.05) return { reason: `${toFixed(diffRate * 100)}％ 止損出場` }
+	checkExit(day) {
 		const time = Date.parse(day.date);
 		const rsiExit = this.rsi.find(r => r && r.time == time && r.dead);
-		if (rsiExit) {
-			return { reason: `RSI 過熱出場：${rsiExit.rsi.scale()}` }
-		}
-		return this.tigerExit.checkExit(day, index, position);
+		return rsiExit ? { reason: `RSI 過熱出場：${rsiExit.rsi.scale()}` } : null;
 	}
 }
 ///////////////////////////////////////////////////////////////////////////////
