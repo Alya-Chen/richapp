@@ -78,6 +78,12 @@
 		}
 		trades(params, callback) {
 			this.$http.get('/trades', { params }).then((res) => {
+				res.data.forEach(t => {
+					const stock = this.stocks.find(s => s.code == t.logs[0].code);
+					t.code = stock.code;
+					t.name = stock.name;
+				});
+				res.data.sort((a, b) => a.entryDate.localeCompare(b.entryDate));
 				if (callback) callback(res.data);
 			});
 		}
@@ -104,10 +110,10 @@
 		}
 		stocks(callback) {
 			this.$http.get('/stocks').then((res) => {
-				const stocks = res.data;
-				stocks.forEach(stock => this.backtest(stock));
-				if (callback) callback(stocks);
-				this.$timeout(() => { this.$root.$broadcast('stocksLoaded', stocks) }, 175);
+				this.stocks = res.data;
+				this.stocks.forEach(stock => this.backtest(stock));
+				if (callback) callback(this.stocks);
+				this.$timeout(() => { this.$root.$broadcast('stocksLoaded', this.stocks) }, 175);
 			});
 		}
 		users(callback, userId) {
@@ -469,6 +475,33 @@
 					}
 				});
 			};
+			$$.showTrades = function(shadow) {
+				$$.trades = [];
+				$$.trades.netProfit = 0;
+				$$.trades.totalDividend = 0;
+				const calTrade = function(stock, dailies, trade) {
+					const invest = new AdxInvest(dailies, trade.ma).start(trade);
+					$$.trades.push({ ...stock, ...invest });
+					$$.trades.netProfit += invest.netProfit;
+					$$.trades.netProfitRate = $$.trades.netProfit / $$.invested.totalCapital;
+				}
+				service.trades({ shadow }, (trades) => {
+					trades.forEach(trade => {
+						const stock = { code: trade.code, name: trade.name };
+						if (trade.type == 'dividend') {
+							$$.trades.totalDividend += trade.payment;
+							return $$.trades.push({ ...stock, ...trade });
+						}
+						if (!trade.exitDate) return service.dailies(stock, (dailies) => calTrade(stock, dailies, trade));
+						calTrade(stock, [], trade);
+					});
+				});
+				$.blockUI({
+					message: $('#trades-block'),
+					onOverlayClick: $.unblockUI,
+					css: { width: '70%', height: '60%', left: '15%', top: '20%' }
+				});
+			};
 			$$.showStareds = function(user) {
 				const stareds = (user.settings || {
 					stared: []
@@ -518,7 +551,7 @@
 				if (stock.trade && stock.trade.status == 'open' && !stocks.find(s => s.code == test.code)) $$.openeds.push(stock);
 				if (stock.trade && stock.trade.exitDate) {
 					stock.trade.exitDate = new Date(stock.trade.exitDate);
-					stock.trade.rsiHot = stock.trade.exitReason.includes('過熱');
+					stock.trade.rsiHot = stock.trade.exitReason?.includes('過熱');
 					if (!stocks.find(s => s.code == test.code) && stock.trade.exitDate.isToday()) $$.todays.push(stock);
 					if (!stocks.find(s => s.code == test.code) && !stock.trade.exitDate.isToday() && stock.trade.exitDate.isAfter(twoWeeksAgo)) $$.closeds.push(stock);
 				}

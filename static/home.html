@@ -24,11 +24,11 @@
         class="text-error"></span>％</span>
   </div>
 </div>
-<div class="stats cursor-pointer flex w-[85%] mx-auto max-w-6xl" ng-click="showTrades()">
+<div class="stats cursor-pointer flex w-[85%] mx-auto max-w-6xl">
   <div class="stat">
     <div class="stat-title">角色</div>
-    <div class="stat-value text-rich-master">Master</div>
-    <div class="stat-value">實際</div>
+    <div class="stat-value text-rich-master" ng-click="showTrades(true)">Master</div>
+    <div class="stat-value" ng-click="showTrades()">實際</div>
   </div>
   <div class="stat">
     <div class="stat-figure text-secondary">

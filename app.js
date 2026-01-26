@@ -122,7 +122,6 @@ app.post('/stock/:code/dividend', async (req, res) => {
 		}
 	}
 	else {
-		trade.id = new Date().getTime();
 		trade.type = 'dividend';
 		stock.trades.push(trade);
 	}
