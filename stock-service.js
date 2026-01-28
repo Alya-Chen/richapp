@@ -69,7 +69,6 @@ class Service {
 		const trades = await this.trades({ userId: 1, shadow: false });
 		if (!trades.length) return TOTAL_CAPITAL;
 		const profit = trades.reduce((total, trade) => {
-			if (trade.exitDate) console.log('%s,%s,%s,%s', trade.exitDate, trade.code, trade.profit, trade.tax.scale(2));
 			return total + (trade.exitDate ? trade.profit : 0);
 		}, 0);
 		this.totalCapital = (TOTAL_CAPITAL + profit).scale(0);
@@ -275,7 +274,6 @@ class Service {
 		// 若是回測，用 entryDate 的前一年資料來 找最佳 MA
 		const entryDate = simulating ? dateFns.addYears(params.entryDate, -1) : params.entryDate;
 		const exitDate = simulating ? new Date(params.entryDate) : params.exitDate;
-		const paramsForBestMa = Object.assign({}, params, { entryDate, exitDate });
 		if (params.usingTigerMa && stock.tigerMa) {
 			const ma = new String(stock.tigerMa).split(',')[0].split('/')[0];
 			if (ma) {
@@ -284,8 +282,12 @@ class Service {
 				return new TradingSystem(dailies, params).backtest()
 			}
 		}
+		// 若有進出場策略標注 maSensitive，則 MA 16-46 進行回測找出最佳 MA
+		const maSensitive = params.entryStrategy.maSensitive || params.exitStrategy.find(strategy => strategy.maSensitive);
+		const maxMa = maSensitive ? 30 : 0;
+		const paramsForBestMa = Object.assign({}, params, { entryDate, exitDate });
 		const results = [];
-		[...Array(30).keys()].map(i => i + 16).forEach(ma => {
+		[...Array(maxMa).keys()].map(i => i + 16).forEach(ma => {
 			paramsForBestMa.ma = ma;
 			paramsForBestMa.code = stock.code;
 			results.push(new TradingSystem(dailies, paramsForBestMa).backtest());
@@ -294,7 +296,7 @@ class Service {
 			b.profit - a.profit
 		)[0];
 		params.code = stock.code;
-		params.ma = best.ma;
+		params.ma = best?.ma || 20; // 沒有找到最佳 MA，則設為 20（月線）
 		return simulating ? new TradingSystem(dailies, params).backtest() : best;
 	}
 

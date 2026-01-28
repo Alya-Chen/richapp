@@ -66,7 +66,7 @@ export class TradingSystem {
 		const entryStrategy = new this.params.entryStrategy(this.data, this.params);
 		const exitStrategy = this.params.exitStrategy.map(strategy => new strategy(this.data, this.params));
 		const entryTime = Date.parse(this.params.entryDate);
-		const exitTime = Date.parse(this.params.exitDate || new Date()) + (8 * 3600 * 1000); // EIGHT_HOURS		
+		const exitTime = Date.parse(this.params.exitDate || new Date()) + (8 * 3600 * 1000); // EIGHT_HOURS
 		let position = {
 			status: 'closed'
 		};

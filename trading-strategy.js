@@ -33,6 +33,7 @@ const ADX_CACHE = new Cache(Adx);
 export class TwoDaysUpEntry {
 	static name = '連兩日走高進場策略';
 	static enabled = true;
+	static maSensitive = true;
 	constructor(data, params) {
 		this.data = data;
 		this.params = params;
@@ -66,45 +67,46 @@ export class DynamicStopExit {
 	// 平倉條件檢查
 	checkExit(day, index, position) {
 		const {
-			stopLossPct,   // 止損小於入場價格的 3%
-			takeProfitPct, // 固定止盈大於入場價格的 10%
-			dynamicStopPct, // 動態止損小於曾經最高價格的 5%
-			partialProfitPct, // 部分止盈大於入場價格的 5%
-			maxHoldPeriod // 最大持倉周期 30 天
+			stopLossPct,   // 固定止損小於入場價格的如：3%
+			takeProfitPct, // 固定止盈大於入場價格的如：10%
+			dynamicStopPct, // 動態止損小於曾經最高價格的如：5%
+			partialProfitPct, // 部分止盈大於入場價格的如：5%
+			partialProfitRatio, // 部分止盈的比例如：0.5
+			maxHoldPeriod // 最大持倉周期如：30 天
 		} = this.params;
 
 		const exitConditions = [];
-
 		// 固定止損
 		if (stopLossPct) {
 			exitConditions.push({
-				reason: `止損觸發：${day.close.scale()} 小於入場價格 ${position.entryPrice.scale()} 的 ${(stopLossPct * 100).scale()}%`,
+				reason: `固定止損：${day.close.scale()} 小於入場 ${position.entryPrice.scale()} 的 ${stopLossPct * 100}%`,
 				condition: day.close <= position.entryPrice * (1 - stopLossPct)
+			});
+		}
+		// 部分止盈
+		if (partialProfitPct && !position.partialExits) {
+			const profit = day.close - position.entryPrice;
+			const profitPct = profit / position.entryPrice;
+			exitConditions.push({
+				ratio: partialProfitRatio,
+				reason: `部分止盈 ${partialProfitRatio * 100}%：每股獲利 ${profit.scale(2)} 元（${(profitPct * 100).scale(2)}%）`,
+				condition: day.close >= position.entryPrice * (1 + partialProfitPct),
+				status: `closed-${(partialProfitRatio * 100).scale()}%`
 			});
 		}
 		// 固定止盈
 		if (takeProfitPct) {
-			if (partialProfitPct && !position.tookProfit && day.close >= position.entryPrice * (1 + partialProfitPct)) {
-				position.tookProfit = true;
-				exitConditions.push({
-					reason: `部分止盈觸發：${day.close.scale()} 大於入場價格 ${position.entryPrice.scale()} 的 ${(partialProfitPct * 100).scale()}%`,
-					condition: day.close >= position.entryPrice * (1 + partialProfitPct),
-					status: `closed-${(partialProfitPct * 100).scale()}%`
-				});
-			}
-			else {
-				exitConditions.push({
-					reason: `止盈觸發：${day.close.scale()} 大於入場價格 ${position.entryPrice.scale()} 的 ${(takeProfitPct * 100).scale()}%`,
-					condition: day.close >= position.entryPrice * (1 + takeProfitPct),
-					status: 'closed'
-				});
-			}
+			exitConditions.push({
+				reason: `固定止盈：${day.close.scale()} 大於入場 ${position.entryPrice.scale()} 的 ${takeProfitPct * 100}%`,
+				condition: day.close >= position.entryPrice * (1 + takeProfitPct),
+				status: 'closed'
+			});
 		}
 		// 動態止損
 		if (dynamicStopPct) {
 			const dynamicStop = this.getDynamicStop(day);
 			exitConditions.push({
-				reason: `止損觸發：${day.close.scale()} 小於曾經最高價格 ${dynamicStop.scale()} 的 ${(dynamicStopPct * 100).scale()}%`,
+				reason: `動態止損：${day.close.scale()} 小於最高價的 ${(dynamicStopPct * 100).scale()}%`,
 				condition: day.close <= dynamicStop
 			});
 		}
@@ -135,6 +137,7 @@ export class DynamicStopExit {
 export class TigerEntry {
 	static name = '金唬男均線突破進場策略';
 	static enabled = true;
+	static maSensitive = true;
 	constructor(data, params) {
 		this.data = data;
 		this.params = params;
@@ -178,6 +181,7 @@ export class TigerEntry {
 export class TigerExit {
 	static name = '金唬男均線出場場策略';
 	static enabled = true;
+	static maSensitive = true;
 	constructor(data, params) {
 		this.data = data;
 		this.params = params;
@@ -202,6 +206,7 @@ export class TigerExit {
 export class BullTigerEntry {
 	static name = '牛市金唬男均線突破進場策略';
 	static enabled = true;
+	static maSensitive = true;
 	constructor(data, params) {
 		this.data = data || [];
 		this.params = params;
@@ -526,6 +531,7 @@ export class ObvMacdEntryExit {
 export class BBEntryExit {
 	static name = '布林帶策略';
 	static enabled = true;
+	static maSensitive = true;
 	constructor(data, params = {}) {
 		this.data = data || [];
 		this.params = Object.assign({
@@ -759,36 +765,6 @@ export class BBEntryExit {
 				};
 			}
 		}
-		return null;
-	}
-}
-
-///////////////////////////////////////////////////////////////////////////////
-export class ProfitFirstExit {
-	static name = '獲利優先出場策略';
-	static enabled = true;
-	constructor(data, params) {
-		this.data = data;
-		this.params = params;
-		this.takeProfitRatio = params.takeProfitRatio || 0.5; // 資金出場比例
-		this.takeProfitRate = params.takeProfitRate || 0.05; // 資金出場停利率
-		this.stopLossRate = params.stopLossRate || 0.05; // 資金出場停損率
-	}
-
-	checkExit(day, _, position) {
-		if (position.status == 'closed') return null;
-		const profit = day.close - position.entryPrice;
-		const profitRate = profit / position.entryPrice;
-		// 尚未停利，且已獲利 takeProfitRate% 以上
-		if (!position.partialExits && profitRate >= this.takeProfitRate) return {
-			ratio: 0.5,
-			reason: `出清 ${this.takeProfitRatio * 100}%：已獲利 ${profit.scale(2)}`,
-			status: `take-profit-${this.takeProfitRatio * 100}%`
-		};
-		if (profitRate <= -this.stopLossRate) return {
-			reason: `出清：跌 ${(profitRate * 100).scale(2)}% 超過停損點 ${this.stopLossRate * 100}%`,
-			status: 'closed'
-		};
 		return null;
 	}
 }

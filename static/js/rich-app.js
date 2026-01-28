@@ -882,7 +882,7 @@
 							event.entryPrice = pre.entryPrice;
 							event.exitPrice = event.price;
 							event.duration = (event.exitDate - pre.entryDate) / ONE_DAY;
-							event.profitRate = (event.exitPrice - event.entryPrice) / event.entryPrice;
+							//event.profitRate = (event.exitPrice - event.entryPrice) / event.entryPrice;
 							event.exitReason = event.reason.replace('\n', '<br/>');
 						}
 					});
@@ -896,11 +896,14 @@
 			$$.open = function(event) {
 				window.open(`/stock/${event.code}/${event.ma}`, `_stock/${event.code}/${event.ma}`);
 			};
-			$$.$watchGroup(['params.takeProfitPct', 'params.stopLossPct', 'params.dynamicStopPct'], (data) => {
+			$$.$watchGroup(['params.takeProfitPct', 'params.stopLossPct', 'params.dynamicStopPct', 'params.partialProfitPct', 'params.partialProfitRatio', 'params.maxHoldPeriod'], (data) => {
 				if (!data.find(d => d)) return;
 				$$.takeProfitPct = ($$.params.takeProfitPct * 100).toFixed() + '%';
 				$$.stopLossPct = ($$.params.stopLossPct * 100).toFixed() + '%';
 				$$.dynamicStopPct = ($$.params.dynamicStopPct * 100).toFixed() + '%';
+				$$.partialProfitPct = ($$.params.partialProfitPct * 100).toFixed() + '%';
+				$$.partialProfitRatio = ($$.params.partialProfitRatio * 100).toFixed() + '%';
+				$$.maxHoldPeriod = ($$.params.maxHoldPeriod).toFixed() + ' 天';
 			});
 			$$.$watch('maCrossChecked', (checked) => {
 				if (!checked) return;
@@ -932,9 +935,12 @@
 					$$.params.exitStrategy.forEach(strategy => {
 						$$.exitStrategies.find(s => s.key == strategy).checked = true;
 					});
-					$$.params.takeProfitPct = $$.params.takeProfitPct || 0.05;
-					$$.params.stopLossPct = $$.params.stopLossPct || 0.03;
+					$$.params.takeProfitPct = $$.params.takeProfitPct || 0.1;
+					$$.params.stopLossPct = $$.params.stopLossPct || 0.05;
 					$$.params.dynamicStopPct = $$.params.dynamicStopPct || 0;
+					$$.params.partialProfitPct = $$.params.partialProfitPct || 0;
+					$$.params.partialProfitRatio = $$.params.partialProfitRatio || 0;
+					$$.params.maxHoldPeriod = $$.params.maxHoldPeriod || 0;
 					$$.strategyChange();
 				});
 			});

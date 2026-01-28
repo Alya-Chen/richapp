@@ -59,14 +59,18 @@
           <input type="checkbox" ng-model="params.reentry" class="checkbox" />重新入場
         </div>
         <div class="ml-4" ng-if="dynamicExitChecked">
-          止損百分比（<span ng-bind="stopLossPct"></span>）：
+          止損出清（<span ng-bind="stopLossPct"></span>）：
           <input type="number" ng-model="params.stopLossPct" step="0.01" />
-          止盈百分比（<span ng-bind="takeProfitPct"></span>）：
+          止盈出清（<span ng-bind="takeProfitPct"></span>）：
           <input type="number" ng-model="params.takeProfitPct" step="0.01" />
-          <!--
-          動態止損百分比（<span ng-bind="dynamicStopPct"></span>）：
+          最高價回撤出清（<span ng-bind="dynamicStopPct"></span>）：
           <input type="number" ng-model="params.dynamicStopPct" step="0.01" />
-          -->
+          <br/>部分止盈（<span ng-bind="partialProfitPct"></span>）：
+          <input type="number" ng-model="params.partialProfitPct" step="0.01" />
+          部分止盈比例（<span ng-bind="partialProfitRatio"></span>）：
+          <input type="number" ng-model="params.partialProfitRatio" step="0.1" />
+          最大持倉天數（<span ng-bind="maxHoldPeriod"></span>）：
+          <input type="number" ng-model="params.maxHoldPeriod" step="5" />
         </div>
         <div class="ml-4" ng-if="maCrossChecked">
           短線：
@@ -258,10 +262,10 @@
         <div
           class="w-0 h-0  border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[10px] border-l-primary">
         </div>
-        🧧 <span class="font-price text-4xl" ng-bind="event.profit"
+        🧧 <span class="font-price text-4xl" ng-bind="event.profit | number"
           ng-class="{'text-rich-green': event.profit < 0, 'text-rich-red': event.profit > 0}"></span>
         <span class="font-pct" ng-bind="event.profitRate | pct"></span>
-        (<span class="font-price text-4xl" ng-bind="-event.tax.scale()" class="text-rich-green"></span>)
+        （<span class="font-price text-4xl" ng-bind="-event.tax.scale() | number" class="text-rich-green"></span> 稅）
       </div>
     </div>
     <div ng-if="event.invest" class="border-l-2 border-primary">
@@ -269,7 +273,7 @@
         <div
           class="w-0 h-0  border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[10px] border-l-primary">
         </div>
-        🤑 <span class="font-price text-4xl" ng-bind="event.invest.profit"
+        🤑 <span class="font-price text-4xl" ng-bind="event.invest.profit | number"
           ng-class="{'text-rich-green': event.invest.profit < 0, 'text-rich-red': event.invest.profit > 0}"></span>
         <span ng-if="event.invest.profit != 0" class="font-pct" ng-bind="event.invest.profitRate | pct"></span>
       </div>

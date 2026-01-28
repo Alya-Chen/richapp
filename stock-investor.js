@@ -93,8 +93,8 @@ class Investor {
 					invested.profit += trade.profit;
 					trades.find(t => t.code == trade.code).status = 'done';
 					const reason = trade.exitReason + (trade.reentry ? '（返場）' : '');
-					csv.push(`${trade.code}	${trade.name}	${trade.ma}	${trade.entryDate.toLocaleDateString()}	${trade.entryPrice.scale(2)}	${trade.amount}	${trade.entryRemain.scale()}	${trade.exitDate.toLocaleDateString()}	${trade.exitPrice.scale()}	${trade.profit.scale()}	${trade.tax.scale()}	${invested.profit.scale()}	${invested.balance.scale()}	${reason}`);
-					data.events.push({ type: 'sell', date: trade.exitDate, code: trade.code, name: trade.name, ma: trade.ma, price: trade.exitPrice, amount: trade.amount, profit: trade.profit, tax: trade.tax, remainMoney: invested.balance, reason });
+					csv.push(`${trade.code}	${trade.name}	${trade.ma}	${trade.entryDate.toLocaleDateString()}	${trade.entryPrice.scale(2)}	${trade.amount}	${trade.entryRemain.scale()}	${trade.exitDate.toLocaleDateString()}	${trade.exitPrice.scale()}	${trade.profit.scale()}	${trade.tax.scale()}	${invested.profit.scale()}	${trade.profitRate.scale(2)}	${invested.balance.scale()}	${reason}`);
+					data.events.push({ type: 'sell', date: trade.exitDate, code: trade.code, name: trade.name, ma: trade.ma, price: trade.exitPrice, amount: trade.amount, profit: trade.profit, profitRate: trade.profitRate, tax: trade.tax, remainMoney: invested.balance, reason });
 					runningTests = runningTests.filter(t => t.code != trade.code);
 					invested.maxDrawdown = this.calculateMDD(invested, trades);
 				}
