@@ -144,6 +144,7 @@ export class Crawler {
 			return results;
 		} catch (error) {
 			db.Log.error(`Finnhub 抓取即時股價失敗: ${error.message}`);
+			await randomDelay(1500, 2500); // 冷卻更久
 			throw error;
 		}
 	}

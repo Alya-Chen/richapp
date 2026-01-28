@@ -183,15 +183,22 @@ Stock.trades = async function(where) {
 	trades.forEach(t => {
 		let trade = { logs: [] };
 		if (t.act == '買入') {
+			trade.code = t.code;
 			trade.entryDate = t.date;
+			trade.entryPrice = t.price;
 			trade.ma = t.ma;
 			trade.remain = t.amount;
+			trade.tax = t.tax || 0;
 			result.push(trade);
 		}
 		if (t.act == '賣出') {
 			trade = result.findLast(t => !t.exitDate);
 			trade.exitDate = t.date;
+			trade.exitPrice = t.price;
 			trade.remain -= t.amount;
+			trade.tax += t.tax || 0;
+			trade.profit = (t.amount * (trade.exitPrice - trade.entryPrice));
+			trade.profit = (trade.profit - trade.tax).scale(2);
 		}
 		trade.logs.push(t.toJSON());
 	});

@@ -764,7 +764,34 @@ export class BBEntryExit {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+export class ProfitFirstExit {
+	static name = '獲利優先出場策略';
+	static enabled = true;
+	constructor(data, params) {
+		this.data = data;
+		this.params = params;
+		this.takeProfitRatio = params.takeProfitRatio || 0.5; // 資金出場比例
+		this.takeProfitRate = params.takeProfitRate || 0.05; // 資金出場停利率
+		this.stopLossRate = params.stopLossRate || 0.05; // 資金出場停損率
+	}
 
+	checkExit(day, _, position) {
+		if (position.status == 'closed') return null;
+		const profit = day.close - position.entryPrice;
+		const profitRate = profit / position.entryPrice;
+		// 尚未停利，且已獲利 takeProfitRate% 以上
+		if (!position.partialExits && profitRate >= this.takeProfitRate) return {
+			ratio: 0.5,
+			reason: `出清 ${this.takeProfitRatio * 100}%：已獲利 ${profit.scale(2)}`,
+			status: `take-profit-${this.takeProfitRatio * 100}%`
+		};
+		if (profitRate <= -this.stopLossRate) return {
+			reason: `出清：跌 ${(profitRate * 100).scale(2)}% 超過停損點 ${this.stopLossRate * 100}%`,
+			status: 'closed'
+		};
+		return null;
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // 比例法則（適合慢牛市場）分批進場：資金分為 25%, 40%, 35%

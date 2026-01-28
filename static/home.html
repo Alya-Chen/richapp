@@ -37,9 +37,9 @@
       </svg>
     </div>
     <div class="stat-title">總資金</div>
-    <div class="stat-value text-rich-master"><span class="font-price" ng-bind="invested.totalCapital | number"></span>
+    <div class="stat-value text-rich-master"><span class="font-price" ng-bind="invested.totalCapital | number:0"></span>
     </div>
-    <div class="stat-value"><span class="font-price" ng-bind="invested.totalCapital | number"></span></div>
+    <div class="stat-value"><span class="font-price" ng-bind="invested.totalCapital | number:0"></span></div>
   </div>
   <div class="stat">
     <div class="stat-figure text-secondary">
@@ -48,7 +48,7 @@
       </svg>
     </div>
     <div class="stat-title">目前投資</div>
-    <div class="stat-value text-rich-master"><span class="font-price" ng-bind="shadowed.cost | number"></span></div>
+    <div class="stat-value text-rich-master"><span class="font-price" ng-bind="shadowed.cost | number:0"></span></div>
     <div class="stat-value"><span class="font-price" ng-bind="invested.cost | number"></span></div>
   </div>
   <div class="stat">
@@ -59,9 +59,9 @@
     </div>
     <div class="stat-title">剩餘資金</div>
     <div class="stat-value text-rich-master"><span class="font-price"
-        ng-bind="(invested.totalCapital - shadowed.cost) | number"></span>
+        ng-bind="(invested.totalCapital - shadowed.cost) | number:0"></span>
     </div>
-    <div class="stat-value"><span class="font-price" ng-bind="(invested.totalCapital - invested.cost) | number"></span>
+    <div class="stat-value"><span class="font-price" ng-bind="(invested.totalCapital - invested.cost) | number:0"></span>
     </div>
   </div>
   <div class="stat">

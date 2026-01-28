@@ -2,6 +2,7 @@ import express from 'express';
 import session from 'express-session';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 import { writeFileSync } from 'fs';
 import {
 	stockService
@@ -17,12 +18,13 @@ const __dirname = path.dirname(__filename);
 const pidFile = path.join(__dirname, 'app.pid');
 writeFileSync(pidFile, process.pid.toString());
 
-stockService.scheduleSync();
+// 開發環境不啟動同步任務
+if (!existsSync(path.join(__dirname, 'dev'))) {
+	stockService.scheduleSync();
+}
 
 const app = express();
 const port = 5001;
-// 總資產
-const TOTAL_CAPITAL = 508528; // 617281
 
 app.set('trust proxy', 1) // trust first proxy
 app.use(session({
@@ -54,7 +56,8 @@ app.get('/users{/:userId}', async (req, res) => {
 	const userId = parseInt(req.params.userId || req.session.userId || 1);
 	req.session.userId = userId;
 	const user = users.find(u => u.id == userId);
-  	res.json({ users, user, totalCapital: TOTAL_CAPITAL });
+	const totalCapital = await stockService.getTotalCapital();
+  	res.json({ users, user, totalCapital });
 });
 
 app.get('/stocks', async (req, res) => {

@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import schedule from 'node-schedule';
 import * as fs from 'fs';
 import * as dateFns from 'date-fns';
@@ -18,10 +17,12 @@ import {
 import { console } from 'inspector';
 
 const SLEEP = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const TOTAL_CAPITAL = 508528; // 617281
 
 class Service {
 	constructor() {
 		this.inited = false;
+		this.totalCapital = 0;
 	}
 
 	static async create() {
@@ -61,6 +62,18 @@ class Service {
 			}
 		}
 		return results.length === 1 ? results[0] : results;
+	}
+
+	async getTotalCapital() {
+		if (this.totalCapital) return this.totalCapital;
+		const trades = await this.trades({ userId: 1, shadow: false });
+		if (!trades.length) return TOTAL_CAPITAL;
+		const profit = trades.reduce((total, trade) => {
+			if (trade.exitDate) console.log('%s,%s,%s,%s', trade.exitDate, trade.code, trade.profit, trade.tax.scale(2));
+			return total + (trade.exitDate ? trade.profit : 0);
+		}, 0);
+		this.totalCapital = (TOTAL_CAPITAL + profit).scale(0);
+		return this.totalCapital;
 	}
 
 	async users() {
