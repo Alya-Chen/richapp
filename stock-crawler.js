@@ -167,17 +167,47 @@ class YahooCrawler extends Crawler {
         return results;
     }
 
-    parseChartData(data) {
-        const result = data.chart?.result?.[0];
-        if (!result) return [];
-        const { timestamp, indicators } = result;
-        const quote = indicators.quote[0];
-        return timestamp.map((ts, i) => ({
-            date: new Date(ts * 1000),
-            open: quote.open[i], high: quote.high[i], low: quote.low[i],
-            close: quote.close[i], volume: quote.volume[i] || 0
-        })).filter(q => q.close != null);
-    }
+	parseChartData(data) {
+		const result = data.chart?.result?.[0];
+		if (!result) return [];
+
+		const { timestamp, indicators, meta } = result;
+		const quote = indicators.quote[0];
+
+		// 1. 初步整理：將陣列轉為物件，並過濾掉無效資料 (null)
+		// Yahoo 有時會在非交易時段回傳 timestamp 但數值為 null
+		const quotes = timestamp.map((ts, i) => ({
+			date: new Date(ts * 1000),
+			open: quote.open[i],
+			high: quote.high[i],
+			low: quote.low[i],
+			close: quote.close[i],
+			volume: quote.volume[i] || 0
+		})).filter(item => item.close != null && item.open != null);
+
+		// 2. 計算 diff (漲跌) 與 diffRate (漲跌幅)
+		// 初始基準：使用 meta 裡的 chartPreviousClose (這段區間的前一日收盤價)
+		let previousClose = meta.chartPreviousClose;
+		quotes.forEach((item) => {
+			// 只有當我們有「前一日收盤價」時才能算漲跌
+			if (previousClose != null) {
+				// 計算漲跌 (今日收盤 - 昨日收盤)
+				const diffVal = item.close - previousClose;
+				// 計算漲跌幅 %
+				const diffRateVal = (diffVal / previousClose) * 100;
+				// 處理浮點數精度問題 (例如 0.1 + 0.2 = 0.300000004)
+				item.diff = parseFloat(diffVal.toFixed(2));
+				item.diffRate = parseFloat(diffRateVal.toFixed(2));
+			} else {
+				item.diff = 0;
+				item.diffRate = 0;
+			}
+			// 重要：將「今日收盤」更新為「明日的昨日收盤」，供下一次迴圈使用
+			previousClose = item.close;
+		});
+
+		return quotes;
+	}
 }
 
 /**
