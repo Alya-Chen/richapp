@@ -111,7 +111,7 @@ class Service {
 			//if (stock.id < 264) continue;
 			if (code && stock.code != code) continue;
 			const last = forced ? null : await db.StockDaily.last(stock.code);
-			const result = await nCrawler.create(stock).fetchAll(last ? new Date(last.date) : null);
+			const result = await Crawler.create(stock).fetchAll(last ? new Date(last.date) : null);
 			for (let i = 0; i < result.length; i++) {
 				const daily = result[i];
 				daily.code = stock.code;
