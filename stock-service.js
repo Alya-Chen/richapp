@@ -89,7 +89,7 @@ class Service {
 	}
 
 	async realtime(codes) {
-		const dailies = await new Crawler().realtime(codes);
+		const dailies = await Crawler.create().realtime(codes);
 		const today = new Date();
 		for (let i = 0; i < dailies.length; i++) {
 			const daily = dailies[i];
@@ -111,7 +111,7 @@ class Service {
 			//if (stock.id < 264) continue;
 			if (code && stock.code != code) continue;
 			const last = forced ? null : await db.StockDaily.last(stock.code);
-			const result = await new Crawler(stock).fetchAll(last ? new Date(last.date) : null);
+			const result = await nCrawler.create(stock).fetchAll(last ? new Date(last.date) : null);
 			for (let i = 0; i < result.length; i++) {
 				const daily = result[i];
 				daily.code = stock.code;
@@ -360,7 +360,7 @@ class Service {
 	}
 
 	async findStock(code) {
-		return await new Crawler({ code }).fetchMeta();
+		return await Crawler.create({ code }).fetchMeta();
 	}
 
 	async saveStock(stock) {
@@ -489,7 +489,7 @@ class Service {
 		let result = await db.StockDaily.query(code, startDate, new Date());
 		if (!result.length) {
 			const stock = await this.getStock(code);
-			result = await new Crawler(stock).fetchAll();
+			result = await Crawler.create(stock).fetchAll();
 			await db.StockDaily.saveAll(code, result);
 			result = await db.StockDaily.query(code, startDate, new Date());
 		}
@@ -532,7 +532,7 @@ class Service {
 	}
 
 	async fetchDividendData(stock) {
-		return await new Crawler(stock).fetchDividendData();
+		return await Crawler.create(stock).fetchDividendData();
 	}
 }
 
