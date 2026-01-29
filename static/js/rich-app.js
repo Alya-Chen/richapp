@@ -65,7 +65,7 @@
 		}
 		sync(code, callback) {
 			$.growlUI('', `${code} 開始進行資料同步與回測，請稍候...`);
-			this.$http.get('/sync/' + code).then((res) => {
+			this.$http.get(`/sync/${code}/true`).then((res) => {
 				$.growlUI('', `${code} 完成資料同步與回測`);
 				callback(res.data);
 			});
@@ -79,7 +79,7 @@
 		trades(params, callback) {
 			this.$http.get('/trades', { params }).then((res) => {
 				res.data.forEach(t => {
-					const stock = this.stocks.find(s => s.code == t.logs[0].code);
+					const stock = this._stocks.find(s => s.code == t.logs[0].code);
 					t.code = stock.code;
 					t.name = stock.name;
 				});
@@ -110,10 +110,10 @@
 		}
 		stocks(callback) {
 			this.$http.get('/stocks').then((res) => {
-				this.stocks = res.data;
-				this.stocks.forEach(stock => this.backtest(stock));
-				if (callback) callback(this.stocks);
-				this.$timeout(() => { this.$root.$broadcast('stocksLoaded', this.stocks) }, 175);
+				this._stocks = res.data;
+				this._stocks.forEach(stock => this.backtest(stock));
+				if (callback) callback(this._stocks);
+				this.$timeout(() => { this.$root.$broadcast('stocksLoaded', this._stocks) }, 175);
 			});
 		}
 		users(callback, userId) {
@@ -616,6 +616,9 @@
 						if (!$$.stock.trade) $$.invest.simulate(result.trades.findLast(t => t.entryDate));
 					});
 				}
+			};
+			$$.sync = function() {
+				service.sync($$.stock.code, () => location.reload());
 			};
 			$$.invest = {
 				simulate: function(trade) {
