@@ -65,7 +65,7 @@ export class DynamicStopExit {
 	}
 
 	// 平倉條件檢查
-	checkExit(day, index, position) {
+	checkExit(day, _, position) {
 		const {
 			stopLossPct,   // 固定止損小於入場價格的如：3%
 			takeProfitPct, // 固定止盈大於入場價格的如：10%
@@ -76,10 +76,10 @@ export class DynamicStopExit {
 		} = this.params;
 
 		const exitConditions = [];
-		// 固定止損
+		// 固定止損出清
 		if (stopLossPct) {
 			exitConditions.push({
-				reason: `固定止損：${day.close.scale()} 小於入場 ${position.entryPrice.scale()} 的 ${stopLossPct * 100}%`,
+				reason: `止損出清：${day.close.scale()} 小於入場 ${position.entryPrice.scale()} 的 ${(stopLossPct * 100).scale(2)}%`,
 				condition: day.close <= position.entryPrice * (1 - stopLossPct)
 			});
 		}
@@ -94,42 +94,32 @@ export class DynamicStopExit {
 				status: `closed-${(partialProfitRatio * 100).scale()}%`
 			});
 		}
-		// 固定止盈
+		// 固定止盈出清
 		if (takeProfitPct) {
 			exitConditions.push({
-				reason: `固定止盈：${day.close.scale()} 大於入場 ${position.entryPrice.scale()} 的 ${takeProfitPct * 100}%`,
+				reason: `止盈出清：${day.close.scale()} 大於入場 ${position.entryPrice.scale()} 的 ${takeProfitPct * 100}%`,
 				condition: day.close >= position.entryPrice * (1 + takeProfitPct),
 				status: 'closed'
 			});
 		}
-		// 動態止損
+		// 最高價回撤出清
 		if (dynamicStopPct) {
-			const dynamicStop = this.getDynamicStop(day);
+			// 更新交易日最高價格
+			position.high = Math.max(position.high || 0, day.close);
+			const dynamicStop = position.high * (1 - dynamicStopPct);
 			exitConditions.push({
-				reason: `動態止損：${day.close.scale()} 小於最高價的 ${(dynamicStopPct * 100).scale()}%`,
+				reason: `最高價回撤出清：${day.close.scale()} 小於最高價 ${position.high.scale()} 的 ${(dynamicStopPct * 100).scale()}%`,
 				condition: day.close <= dynamicStop
 			});
 		}
-		// 時間止損（最大持倉周期）
+		// 時間止損最大持倉天數
 		if (maxHoldPeriod) {
 			exitConditions.push({
-				reason: `時間止損：交易週期大於 ${maxHoldPeriod} 天`,
+				reason: `最大持倉天數大於 ${maxHoldPeriod} 天`,
 				condition: day.date - position.entryDate > maxHoldPeriod * 24 * 60 * 60 * 1000
 			});
 		}
-		const condition = exitConditions.find(c => c.condition);
-		if (condition) {
-			this.dynamicStop = 0; // reset
-		}
-		return condition;
-	}
-
-	// 更新動態止損，交易日最高價格的 xx%
-	getDynamicStop(day) {
-	    this.dynamicStop = this.dynamicStop || 0;
-		const newStop = day.high * (1 - this.params.dynamicStopPct);
-		this.dynamicStop = Math.max(newStop, this.dynamicStop);
-		return this.dynamicStop;
+		return exitConditions.find(c => c.condition);
 	}
 }
 

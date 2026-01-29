@@ -276,11 +276,13 @@ const StockTrade = sequelize.define('StockTrade', {
 });
 
 StockTrade.save = async function(trade) {
+	const FEE_RATE = 0.001425 * 0.6; // 證券手續費，六折
+	const FEE_TAX_RATE = FEE_RATE + 0.003; // 證券手續費＋證券交易稅 0.001425 + 0.003
 	// 股票買進：證券手續費＝股票買進股價 × 股數 × 0.1425%
 	// 未滿新臺幣20元按新臺幣20元計收
 	if (trade.act == '買入') {
 		trade.remain = trade.amount;
-		trade.tax = trade.amount * trade.price * 0.001425;
+		trade.tax = trade.amount * trade.price * FEE_RATE;
 		trade.tax = Math.max(trade.tax, 20).scale(2);
 	}
 	// 證券手續費＋證券交易稅＝（股票賣出股價 × 股數 × 0.1425%）＋（股票賣出股價 × 股數 × 0.3%）

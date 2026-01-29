@@ -1,5 +1,5 @@
-const FEE_RATE = 0.0008534;
-const TAX_RATE = 0.003;
+const FEE_RATE = 0.001425 * 0.6; // 證券手續費，六折
+const FEE_TAX_RATE = FEE_RATE + 0.003; // 證券手續費＋證券交易稅 0.003
 
 class TigerInvest {
 	constructor(data, ma) {
@@ -34,7 +34,7 @@ class TigerInvest {
 		if (trade && trade.logs) return this.load(trade);
 		trade = trade || { entryDate: new Date('2000/01/01'), exitDate: new Date() };
 		const entryTime = Date.parse(trade.entryDate);
-		const exitTime = Date.parse(trade.exitDate || new Date()) + (8 * 3600 * 1000); // EIGHT_HOURS		
+		const exitTime = Date.parse(trade.exitDate || new Date()) + (8 * 3600 * 1000); // EIGHT_HOURS
 		this.data.forEach((day, idx) => {
 			const date = Date.parse(day.date);
 			if (date < entryTime || date > exitTime) return;
@@ -49,7 +49,7 @@ class TigerInvest {
 			log.date = new Date(log.date);
 			const day = this.data.find(d => d.date.isSameDay(log.date));
 			this.entryDate = trade.entryDate;
-			this.exitDate = trade.exitDate;			
+			this.exitDate = trade.exitDate;
 			if (log.act == '買入') {
 				this.entryPrice = this.entryPrice || log.price;
 				this.totalCapital += log.amount;
@@ -63,24 +63,25 @@ class TigerInvest {
 			}
 			if (day) this.logStatus(day, log);
 		});
-		if (this.data.length && !trade.exitDate) {
+		if (this.data.length) {
 			const day = this.data[this.data.length - 1];
 			day.prev = this.data[this.data.length - 2];
-			this.execute(day);			
+			this.execute(day);
 		}
 		return this.summary();
 	}
 	summary() {
-		if (!this.exitDate && this.getTotalInvested()) { // 交易中
+		const totalInvested = this.getTotalInvested();
+		const avgCost = this.getAvgCost();
+		if (totalInvested) { // 交易中
 			const lastDay = this.data[this.data.length - 1];
-			this.tax += lastDay.close * this.getTotalInvested() * FEE_RATE;
-			const avgCost = this.getAvgCost();
-			this.profit = lastDay.close - this.getAvgCost();
-			this.profitRate = this.profit / this.getAvgCost();
+			this.tax += lastDay.close * totalInvested * FEE_RATE;
+			this.profit += (lastDay.close - avgCost) * (totalInvested / this.totalCapital);
+			this.profitRate += this.profit / avgCost;
 		}
 		this.totalProfit = this.totalCapital * this.profit;
 		this.netProfit = this.totalProfit - this.tax;
-		this.netProfitRate = this.profitRate - (FEE_RATE + TAX_RATE);
+		this.netProfitRate = this.profitRate - FEE_TAX_RATE;
 		return {
 			stage: this.stage,
 			logs: this.logs,
@@ -88,24 +89,24 @@ class TigerInvest {
 			entryPrice: this.entryPrice,
 			exitDate: this.exitDate,
 			exitPrice: this.exitPrice,
-			avgCost: this.getAvgCost().scale(2) || 0,
-			stopLossPrice: this.stopLossPrice.scale(2),			
+			avgCost: avgCost.scale(2) || 0,
+			stopLossPrice: this.stopLossPrice.scale(2),
 			profit: this.profit.scale(2),
 			profitRate: this.profitRate.scale(3),
 			totalProfit: this.totalProfit.scale(2),
 			netProfit: this.netProfit.scale(2),
 			netProfitRate: this.netProfitRate.scale(3),
-			totalInvested: this.getTotalInvested(),
+			totalInvested: totalInvested.scale(2),
 			tax: this.tax.scale(2)
-		};		
+		};
 	}
 	withMacd(data) {
 		const macd = new Macd(data).calculate();
-		return data.map((day, idx) => ({ 
+		return data.map((day, idx) => ({
 			...day,
 			...macd[idx]
 		}));
-	}	
+	}
 	execute(day) {
 		const priceStatus = this.priceStatus(day);
 		// 核心狀態機邏輯
@@ -122,7 +123,7 @@ class TigerInvest {
 				const amount = this.handleBuyStage(day);
 				if (amount) this.logStatus(day, { act: '建倉', amount });
 			}
-		} 
+		}
 		else if (priceStatus.isDown && this.getTotalInvested() > 0) {
 			const amount = this.handleSellStage(day, 1.0);
 			if (amount) this.logStatus(day, { act: '清倉', amount });
@@ -160,7 +161,7 @@ class TigerInvest {
 	}
 	isRerising(day) {
 		return day.prev.low <= (day.prev.ma * 1.01) && day.close > day.prev.close && day.close > (day.ma * 1.02);
-	}	
+	}
 	// 不同階段的累計可投入資金額度
 	getStageCapital() {
 		return this.stages.filter((_, idx) => idx <= this.stage).reduce((sum, s) => sum + (this.totalCapital * s.ratio), 0);
@@ -184,16 +185,16 @@ class TigerInvest {
 	}
 	// 平倉
 	sell(price, sellRatio) {
-		const amountToSell = this.totalCapital * sellRatio;
+		const amountToSell = Math.min(this.totalCapital * sellRatio, this.getTotalInvested());
+		const avgCost = this.getAvgCost();
 		// 先進先出平倉
-		let remaining = Math.min(amountToSell, this.getTotalInvested());
-		const profit = (price - this.getAvgCost()) * (remaining / this.totalCapital);
+		let remaining = amountToSell;
+		const profit = (price - avgCost) * (amountToSell / this.totalCapital);
 		this.profit += profit;
-		this.profitRate += profit / this.getAvgCost();
+		this.profitRate += profit / avgCost;
 		while (remaining > 0 && this.investments.length > 0) {
 			const oldest = this.investments[0];
 			const sellAmount = Math.min(oldest.amount, remaining);
-			const sellUnits = sellAmount / oldest.price;
 			if (oldest.amount === sellAmount) {
 				this.investments.shift();
 			} else {
@@ -202,7 +203,7 @@ class TigerInvest {
 			}
 			remaining -= sellAmount;
 		}
-		this.tax += (price * amountToSell * 0.00385).scale(2);
+		this.tax += (price * amountToSell * FEE_TAX_RATE).scale(2);
 		return amountToSell;
 	}
 	// 獲取階段最高價
@@ -252,16 +253,19 @@ class TigerInvest {
 		this.updateStopLoss(day);
 		const lastDay = this.data[this.data.length - 1];
 		const log = this.logs.find(log => log.day.id == day.id) || { ...act };
-		const price = log.price || day.close;
+		const totalInvested = this.getTotalInvested();
+		const price = (log.act == '賣出') ? log.price : lastDay.close;
 		log.day = day;
+		//log.act = log.act || '持倉';
 		log.stage = this.stage;
-		log.totalInvested = this.getTotalInvested();
-		log.invested = (this.getTotalInvested() / this.totalCapital) * 100;
+		log.totalInvested = totalInvested;
+		log.amount = log.amount || totalInvested;
+		log.invested = (log.amount / this.totalCapital) * 100;
 		log.avgCost = this.getAvgCost().scale(2) || 0;
-		log.profit = ((this.profit.scale(2) || (lastDay.close - price)) * (log.amount || 0)).scale(2);
-		log.profitRate = (this.profitRate * 100).scale(2) || ((log.profit / (log.avgCost * log.totalInvested)) * 100).scale(2);
 		log.stopLossPrice = this.stopLossPrice.scale(2);
-		log.tax = this.tax + (price * log.totalInvested * 0.00385);
+		log.tax = ((log.avgCost * log.amount * FEE_RATE) + (price * log.amount * FEE_TAX_RATE)).scale(2);
+		log.profit = ((price - log.avgCost) * log.amount - log.tax).scale(2);
+		log.profitRate = ((log.profit / (log.avgCost * log.amount)) * 100).scale(2);
 		let msgs = [day.date.toLocaleDateString()];
 		if (log.act) msgs = msgs.concat([`${log.act} ${log.amount}股`]);
 		msgs = msgs.concat([
@@ -270,6 +274,7 @@ class TigerInvest {
 			`階段: ${log.stage}`,
 			`持倉: ${log.invested}％`,
 			`損益：${log.profit} ${log.profitRate}%`,
+			`稅費：${log.tax}`,
 			`成本: ＄${log.avgCost || 0}`,
 			`止損價: ＄${log.stopLossPrice || 0}`
 		]);
@@ -284,7 +289,7 @@ const MA = 18;
 // 測試數據：波動上升趨勢
 const rowData = [
 	95, 96, 97, 98, 99, 100, 101, 102, 103, 104,
-	105, 106, 107, 108, 109, 110, 111, 112, // MA18開始計算 
+	105, 106, 107, 108, 109, 110, 111, 112, // MA18開始計算
 	113, 112, 111, 110, 109, // 112 突破MA18 價格回撤但維持 MA18上方
 	108, 107, 116, 115, 120, // 107 跌破MA18，116 突破MA18，120破高
 	122, 125, 126, 124, 125 // 創新高止盈

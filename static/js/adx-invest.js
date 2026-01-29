@@ -19,12 +19,9 @@ class AdxInvest extends TigerInvest {
 			this.buy(day.close, amount);
 			this.logStatus(day, { act: '建倉', amount });
 		}
-		if (priceStatus.isDead && this.getTotalInvested() > 0) { // 停損 priceStatus.isStopLoss，停利優先
-			const act = '清倉';
-			const amount = this.sell(day.close, 1.0);
-			if (amount) this.logStatus(day, { act, amount });
-		}
-		this.logStatus(day);
+		const amount = this.getTotalInvested();
+		const act = priceStatus.isDead ? '清倉' : '持倉';
+		this.logStatus(day, { act, amount });
 	}
 	summary() {
 		const summary = super.summary();
