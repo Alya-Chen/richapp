@@ -613,7 +613,7 @@
 					service.backtest(params, (result) => {
 						$$.tests.push(result);
 						$$.chart.addMa(ma);
-						if (!$$.stock.trade) $$.invest.simulate(result.trades.findLast(t => t.entryDate));
+						//if (!$$.stock.trade) $$.invest.simulate(result.trades.findLast(t => t.entryDate));
 					});
 				}
 			};

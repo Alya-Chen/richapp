@@ -3,6 +3,9 @@ import {
 	stockService
 } from './stock-service.js';
 
+const FEE_RATE = 0.001425 * 0.6; // 證券手續費，六折
+const FEE_TAX_RATE = FEE_RATE + 0.003; // 證券手續費＋證券交易稅 0.001425 + 0.003
+
 class Investor {
 	constructor(stockCodes, money, params) {
 		this.stockCodes = stockCodes;
@@ -43,7 +46,7 @@ class Investor {
 		let tests = null;
 		let runningTests = [];
 		csv.push(`代號	公司	MA	購入日期	購入價格	購入股數	剩餘本金	賣出日期	賣出價格	單筆收益	單筆稅金	累積收益	期末本金	出場原因`);
-		while (!entryDate.isSameDay(exitDate)) {
+		while (entryDate.getTime() < exitDate.getTime()) {
 			const codes = this.stockCodes.filter(code => !runningTests.map(t => t.code).includes(code));
 			tests = this.params.dynamic ? runningTests.concat(await this.getTests(codes, entryDate)) : (tests || await this.getTests(codes, entryDate));
 			for (let i = 0; i < tests.length; i++) {
@@ -57,7 +60,7 @@ class Investor {
 						runningTests.push(test);
 						const money = trade.amount * trade.entryPrice;
 						invested.balance -= money;
-						trade.tax = trade.amount * trade.entryPrice * 0.001425;
+						trade.tax = trade.amount * trade.entryPrice * FEE_RATE;
 						trade.tax = Math.max(trade.tax, 20).scale(2);
 						trades.push({
 							code: test.code,
@@ -89,7 +92,7 @@ class Investor {
 					const money = trade.amount * trade.exitPrice;
 					invested.balance += money;
 					trade.profit = (trade.amount * trade.profit).scale();
-					trade.tax += (trade.amount * trade.exitPrice * 0.004425).scale(2);
+					trade.tax += (trade.amount * trade.exitPrice * FEE_TAX_RATE).scale(2);
 					invested.profit += trade.profit;
 					trades.find(t => t.code == trade.code).status = 'done';
 					const reason = trade.exitReason + (trade.reentry ? '（返場）' : '');
@@ -104,6 +107,7 @@ class Investor {
 
 		// 完成摘要
 		const unclosed = trades.filter(t => t.status != 'closed' && t.status != 'done');
+		// 計算未平倉的交易
 		for (const trade of unclosed) {
 			const day = await stockService.getDaily(trade.code, entryDate);
 			trade.profit = (day.close - trade.entryPrice) * trade.amount;
@@ -114,6 +118,7 @@ class Investor {
 		data.summary = Object.assign(data.summary, this.calculateMetrics(trades));
 		data.summary.finalMoney = invested.balance;
 		data.summary.unclosed = invested.unclosed;
+		data.summary.unclosedCount = unclosed.length;
 		data.summary.totalProfit = invested.profit;
 		data.summary.profitRate = (data.summary.totalProfit / this.money);
 		data.summary.netProfitRate = (data.summary.netProfit / this.money);

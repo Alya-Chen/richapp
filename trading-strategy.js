@@ -378,8 +378,9 @@ export class AdxEntry {
 	}
 
 	// 開倉條件檢查
-	checkEntry(_, index, position) {
-		const adx = this.adx[index];
+	checkEntry(day, index, position) {
+		const time = Date.parse(day.date);
+		const adx = this.adx.find(i => i && i.time == time);
 		if (index < 1 || position.status != 'closed' || adx == null) return null;
 		const adxNote = `日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
         return adx.golden ? { reason: `${AdxEntry.name} ${adx.plusDi.scale(2)} > ${adx.minusDi.scale(2)} 金叉${adx.rising ? '趨勢強烈' : ''} ${adxNote}` } : null;
@@ -396,8 +397,9 @@ export class AdxExit {
 	}
 
 	// 平倉條件檢查
-	checkExit(_, index, position) {
-		const adx = this.adx[index];
+	checkExit(day, index, position) {
+		const time = Date.parse(day.date);
+		const adx = this.adx.find(i => i && i.time == time);
 		if (index < 1 || adx == null) return null;
 		const adxNote = `日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
         return adx.dead ? { reason: `${AdxExit.name} ${adx.minusDi.scale(2)} > ${adx.plusDi.scale(2)} 死叉${adx.rising ? '趨勢強烈' : ''} ${adxNote}` } : null;

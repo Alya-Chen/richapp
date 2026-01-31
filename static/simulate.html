@@ -128,22 +128,22 @@
   <div class="stat">
     <span class="stat-title text-base-200">初始資金</span>
     <span class="stat-value before:content-['$'] before:text-xs text-white"
-      ng-bind="simulated.summary.initialMoney"></span>
+      ng-bind="simulated.summary.initialMoney | number"></span>
   </div>
   <div class="stat">
     <span class="stat-title text-base-200">最終資金</span>
     <span class="stat-value before:content-['$'] before:text-xs text-white"
-      ng-bind="simulated.summary.finalMoney.scale()"></span>
+      ng-bind="simulated.summary.finalMoney.scale() | number"></span>
     <span ng-if="simulated.summary.unclosed"
       class="stat-value before:content-['$'] before:text-xs text-white"
-      ng-bind="simulated.summary.unclosed.scale()"></span>
+      ng-bind="simulated.summary.unclosed.scale() | number"></span>
   </div>
   <div class="stat">
     <span class="stat-title text-base-200">總損益</span>
     <span class="stat-value before:content-['$'] before:text-xs text-white"
-      ng-bind="simulated.summary.totalProfit.scale()"></span>
+      ng-bind="simulated.summary.totalProfit.scale() | number"></span>
     <span class="stat-value before:content-['$'] before:text-xs text-white"
-      ng-bind="-(simulated.summary.tax.scale())"></span>
+      ng-bind="-(simulated.summary.tax.scale()) | number"></span>
   </div>
   <div class="stat">
     <span class="stat-title text-base-200">總損益率</span>
@@ -158,7 +158,10 @@
   </div>
   <div class="stat">
     <span class="stat-title text-base-200">交易次數</span>
-    <span class="stat-value text-white" ng-bind="simulated.summary.tradeCount"></span>
+    <span class="stat-value text-white">
+      <span ng-bind="simulated.summary.tradeCount"></span>
+      <span ng-if="simulated.summary.unclosedCount">({{simulated.summary.unclosedCount}})</span>
+    </span>
   </div>
   <div class="stat">
     <span class="stat-title text-base-200">盈虧比</span>
