@@ -466,7 +466,7 @@ export class AdxMacdEntryExit {
 		if (index < 1 || position.status != 'closed' || adx == null) return null;
 		if (adx.adx < 20) return this.macdEntry.checkEntry(day, index, position);
 		if (adx.adx >= 20 && adx.adx <= 25) return this.macdEntry.checkEntry(day, index, position) || this.adxEntry.checkEntry(day, index, position);
-		if (adx.adx > 25 && adx.rising) return this.adxEntry.checkEntry(day, index, position);
+		if (adx.adx > 25) return this.adxEntry.checkEntry(day, index, position);
 	}
 
 	// 平倉條件檢查
@@ -476,7 +476,7 @@ export class AdxMacdEntryExit {
 		if (index < 1 || adx == null) return null;
 		if (adx.adx < 20) return this.macdExit.checkExit(day, index, position);
 		if (adx.adx >= 20 && adx.adx <= 25) return this.macdExit.checkExit(day, index, position) || this.adxExit.checkExit(day, index, position);
-		if (adx.adx > 25 && adx.rising) return this.adxExit.checkExit(day, index, position);
+		if (adx.adx > 25) return this.adxExit.checkExit(day, index, position);
 	}
 }
 ///////////////////////////////////////////////////////////////////////////////

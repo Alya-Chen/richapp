@@ -140,7 +140,7 @@ class StockChart {
 				labels: {
 					align: 'left'
 				},
-				top: (axes.length == 1) ? '75%' : '50%',
+				top: '50%',
 				height: '25%'
 			});
 			params.series.push({
