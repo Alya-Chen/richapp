@@ -364,7 +364,7 @@
 				setup: function() {
 					const url = $location.url();
 					if (url.startsWith('/stock/')) {
-						const code = url.split('/').pop();
+						const code = url.match(/stock\/(\d+)/)[1];
 						return window.open(`/simulate/${code}`, `_simulate/${code}`);
 					}
 					const stocks = $$.stocks.filter(s => s.checked);

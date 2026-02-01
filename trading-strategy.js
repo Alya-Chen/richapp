@@ -406,7 +406,7 @@ export class AdxExit {
 	}
 }
 ///////////////////////////////////////////////////////////////////////////////
-export class MaEntry {
+export class MacdEntry {
 	static name = 'MACD 進場策略';
 	static enabled = true;
 	constructor(data, params) {
@@ -417,28 +417,66 @@ export class MaEntry {
 
 	// 開倉條件檢查
 	checkEntry(day, index, position) {
-		const macd = this.macd[index];
+		const time = Date.parse(day.date);
+		const macd = this.macd.find(i => i && i.time == time);
 		if (index < 1 || position.status != 'closed' || macd == null) return null;
-        return macd.golden ? { reason: `${MaEntry.name} 金叉` } : null;
+        return macd.golden ? { reason: `${MacdEntry.name} 金叉，信心：${macd.score}（快 ${macd.diff.scale()} > 慢 ${macd.dea.scale()}）` } : null;
 	}
 }
 
-export class MacdMaExit {
+export class MacdExit {
 	static name = 'MACD 出場策略';
 	static enabled = true;
 	constructor(data, params) {
 		this.data = data || [];
 		this.params = params;
 		this.macd = MACD_CACHE.get(params.code, data);
-		this.kdj = KDJ_CACHE.get(params.code, data);
-		this.rsi = RSI_CACHE.get(params.code, data);
 	}
 
 	// 平倉條件檢查
 	checkExit(day, index, position) {
-		const macd = this.macd[index];
+		const time = Date.parse(day.date);
+		const macd = this.macd.find(i => i && i.time == time);
 		if (index < 1 || macd == null) return null;
-        return macd.dead ? { reason: `${MacdMaExit.name} 死叉` } : null;
+        return macd.dead ? { reason: `${MacdExit.name} 死叉，信心：${macd.score}（慢 ${macd.dea.scale()} > 快 ${macd.diff.scale()}）` } : null;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+export class AdxMacdEntryExit {
+	// 若 ADX < 20 → 只用 MACD
+	// 若 ADX 20～25 → MACD 為主，少量 ADX 試單
+	// 若 ADX > 25 且上升 → 停用 MACD，全面用 ADX
+	static name = 'ADX＋MACD 進出場策略';
+	static enabled = true;
+	constructor(data, params) {
+		this.data = data || [];
+		this.params = params;
+		this.adx = ADX_CACHE.get(params.code, data);
+		this.adxEntry = new AdxEntry(data, params);
+		this.adxExit = new AdxExit(data, params);
+		this.macdEntry = new MacdEntry(data, params);
+		this.macdExit = new MacdExit(data, params);
+	}
+
+	// 開倉條件檢查
+	checkEntry(day, index, position) {
+		const time = Date.parse(day.date);
+		const adx = this.adx.find(i => i && i.time == time);
+		if (index < 1 || position.status != 'closed' || adx == null) return null;
+		if (adx.adx < 20) return this.macdEntry.checkEntry(day, index, position);
+		if (adx.adx >= 20 && adx.adx <= 25) return this.macdEntry.checkEntry(day, index, position) || this.adxEntry.checkEntry(day, index, position);
+		if (adx.adx > 25 && adx.rising) return this.adxEntry.checkEntry(day, index, position);
+	}
+
+	// 平倉條件檢查
+	checkExit(day, index, position) {
+		const time = Date.parse(day.date);
+		const adx = this.adx.find(i => i && i.time == time);
+		if (index < 1 || adx == null) return null;
+		if (adx.adx < 20) return this.macdExit.checkExit(day, index, position);
+		if (adx.adx >= 20 && adx.adx <= 25) return this.macdExit.checkExit(day, index, position) || this.adxExit.checkExit(day, index, position);
+		if (adx.adx > 25 && adx.rising) return this.adxExit.checkExit(day, index, position);
 	}
 }
 ///////////////////////////////////////////////////////////////////////////////

@@ -31,12 +31,6 @@ export class Macd {
             return deaIdx >= 0 ? deaArray[deaIdx] : null;
         });
 
-        const slopeArray = diffArray.map((m, idx) => {
-            if (m === null || idx <= 10) return null;
-            const prev10 = diffArray[idx - 10]; // 计算近 10 日均线斜率
-            return prev10 && ((m - prev10) / 10 > 0);
-        });
-
         // MACD (紅綠柱) Histogram：DIF - DEA
         const histogramArray = diffArray.map((m, idx) => {
             if (m === null || fullDeaArray[idx] === null) return null;
@@ -45,12 +39,15 @@ export class Macd {
 
         const result = this.data.map((day, idx) => ({
             time: day.date ? Date.parse(day.date) : null,
+            date: day.date, // 日期方便偵錯
             diff: diffArray[idx],
-            slope: slopeArray[idx],
             dea: fullDeaArray[idx],
             histogram: histogramArray[idx]
         }));
-        return this.detectCrossovers(result);
+
+        // 依序執行背離偵測與交叉偵測
+        const withDivergence = this.detectDivergence(result);
+        return this.detectCrossovers(withDivergence);
     }
 
     calculateEMA(values, period) {
@@ -73,38 +70,99 @@ export class Macd {
         return emaArray;
     }
 
-    detectCrossovers(diffArray) {
-        for (let i = 1; i < diffArray.length; i++) {
-            const prev = diffArray[i - 1];
-            const curr = diffArray[i];
-            if (prev.diff == null || prev.dea == null || curr.diff == null || curr.dea == null) {
-                continue;
+    // 柱狀圖背離偵測
+    detectDivergence(data) {
+        // 尋找局部峰值（Peaks）與谷底（Troughs）的輔助函式
+        const findExtremes = (arr) => {
+            const extremes = [];
+            for (let i = 2; i < arr.length - 2; i++) {
+                const prev = arr[i - 1].histogram;
+                const curr = arr[i].histogram;
+                const next = arr[i + 1].histogram;
+                if (curr === null || prev === null || next === null) continue;
+                // 頂部峰值 (Positive Peak)
+                if (curr > 0 && curr > prev && curr > next) {
+                    extremes.push({ type: 'peak', index: i, value: curr, price: this.data[i].high });
+                }
+                // 底部谷底 (Negative Trough)
+                if (curr < 0 && curr < prev && curr < next) {
+                    extremes.push({ type: 'trough', index: i, value: curr, price: this.data[i].low });
+                }
             }
-            // 1. DIF（快線）由下往上穿越 DEA（慢線）
-            // 2. DEA 線為正：必須在零軸上方，表示目前處於多頭趨勢
-            if (prev.diff < prev.dea && curr.diff >= curr.dea) { // && curr.dea >= 0
-                curr.golden = true; // 金叉
-            }
-            if (prev.diff > prev.dea && curr.diff <= curr.dea) { //  && curr.dea >= 0
-                curr.dead = true; // 死亡交叉
+            return extremes;
+        };
+
+        const extremes = findExtremes(data);
+        for (let i = 1; i < extremes.length; i++) {
+            const currEx = extremes[i];
+            const prevEx = extremes[i - 1];
+            // 判斷兩點是否為同一性質（都是正柱或都是負柱）
+            if (currEx.type === prevEx.type) {
+                // 頂背離 (Bearish Divergence): 股價更高，但柱狀圖峰值更低
+                if (currEx.type === 'peak' && currEx.price > prevEx.price && currEx.value < prevEx.value) {
+                    data[currEx.index].bearDivergence = true;
+                }
+                // 底背離 (Bullish Divergence): 股價更低，但柱狀圖谷底抬高
+                if (currEx.type === 'trough' && currEx.price < prevEx.price && currEx.value > prevEx.value) {
+                    data[currEx.index].bullDivergence = true;
+                }
             }
         }
-        return diffArray;
+        return data;
     }
 
-    // Bullish Engulfing（看漲吞噬形態） 是一種常見的 K 線反轉形態，通常出現在 下跌趨勢末端，暗示潛在的反轉上漲
-    detectBearishEngulfing(diffArray) {
-        const result = [false]; // 第一根沒辦法判斷
-        for (let i = 1; i < this.data.length; i++) {
-            if (!diffArray[i]) continue;
-            const prev = this.data[i - 1];
-            const curr = this.data[i];
-            const isBullishPrev = prev.close > prev.open;
-            const isBearishCurr = curr.close < curr.open;
-            const isEngulfingBody = curr.close < prev.open && curr.open > prev.close;
-            diffArray[i].bearish = (isBullishPrev && isBearishCurr && isEngulfingBody);
+    // MACD 交叉偵測
+    detectCrossovers(resArray) {
+        const DIVERGENCE_WINDOW_SIZE = 5; // 背離訊號有效窗口為 5 天
+        let lastBullDivIdx = -100; // 記錄最近底背離發生的索引
+        let lastBearDivIdx = -100; // 記錄最近頂背離發生的索引
+        for (let i = 2; i < resArray.length; i++) {
+        const prev = resArray[i - 1];
+            const curr = resArray[i];
+
+            if (prev.diff === null || curr.diff === null) continue;
+
+            // 1. 基礎金叉/死叉判定
+            if (prev.diff < prev.dea && curr.diff >= curr.dea) curr.golden = true;
+            if (prev.diff > prev.dea && curr.diff <= curr.dea) curr.dead = true;
+
+            // 2. 柱狀圖抽腳/縮頭判定
+            if (curr.histogram < 0 && curr.histogram > prev.histogram) curr.histoCover = true;
+            if (curr.histogram > 0 && curr.histogram < prev.histogram) curr.histoPeak = true;
+
+            // 3. 更新背離發生位置
+            if (curr.bullDivergence) lastBullDivIdx = i;
+            if (curr.bearDivergence) lastBearDivIdx = i;
+
+            // 4. 綜合打分邏輯
+            let score = 0;
+
+            // --- A. 金叉/死叉得分 (依據零軸位置) ---
+            if (curr.golden) {
+                score += (curr.diff > 0 ? 50 : 30);
+            }
+            if (curr.dead) {
+                score -= (curr.diff < 0 ? 50 : 30);
+            }
+
+            // --- B. 背離記憶加分 (如果底背離剛發生，或者在 5 天內發生過) ---
+            const bullDivDiff = i - lastBullDivIdx;
+            if (bullDivDiff < DIVERGENCE_WINDOW_SIZE) {
+                score += 40;
+            }
+            const bearDivDiff = i - lastBearDivIdx;
+            if (bearDivDiff < DIVERGENCE_WINDOW_SIZE) {
+                score -= 40;
+            }
+
+            // --- C. 動能微調 ---
+            if (curr.histoCover) score += 10;
+            if (curr.histoPeak) score -= 10;
+
+            // 限制總分範圍
+            curr.score = Math.max(-100, Math.min(100, score));
         }
-        return diffArray;
+        return resArray;
     }
 }
 
