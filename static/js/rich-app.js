@@ -364,7 +364,7 @@
 				setup: function() {
 					const url = $location.url();
 					if (url.startsWith('/stock/')) {
-						const code = url.match(/stock\/(\d+)/)[1];
+						const code = url.match(/stock\/([\da-zA-Z]+)/)[1];
 						return window.open(`/simulate/${code}`, `_simulate/${code}`);
 					}
 					const stocks = $$.stocks.filter(s => s.checked);
@@ -572,6 +572,10 @@
 						$$.exitStrategy.stopLossPct = params.stopLossPct * 100;
 						$$.exitStrategy.takeProfitPct = params.takeProfitPct * 100;
 					}
+					[$$.entryStrategy, $$.exitStrategy].filter(s => s.name.includes('ADX')).forEach(s => {
+						s.adxRate = params.adxRate * 100;
+						s.drawdownRate = params.drawdownRate * 100;
+					});
 				});
 			});
 			$$.$on('notesLoaded', (_, notes) => {

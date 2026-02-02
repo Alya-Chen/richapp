@@ -386,7 +386,7 @@ export class AdxEntry {
 		if (index < 1 || position.status != 'closed' || adx == null || adx.adxRate < this.params.adxRate) return null;
 		position.adxLow = Math.min(position.adxLow || 100, adx.adx);
 		const raiseRate = position.adxLow ? (adx.adx - position.adxLow) / position.adxLow : 0;
-		const adxNote = `三日斜率：${adx.adxRate * 100}%，谷底回升率：${(raiseRate * 100).scale(2)}%，日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
+		const adxNote = `三日斜率：${(adx.adxRate * 100).scale(2)}%，谷底回升率：${(raiseRate * 100).scale(2)}%，日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
         return adx.golden ? { reason: `${AdxEntry.name} 金叉（${adx.plusDi.scale(2)} > ${adx.minusDi.scale(2)}）${adxNote}` } : null;
 	}
 }
@@ -407,7 +407,7 @@ export class AdxExit {
 		const time = Date.parse(day.date);
 		const adx = this.adx.find(i => i && i.time == time);
 		if (index < 1 || adx == null) return null;
-		const adxNote = `三日斜率：${adx.adxRate * 100}%，日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
+		const adxNote = `三日斜率：${(adx.adxRate * 100).scale(2)}%，日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
 		if (this.params.adxRate && adx.adxRate < -this.params.adxRate) {
 			return { reason: `${AdxExit.name} 下降率強烈 ${adxNote}` };
 		}
