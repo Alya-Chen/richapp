@@ -21,6 +21,7 @@ class Investor {
 		const exitDate = this.params.exitDate;
 		const entryStrategy = st[this.params.entryStrategy].name;
 		const exitStrategy = this.params.exitStrategy.map(s => st[s].name).join('＋');
+		const maxEntryMoney = this.money / 4;
 		const invested = {
 			balance: this.money, // 當前餘額
 			unclosed: 0,
@@ -34,6 +35,7 @@ class Investor {
 				entryDate: new Date(entryDate),
 				exitDate: exitDate,
 				initialMoney: this.money,
+				maxEntryMoney,
 				finalMoney: null,
 				totalProfit: null,
 				stockCount: this.stockCodes.length
@@ -53,9 +55,11 @@ class Investor {
 				const test = tests[i];
 				test.trades = test.trades || test.result.trades;
 				let trade = test.trades.find(t => entryDate.isSameDay(t.entryDate));
-				if (trade && invested.balance > 3000) {
-					trade.amount = parseInt(invested.balance / trade.entryPrice);
-					trade.amount = trade.amount > 1000 ? 1000 : trade.amount;
+				if (trade && invested.balance > 0) {
+					// 單次最高投資金額：總金額的 1/4 或餘額
+					const entryMoney = Math.min(invested.balance, maxEntryMoney);
+					trade.amount = parseInt(entryMoney / trade.entryPrice);
+					//trade.amount = trade.amount > 1000 ? 1000 : trade.amount;
 					if (trade.amount > 0) {
 						runningTests.push(test);
 						const money = trade.amount * trade.entryPrice;

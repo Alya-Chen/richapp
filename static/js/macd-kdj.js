@@ -754,7 +754,7 @@ export class Atr {
 export class Adx {
     constructor(data, {
         period = 14,
-        threshold = 20,
+        threshold = 25,
         useWeekly = false,
         strongTrend = 18, // 週線 ADX 強趨勢門檻（可調）
         softTrend = 14 // 週線 ADX 較寬鬆門檻（可調）
@@ -776,11 +776,9 @@ export class Adx {
         let minusDms = [];
         let trs = [];
         let dxs = [];
-
         let smoothPlusDm = 0;
         let smoothMinusDm = 0;
         let smoothTr = 0;
-        let adx = 0;
 
         if (this.data.length < this.period * 2) {
             console.warn("ADX calculation needs at least 2 * period data points.");
@@ -965,7 +963,6 @@ export class Adx {
             // 先清理舊旗標
             current.golden    = false;
             current.dead      = false;
-            current.adxDead   = false;
             // 若週線濾網不通過 → 完全不打訊號（但保留 rising / week）
             if (!weekOk) {
                 continue;
@@ -989,9 +986,6 @@ export class Adx {
                         current.dead = true;
                     }
                 }
-            }
-            if (!current.rising && prev.plusDi <= prev.adx && current.plusDi > current.adx) {
-                current.adxDead = true;
             }
         }
         return adxArray;

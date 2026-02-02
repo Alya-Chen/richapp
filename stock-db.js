@@ -379,6 +379,7 @@ StockDaily.saveAll = async function(code, data) {
 };
 
 StockDaily.save = async function(daily) {
+	daily.volume = daily.volume || 0;
 	const loaded = await StockDaily.query(daily.code, daily.date, daily.date);
 	if (loaded.length) {
 		loaded[0].set(daily);

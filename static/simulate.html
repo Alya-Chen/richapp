@@ -133,7 +133,9 @@
   <div class="stat">
     <span class="stat-title text-base-200">初始資金</span>
     <span class="stat-value before:content-['$'] before:text-xs text-white"
-      ng-bind="simulated.summary.initialMoney | number"></span>
+      ng-bind="simulated.summary.initialMoney.scale() | number"></span>
+    <span class="stat-value before:content-['$'] before:text-xs text-white"
+      title="單次最高投資金額：總金額的 1/4 或餘額" ng-bind="simulated.summary.maxEntryMoney.scale() | number"></span>
   </div>
   <div class="stat">
     <span class="stat-title text-base-200">最終資金</span>
