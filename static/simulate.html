@@ -53,10 +53,15 @@
     <div class="collapse-content text-sm">
       <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
         <div class="flex gap-2" ng-if="tigerChecked">
-          <input type="checkbox" ng-model="params.breakout" class="checkbox" />二日法則
+          <input type="checkbox" ng-model="params.breakout" class="checkbox" />二日法則&nbsp;
+          <input type="checkbox" ng-model="params.reentry" class="checkbox" />重新入場&nbsp;
         </div>
-        <div class="flex gap-2" ng-if="tigerChecked">
-          <input type="checkbox" ng-model="params.reentry" class="checkbox" />重新入場
+        <div class="ml-2" ng-if="adxChecked">
+          三日斜率閥值（<span ng-bind="adxRate"></span>）：
+          <input type="number" ng-model="params.adxRate" step="0.1" />
+          <br/>
+          最高回撤出清（<span ng-bind="drawdownRate"></span>）：
+          <input type="number" ng-model="params.drawdownRate" step="0.1" />
         </div>
         <div class="ml-4" ng-if="dynamicExitChecked">
           止損出清（<span ng-bind="stopLossPct"></span>）：
@@ -223,8 +228,8 @@
             <span class="text-sm after:content-['股'] after:text-xs" ng-bind="event.amount"></span>
           </div>
           <span>
-            <span class="badge badge-secondary" ng-if="event.breakout">二日法則</span>
-            <span class="badge badge-secondary" ng-if="event.reentry">重新入場</span>
+            <span class="badge badge-secondary" ng-if="event.breakout">二日法則</span>&nbsp;
+            <span class="badge badge-secondary" ng-if="event.reentry">重新入場</span>&nbsp;
             <span class="text-sm/6 text-success" ng-bind="event.entryReason"></span>
           </span>
         </div>

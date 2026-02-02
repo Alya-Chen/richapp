@@ -870,10 +870,21 @@ export class Adx {
                 currentAdx = null;
             }
 
+            // --- 新增：計算近三日 ADX 升降幅度 ---
+            let adxRate = 0;
+            if (i >= 2 && currentAdx !== null) {
+                const prev1 = adxArray[i - 1]?.adx;
+                const prev2 = adxArray[i - 2]?.adx;
+                if (prev1 !== null && prev2 !== null) {
+                    adxRate = parseFloat((currentAdx - prev2) / prev2).scale(2);
+                }
+            }
+
             adxArray.push({
                 date: current.date,
                 time: current.date ? Date.parse(current.date) : null,
                 adx: currentAdx,
+                adxRate: adxRate,
                 plusDi: currentPlusDi,
                 minusDi: currentMinusDi,
                 diff: (currentPlusDi - currentMinusDi).scale(2)

@@ -850,6 +850,7 @@
 				$$.tigerChecked = $$.params.entryStrategy.includes('Tiger') || $$.exitStrategies.find(s => s.key.includes('Tiger') && s.checked);
 				$$.dynamicExitChecked = $$.exitStrategies.find(s => s.key == 'DynamicStopExit').checked;
 				$$.maCrossChecked = $$.params.entryStrategy.includes('MaCross') || $$.exitStrategies.find(s => s.key.includes('MaCross') && s.checked);
+				$$.adxChecked = $$.params.entryStrategy.includes('Adx') || $$.exitStrategies.find(s => s.key.includes('Adx') && s.checked);
 			};
 			$$.saveParams = function() {
 				delete $$.params.dynamic; // 動態 MA，回測專用不儲存
@@ -899,12 +900,14 @@
 			$$.open = function(event) {
 				window.open(`/stock/${event.code}/${event.ma}`, `_stock/${event.code}/${event.ma}`);
 			};
-			$$.$watchGroup(['params.takeProfitPct', 'params.stopLossPct', 'params.dynamicStopPct', 'params.partialProfitPct', 'params.partialProfitRatio', 'params.maxHoldPeriod'], (data) => {
+			$$.$watchGroup(['params.adxRate', 'params.drawdownRate', 'params.takeProfitPct', 'params.stopLossPct', 'params.dynamicStopPct', 'params.partialProfitPct', 'params.partialProfitRatio', 'params.maxHoldPeriod'], (data) => {
 				if (!data.find(d => d)) return;
-				$$.takeProfitPct = ($$.params.takeProfitPct * 100).toFixed() + '%';
-				$$.stopLossPct = ($$.params.stopLossPct * 100).toFixed() + '%';
-				$$.dynamicStopPct = ($$.params.dynamicStopPct * 100).toFixed() + '%';
-				$$.partialProfitPct = ($$.params.partialProfitPct * 100).toFixed() + '%';
+				$$.adxRate = (($$.params.adxRate || 0) * 100).toFixed() + '%';
+				$$.drawdownRate = (($$.params.drawdownRate || 0) * 100).toFixed() + '%';
+				$$.takeProfitPct = ($$.params.takeProfitPct || 0 * 100).toFixed() + '%';
+				$$.stopLossPct = ($$.params.stopLossPct || 0 * 100).toFixed() + '%';
+				$$.dynamicStopPct = ($$.params.dynamicStopPct || 0 * 100).toFixed() + '%';
+				$$.partialProfitPct = ($$.params.partialProfitPct || 0 * 100).toFixed() + '%';
 				$$.partialProfitRatio = ($$.params.partialProfitRatio * 100).toFixed() + '%';
 				$$.maxHoldPeriod = ($$.params.maxHoldPeriod).toFixed() + ' 天';
 			});

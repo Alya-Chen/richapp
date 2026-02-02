@@ -374,6 +374,8 @@ export class AdxEntry {
 	constructor(data, params) {
 		this.data = data || [];
 		this.params = params;
+		// ADX 三日斜率門檻，0 表示不使用
+		this.params.adxRate = params.adxRate || 0;
 		this.adx = ADX_CACHE.get(params.code, data);
 	}
 
@@ -381,9 +383,11 @@ export class AdxEntry {
 	checkEntry(day, index, position) {
 		const time = Date.parse(day.date);
 		const adx = this.adx.find(i => i && i.time == time);
-		if (index < 1 || position.status != 'closed' || adx == null) return null;
-		const adxNote = `日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
-        return adx.golden ? { reason: `${AdxEntry.name} ${adx.plusDi.scale(2)} > ${adx.minusDi.scale(2)} 金叉${adx.rising ? '趨勢強烈' : ''} ${adxNote}` } : null;
+		if (index < 1 || position.status != 'closed' || adx == null || adx.adxRate < this.params.adxRate) return null;
+		position.adxLow = Math.min(position.adxLow || 100, adx.adx);
+		const raiseRate = position.adxLow ? (adx.adx - position.adxLow) / position.adxLow : 0;
+		const adxNote = `三日斜率：${adx.adxRate * 100}%，谷底回升率：${(raiseRate * 100).scale(2)}%，日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
+        return adx.golden ? { reason: `${AdxEntry.name} 金叉（${adx.plusDi.scale(2)} > ${adx.minusDi.scale(2)}）${adxNote}` } : null;
 	}
 }
 
@@ -393,6 +397,8 @@ export class AdxExit {
 	constructor(data, params) {
 		this.data = data || [];
 		this.params = params;
+		// ADX 三日斜率門檻，0 表示不使用
+		this.params.adxRate = params.adxRate || 0;
 		this.adx = ADX_CACHE.get(params.code, data);
 	}
 
@@ -401,8 +407,16 @@ export class AdxExit {
 		const time = Date.parse(day.date);
 		const adx = this.adx.find(i => i && i.time == time);
 		if (index < 1 || adx == null) return null;
-		const adxNote = `日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
-        return adx.dead ? { reason: `${AdxExit.name} ${adx.minusDi.scale(2)} > ${adx.plusDi.scale(2)} 死叉${adx.rising ? '趨勢強烈' : ''} ${adxNote}` } : null;
+		const adxNote = `三日斜率：${adx.adxRate * 100}%，日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
+		if (this.params.adxRate && adx.adxRate < -this.params.adxRate) {
+			return { reason: `${AdxExit.name} 下降率強烈 ${adxNote}` };
+		}
+		position.adxHigh = Math.max(position.adxHigh || 0, adx.adx);
+		const drawdownRate = position.adxHigh ? (position.adxHigh - adx.adx) / adx.adx : 0;
+		if (this.params.drawdownRate && drawdownRate > this.params.drawdownRate) {
+			return { reason: `${AdxExit.name} 高點回撤率：-${(drawdownRate * 100).scale(2)}% 強烈 ${adxNote}` };
+		}
+		return adx.dead ? { reason: `${AdxExit.name} 死叉（${adx.minusDi.scale(2)} > ${adx.plusDi.scale(2)}）${adxNote}` } : null;
 	}
 }
 ///////////////////////////////////////////////////////////////////////////////
