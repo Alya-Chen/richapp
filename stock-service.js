@@ -202,7 +202,7 @@ class Service {
 		params.exitDate = params.exitDate || new Date();
 		//params = Object.assign({}, sysUser.settings.params, params || {});
 		params.entryStrategy = st[params.entryStrategy];
-		params.exitStrategy = params.exitStrategy.map(strategy => st[strategy]);
+		params.exitStrategy = params.exitStrategy.map(strategy => st[strategy]).filter(Boolean);
 		if (codes != 'all' && !Array.isArray(codes)) { // ma：從 params 設定取得
 			const startDate = dateFns.addYears(params.entryDate, -1);
 			const dailies = await this.dailies(codes, startDate);

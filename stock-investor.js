@@ -19,8 +19,8 @@ class Investor {
 	async invest() {
 		const entryDate = this.params.entryDate;
 		const exitDate = this.params.exitDate;
-		const entryStrategy = st[this.params.entryStrategy].name;
-		const exitStrategy = this.params.exitStrategy.map(s => st[s].name).join('＋');
+		const entryStrategy = st[this.params.entryStrategy]?.name || this.params.entryStrategy;
+		const exitStrategy = this.params.exitStrategy.map(s => st[s]?.name).filter(Boolean).join('＋');
 		const maxEntryMoney = this.money / 4;
 		const invested = {
 			balance: this.money, // 當前餘額
