@@ -383,7 +383,7 @@ export class AdxEntry {
 	checkEntry(day, index, position) {
 		const time = Date.parse(day.date);
 		const adx = this.adx.find(i => i && i.time == time);
-		if (index < 1 || position.status != 'closed' || adx == null || adx.adxRate < this.params.adxRate) return null;
+		if (index < 1 || position.status != 'closed' || adx == null || adx.adx == null || adx.adxRate < this.params.adxRate) return null;
 		position.adxLow = Math.min(position.adxLow || 100, adx.adx);
 		const raiseRate = position.adxLow ? (adx.adx - position.adxLow) / position.adxLow : 0;
 		const adxNote = `三日斜率：${(adx.adxRate * 100).scale(2)}%，谷底回升率：${(raiseRate * 100).scale(2)}%，日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
@@ -406,8 +406,8 @@ export class AdxExit {
 	checkExit(day, index, position) {
 		const time = Date.parse(day.date);
 		const adx = this.adx.find(i => i && i.time == time);
-		if (index < 1 || adx == null) return null;
-		const adxNote = `三日斜率：${(adx.adxRate * 100).scale(2)}%，日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
+		if (index < 1 || adx == null || adx.adx == null) return null;
+		const adxNote = `三日斜率：${(adx.adxRate * 100).scale(2)}%，日：${adx.adx?.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
 		if (this.params.adxRate && adx.adxRate < -this.params.adxRate) {
 			return { reason: `${AdxExit.name} 下降率強烈 ${adxNote}` };
 		}
@@ -477,7 +477,7 @@ export class AdxMacdEntryExit {
 	checkEntry(day, index, position) {
 		const time = Date.parse(day.date);
 		const adx = this.adx.find(i => i && i.time == time);
-		if (index < 1 || position.status != 'closed' || adx == null) return null;
+		if (index < 1 || position.status != 'closed' || adx == null || adx.adx == null) return null;
 		if (adx.adx < 20) return this.macdEntry.checkEntry(day, index, position);
 		if (adx.adx >= 20 && adx.adx <= 25) return this.macdEntry.checkEntry(day, index, position) || this.adxEntry.checkEntry(day, index, position);
 		if (adx.adx > 25) return this.adxEntry.checkEntry(day, index, position);
@@ -487,7 +487,7 @@ export class AdxMacdEntryExit {
 	checkExit(day, index, position) {
 		const time = Date.parse(day.date);
 		const adx = this.adx.find(i => i && i.time == time);
-		if (index < 1 || adx == null) return null;
+		if (index < 1 || adx == null || adx.adx == null) return null;
 		if (adx.adx < 20) return this.macdExit.checkExit(day, index, position);
 		if (adx.adx >= 20 && adx.adx <= 25) return this.macdExit.checkExit(day, index, position) || this.adxExit.checkExit(day, index, position);
 		if (adx.adx > 25) return this.adxExit.checkExit(day, index, position);

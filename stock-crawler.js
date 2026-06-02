@@ -72,7 +72,7 @@ export class Crawler {
             });
             return results;
         } catch (error) {
-            db.Log.error(`抓取 ${this.stockNo} 股利資料錯誤: ${error.message}`);
+            db.Log.error(`抓取 ${this.stockNo} 股利資料錯誤`, error);
             return [];
         }
     }
@@ -247,7 +247,7 @@ class UsCrawler extends Crawler {
             }
             return quotes;
         } catch (error) {
-            db.Log.error(`[Stooq] ${this.stockNo} 歷史資料錯誤: ${error.message}`);
+            db.Log.error(`[Stooq] ${this.stockNo} 歷史資料錯誤`, error);
             throw error;
         }
     }
@@ -282,7 +282,7 @@ class UsCrawler extends Crawler {
             console.log(`[Finnhub] 成功抓取 ${results.length} 筆美股即時資料`);
             return results;
         } catch (error) {
-            db.Log.error(`[Finnhub] 即時股價失敗: ${error.message}`);
+            db.Log.error(`[Finnhub] 即時股價失敗`, error);
             await randomDelay(2000, 3000); // 發生錯誤時多休息一下
             throw error;
         }
@@ -317,7 +317,7 @@ class TwCrawler extends Crawler {
                 results.push(result.data);
                 await randomDelay(2000, 3000); // 台股官方 API 需要較長延遲以免被擋
             } catch (error) {
-                db.Log.error(`[TW] ${this.stockNo} ${date} 抓取失敗: ${error.message}`);
+                db.Log.error(`[TW] ${this.stockNo} ${date} 抓取失敗`, error);
                 // 不拋出錯誤，讓迴圈繼續抓下個月
             }
         }
@@ -433,7 +433,7 @@ class TwCrawler extends Crawler {
             return await this.realtimeTwRecursive(allCodes, start + 100, result);
 
         } catch (error) {
-            db.Log.error(`[TW Realtime] 抓取失敗: ${error.message}`);
+            db.Log.error(`[TW Realtime] 抓取失敗`, error);
             throw error;
         }
     }

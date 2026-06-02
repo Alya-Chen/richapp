@@ -57,7 +57,7 @@ class Service {
 				const result = await sequelize.query(sql, { type: queryType });
 				results.push(result);
 			} catch (error) {
-				db.Log.error(`Error executing SQL: ${sql} - ${error.message}`);
+				db.Log.error(`Error executing SQL: ${sql}`, error);
 				results.push({ error: error.message });
 			}
 		}
@@ -97,7 +97,7 @@ class Service {
 				if (!daily.open) continue; //!today.isSameDay(daily.date) ||
 				await db.StockDaily.save(daily);
 			} catch (error) {
-				db.Log.error(`${daily.code} 股票即時資料儲存失敗 ${error}`);
+				db.Log.error(`${daily.code} 股票即時資料儲存失敗`, error);
 			}
 		}
 		return dailies;
@@ -133,7 +133,7 @@ class Service {
 			await this.realtimeBacktest(codes);
 			console.log(`[${new Date().toLocaleString()}] ${country} 股票即時同步任務執行完成`);
 		} catch (error) {
-			db.Log.error(`${country} 股票即時同步任務執行失敗 ${error}`);
+			db.Log.error(`${country} 股票即時同步任務執行失敗`, error);
 		}
 	}
 
@@ -176,7 +176,7 @@ class Service {
 				await this.sync();
 				db.Log.info(`股票資料同步任務執行完成`);
 			} catch (error) {
-				db.Log.error(`股票資料同步任務執行失敗 ${error}`);
+				db.Log.error(`股票資料同步任務執行失敗`, error);
 			}
 			const stocks = this.checkDailies();
 			if (stocks.length) db.Log.error(`${stocks.join(",")} 無今日股價資料`);
@@ -192,7 +192,7 @@ class Service {
 				}
 				db.Log.info(`股票回測任務執行完成`);
 			} catch (error) {
-				db.Log.error(`股票回測任務執行失敗 ${error}`);
+				db.Log.error(`股票回測任務執行失敗`, error);
 			}
 		});
 	}
@@ -467,7 +467,7 @@ class Service {
 			}
 			return await db.Backtest.save(backtest);
 		} catch (error) {
-			db.Log.error(`${stock.code} ${stock.name} 測試結果保存到數據庫失敗: ${error.message}`);
+			db.Log.error(`${stock.code} ${stock.name} 測試結果保存到數據庫失敗`, error);
 			return null;
 		}
 	}

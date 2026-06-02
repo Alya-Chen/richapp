@@ -786,7 +786,13 @@ export class Adx {
                 time: d.date ? Date.parse(d.date) : null,
                 adx: null,
                 plusDi: null,
-                minusDi: null
+                minusDi: null,
+                adxRate: 0,
+                diff: 0,
+                golden: false,
+                dead: false,
+                week: null,
+                rising: false
             }));
         }
 
@@ -794,7 +800,7 @@ export class Adx {
             if (i === 0) {
                 const day = this.data[i];
                 const time = day.date ? Date.parse(day.date) : null;
-                adxArray.push({ time, adx: null, plusDi: null, minusDi: null });
+                adxArray.push({ time, adx: null, plusDi: null, minusDi: null, adxRate: 0, diff: 0 });
                 continue;
             }
 
@@ -838,7 +844,7 @@ export class Adx {
 
             if (i < this.period) {
                 const time = current.date ? Date.parse(current.date) : null;
-                adxArray.push({ time, adx: null, plusDi: null, minusDi: null });
+                adxArray.push({ time, adx: null, plusDi: null, minusDi: null, adxRate: 0, diff: 0 });
                 continue;
             }
 

@@ -546,9 +546,9 @@ Log.info = async function(msg) {
 	return Base.save(Log, { level: 'info', msg });
 };
 
-Log.error = async function(msg) {
-	msg = `[${new Date().toLocaleString()}] ${msg}`;
-	console.error(msg);
+Log.error = async function(msg, error) {
+	console.error(error);
+	msg = `[${new Date().toLocaleString()}] ${msg} ${error?.message || ''}`;
 	return Base.save(Log, { level: 'error', msg });
 };
 
