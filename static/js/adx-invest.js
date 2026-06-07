@@ -124,25 +124,27 @@ class AdxInvest extends TigerInvest {
 	 * 找出第一個觸發買入或賣出的價格點
 	 * @param {'buy'|'sell'} side
 	 * @param {Object} [opts]
-	 * @param {number} [opts.adxRate=10]     ADX 三日斜率門檻（0=不使用）
-	 * @param {number} [opts.drawdownRate=0] ADX 高點回撤率門檻（0=不使用）
-	 * @param {number} [opts.raiseRate=0]    ADX 谷底回升率門檻（0=不使用）
+	 * @param {number} [opts.adxRate=0]      ADX 三日斜率門檻（小數，0=不使用，如 0.1=10%）
+	 * @param {number} [opts.drawdownRate=0] ADX 高點回撤率門檻（小數，0=不使用，如 0.2=20%）
+	 * @param {number} [opts.raiseRate=0]    ADX 谷底回升率門檻（小數，0=不使用）
 	 * @returns {{ pct:number, close:number, reason:string, status:string }|null}
 	 */
 	static findTriggerPrice(dailies, side, position, opts = {}) {
 		const { down, up } = this.simulate(dailies, position, opts);
 		const candidates = side === 'sell' ? down : up;
-		const adxRt = opts.adxRate || 0.1;
-		const drawRt = opts.drawdownRate || 0.2;
+
+		// 門檻值統一為小數比（0.1 = 10%），0 表示不使用此條件
+		const adxRt = opts.adxRate || 0;
+		const drawRt = opts.drawdownRate || 0;
 		const raiseRt = opts.raiseRate || 0;
+
 		for (const r of candidates) {
-			console.log(r);
 			if (side === 'sell') {
 				if (r.dead) return { ...r, reason: `＄${r.close.toFixed(0)}，跌 ${r.pct}% ADX 死叉（回撤 ${(r.drawdownRate * 100).scale(2)}%）`, status: 'sell' };
-				if (adxRt && r.adxRate < -adxRt) return { ...r, reason: `＄${r.close.toFixed(0)}，跌 ${r.pct}% ADX 下降率 ${(r.adxRate * 100).scale(2)}%（回撤 ${(r.drawdownRate * 100).scale(2)}%）`, status: 'sell' };
+				if (adxRt && r.adxRate != null && r.adxRate < -adxRt) return { ...r, reason: `＄${r.close.toFixed(0)}，跌 ${r.pct}% ADX 下降率 ${(r.adxRate * 100).scale(2)}%（回撤 ${(r.drawdownRate * 100).scale(2)}%）`, status: 'sell' };
 				if (drawRt && r.drawdownRate >= drawRt) return { ...r, reason: `＄${r.close.toFixed(0)}，跌 ${r.pct}% ADX 高點回撤 ${(r.drawdownRate * 100).scale(2)}%`, status: 'sell' };
 			} else {
-				if (r.golden && (!adxRt || r.adxRate >= adxRt)) return { ...r, reason: `＄${r.close.toFixed(0)}，漲 ${r.pct}% ADX 金叉${adxRt ? `（斜率 ${(r.adxRate * 100).scale(2)}%）` : ''}${raiseRt ? `，谷底回升 ${(r.raiseRate * 100).scale(2)}%` : ''}`, status: 'buy' };
+				if (r.golden && (!adxRt || (r.adxRate != null && r.adxRate >= adxRt))) return { ...r, reason: `＄${r.close.toFixed(0)}，漲 ${r.pct}% ADX 金叉${adxRt ? `（斜率 ${(r.adxRate * 100).scale(2)}%）` : ''}${raiseRt ? `，谷底回升 ${(r.raiseRate * 100).scale(2)}%` : ''}`, status: 'buy' };
 			}
 		}
 		// 未觸發：用最後一筆（變動最大）的 ADX 狀態來說明當前趨勢

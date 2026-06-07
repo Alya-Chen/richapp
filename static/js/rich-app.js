@@ -829,8 +829,8 @@
 				const dailies = $$.stock.dailies;
 				const trade = $$.stock.trade;
 				if (!dailies || !trade || !trade.invest) return;
-				const adxRate = $$.params?.adxRate || 0;
-				const drawdownRate = $$.params?.drawdownRate || 0;
+				const adxRate = $$.params?.adxRate || 0.1;
+				const drawdownRate = $$.params?.drawdownRate || 0.2;
 				$$.stock.trigger = {};
 				if (trade.invest.totalInvested) {
 					$$.stock.trigger.sell = AdxInvest.findTriggerPrice(dailies, 'sell', trade.invest, {
