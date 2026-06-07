@@ -808,7 +808,10 @@
 					$$.backtest($$.stock.defaultMa);
 					if ($$.stock.trades) {
 						$$.stock.trade = $$.stock.trades.find(t => t.entryDate && !t.exitDate);
-						if ($$.stock.trade) $$.invest.simulate($$.stock.trade);
+						if ($$.stock.trade) {
+						$$.invest.simulate($$.stock.trade);
+						$$.calcTriggers();
+					}
 						$$.invest.done($$.stock.trades.filter(t => t.exitDate));
 						$$.dividends = $$.stock.trades.filter(t => t.type == 'dividend');
 					}
@@ -821,6 +824,23 @@
 						});
 					});
 				});
+			};
+			$$.calcTriggers = function() {
+				const dailies = $$.stock.dailies;
+				const trade = $$.stock.trade;
+				if (!dailies || !trade || !trade.invest) return;
+				const adxRate = $$.params?.adxRate || 0;
+				const drawdownRate = $$.params?.drawdownRate || 0;
+				$$.stock.trigger = {};
+				if (trade.invest.totalInvested) {
+					$$.stock.trigger.sell = AdxInvest.findTriggerPrice(dailies, 'sell', trade.invest, {
+						adxRate, drawdownRate, entryDate: trade.entryDate
+					});
+				} else {
+					$$.stock.trigger.buy = AdxInvest.findTriggerPrice(dailies, 'buy', null, {
+						adxRate
+					});
+				}
 			};
 			$$.realtime = function() {
 				service.realtime($$.stock.code, realtimes => {

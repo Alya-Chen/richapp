@@ -172,6 +172,27 @@
       <div class="stat-title">稅費</div>
       <div class="stat-value font-price text-lg text-rich-green" ng-bind="stock.trade.invest.tax.scale(2)"></div>
     </div>
+    <!-- 買賣觸發價格 -->
+    <div class="stat" ng-if="stock.trigger.sell">
+      <div class="stat-title">賣出模擬</div>
+      <div ng-if="stock.trigger.sell.status == 'sell'" class="stat-value font-price text-lg text-rich-green">
+        ▼ 跌 {{stock.trigger.sell.pct}}%（${{stock.trigger.sell.close}}）
+      </div>
+      <div ng-if="stock.trigger.sell.status == 'hold'" class="stat-value font-price text-lg">
+        ADX {{stock.trigger.sell.adx}}
+      </div>
+      <div class="stat-desc" ng-bind="stock.trigger.sell.reason"></div>
+    </div>
+    <div class="stat" ng-if="stock.trigger.buy">
+      <div class="stat-title">買入訊號</div>
+      <div ng-if="stock.trigger.buy.status == 'buy'" class="stat-value font-price text-lg text-rich-red">
+        ▲ 漲 {{stock.trigger.buy.pct}}%（${{stock.trigger.buy.close}}）
+      </div>
+      <div ng-if="stock.trigger.buy.status == 'wait'" class="stat-value font-price text-lg">
+        ADX {{stock.trigger.buy.adx}}
+      </div>
+      <div class="stat-desc" ng-bind="stock.trigger.buy.reason"></div>
+    </div>
     <!-- 持倉詳情 -->
     <div class="stat">
       <div class="stat-title">交易</div>
