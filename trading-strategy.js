@@ -383,11 +383,25 @@ export class AdxEntry {
 	checkEntry(day, index, position) {
 		const time = Date.parse(day.date);
 		const adx = this.adx.find(i => i && i.time == time);
+		// 若設定 adxRate 三日斜率門檻，先作過濾
 		if (index < 1 || position.status != 'closed' || adx == null || adx.adx == null || adx.adxRate < this.params.adxRate) return null;
+
+		// 追蹤 ADX 低點（用於谷底回升率計算）
 		position.adxLow = Math.min(position.adxLow || 100, adx.adx);
 		const raiseRate = position.adxLow ? (adx.adx - position.adxLow) / position.adxLow : 0;
 		const adxNote = `三日斜率：${(adx.adxRate * 100).scale(2)}%，谷底回升率：${(raiseRate * 100).scale(2)}%，日：${adx.adx.scale(2)}` + (adx.week ? `／週：${adx.week.scale(2)}` : '');
-        return adx.golden ? { reason: `${AdxEntry.name} 金叉（${adx.plusDi.scale(2)} > ${adx.minusDi.scale(2)}）${adxNote}` } : null;
+
+		// 金叉：標準進場訊號，reentry 不論 true/false 都允許
+		if (adx.golden) {
+			return { reason: `${AdxEntry.name} 金叉（${adx.plusDi.scale(2)} > ${adx.minusDi.scale(2)}）${adxNote}` };
+		}
+
+		// raiseRate 谷底回升：僅在 reentry=true 且已出場過才允許（此為「返場」）
+		if (this.params.reentry && this.params.raiseRate > 0 && position.exitDate && raiseRate >= this.params.raiseRate) {
+			return { reason: `${AdxEntry.name} 谷底回升（${(raiseRate * 100).scale(2)}% ≥ ${(this.params.raiseRate * 100).scale(2)}%）${adxNote}` };
+		}
+
+		return null;
 	}
 }
 

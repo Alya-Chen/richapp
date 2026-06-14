@@ -575,6 +575,7 @@
 					[$$.entryStrategy, $$.exitStrategy].filter(s => s.name.includes('ADX')).forEach(s => {
 						s.adxRate = params.adxRate * 100;
 						s.drawdownRate = params.drawdownRate * 100;
+						s.raiseRate = params.raiseRate * 100;
 					});
 				});
 			});
@@ -924,10 +925,11 @@
 			$$.open = function(event) {
 				window.open(`/stock/${event.code}/${event.ma}`, `_stock/${event.code}/${event.ma}`);
 			};
-			$$.$watchGroup(['params.adxRate', 'params.drawdownRate', 'params.takeProfitPct', 'params.stopLossPct', 'params.dynamicStopPct', 'params.partialProfitPct', 'params.partialProfitRatio', 'params.maxHoldPeriod'], (data) => {
+			$$.$watchGroup(['params.adxRate', 'params.drawdownRate', 'params.raiseRate', 'params.takeProfitPct', 'params.stopLossPct', 'params.dynamicStopPct', 'params.partialProfitPct', 'params.partialProfitRatio', 'params.maxHoldPeriod'], (data) => {
 				if (!data.find(d => d)) return;
 				$$.adxRate = (($$.params.adxRate || 0) * 100).toFixed() + '%';
 				$$.drawdownRate = (($$.params.drawdownRate || 0) * 100).toFixed() + '%';
+				$$.raiseRate = (($$.params.raiseRate || 0) * 100).toFixed() + '%';
 				$$.takeProfitPct = ($$.params.takeProfitPct || 0 * 100).toFixed() + '%';
 				$$.stopLossPct = ($$.params.stopLossPct || 0 * 100).toFixed() + '%';
 				$$.dynamicStopPct = ($$.params.dynamicStopPct || 0 * 100).toFixed() + '%';

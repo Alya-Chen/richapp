@@ -53,15 +53,21 @@
     <div class="collapse-content text-sm">
       <div class="border-t-base-content/5 flex items-center border-t border-dashed py-2 p-2">
         <div class="flex gap-2" ng-if="tigerChecked">
-          <input type="checkbox" ng-model="params.breakout" class="checkbox" />二日法則&nbsp;
-          <input type="checkbox" ng-model="params.reentry" class="checkbox" />重新入場&nbsp;
+          <input type="checkbox" ng-model="params.breakout" class="checkbox" /> 二日法則&nbsp;
+          <input type="checkbox" ng-model="params.reentry" class="checkbox" /> 重新入場&nbsp;
         </div>
         <div class="ml-2" ng-if="adxChecked">
+          <input type="checkbox" ng-model="params.reentry" class="checkbox" /> 重新入場&nbsp;
+          <br/>
           三日斜率閥值（<span ng-bind="adxRate"></span>）：
           <input type="number" ng-model="params.adxRate" step="0.1" />
           <br/>
           最高回撤出清（<span ng-bind="drawdownRate"></span>）：
           <input type="number" ng-model="params.drawdownRate" step="0.1" />
+          <p ng-if="params.reentry">
+            谷底回升率閥值（<span ng-bind="raiseRate"></span>）：
+            <input type="number" ng-model="params.raiseRate" step="0.1" />
+          </p>
         </div>
         <div class="ml-4" ng-if="dynamicExitChecked">
           止損出清（<span ng-bind="stopLossPct"></span>）：

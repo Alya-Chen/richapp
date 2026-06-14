@@ -204,6 +204,7 @@ class Service {
 		params.entryStrategy = st[params.entryStrategy];
 		params.exitStrategy = params.exitStrategy.map(strategy => st[strategy]).filter(Boolean);
 		if (codes != 'all' && !Array.isArray(codes)) { // ma：從 params 設定取得
+			params.code = codes; // 設 code 讓 ADX_CACHE 正確區分各股
 			const startDate = dateFns.addYears(params.entryDate, -1);
 			const dailies = await this.dailies(codes, startDate);
 			if (!dailies.length) return {};
