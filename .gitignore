@@ -7,4 +7,5 @@ npm-debug.log
 stock-sqlite.db
 package-lock.json
 .vscode
+.openclaude
 app.pid
