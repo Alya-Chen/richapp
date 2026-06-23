@@ -1,193 +1,176 @@
-import * as dateFns from 'date-fns';
 import * as fs from 'fs';
+import * as db from './stock-db.js';
 import './static/js/lang.js';
-import * as csv from './csv-utils.js';
-import {
-    TradingSystem,
-    ParameterOptimizer
-} from './trading-sys.js';
-import {
-    stockService as service
-} from './stock-service.js';
-import {
-    Investor
-} from './stock-investor.js';
-import {
-    Op
-} from 'sequelize';
-import {
-    BullBear, Adx, Atr, VolatilityAnalyzer
-} from './static/js/macd-kdj.js';
+import * as st from './trading-strategy.js';
+import { STRATEGY_PRESETS } from './trading-strategy.js';
+import { TradingSystem } from './trading-sys.js';
+import { stockService as service } from './stock-service.js';
+import { Investor, WeeklyInvestor } from './stock-investor.js';
 
-//https://openapi.twse.com.tw/
-//https://hackmd.io/@aaronlife/python-ex-stock-by-api
-//https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY?date=20250101&stockNo=2330&response=json
-//https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=1264&date=2021%2F09%2F01&id=&response=utf-8
-//https://www.tpex.org.tw/openapi/#/
-//https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_0050.tw
-
-const ARGS = process.argv.slice(2);
-const STOCK_CODE = ARGS[0];
 const DATA_DIR = 'data/';
-const STOCK_DIR = 'data/stock/';
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-// 初始化參數
-const params = {
-    ma: ARGS[1] || 17,
-    threshold: 0.005, // MA 需增量 0.5%
-    volumeRate: 1.2, // 交易需增量倍數
-    breakout: true, // 入場需符合二日法則
-    reentry: true, // 出場後是否要重複入場
-    entryDate: new Date('2025-06-01'), //dateFns.addYears(dateFns.addMonths(new Date(), -6), -1), // 取前一年半資料
-    exitDate: new Date(),
-    //entryStrategy: AdxEntry, BullTigerEntry, BBEntryExit, TwoDaysUpEntry
-    entryStrategy: 'AdxEntry',
-    exitStrategy: ['AdxExit'], //['DynamicStopExit', 'RsiTigerExit'],
-    //entryStrategy: 'MacdMaEntry',
-    //exitStrategy: ['MacdMaExit'],
-    stopLossPct: 0.03, // 止損小於入場價格的 3%
-    takeProfitPct: 0.05, // 固定止盈大於入場價格的 5%
-    dynamicStopPct: 0.07, // 動態止損小於曾經最高價格的 7%
-    //maxHoldPeriod: 30 // 最大持倉周期 30 天
-};
+const USER_ID = parseGlobalUser();
+let _user;
+const STRATEGIES = STRATEGY_PRESETS;
 
-function processTrading(dailies, params) {
-    // 參數優化
-    const optimizer = new ParameterOptimizer(dailies);
-    const paramGrid = {
-        ma: [...Array(30).keys()].map(i => i + 15),
-        stopLossPct: [0.02, 0.03, 0.04],
-        takeProfitPct: [0.08, 0.1, 0.12, 10],
-        entryStrategy: ['TigerEntry'],
-        exitStrategy: ['TigerExit']
-    };
-    const results = optimizer.gridSearch(paramGrid);
-    const best = results.sort((a, b) =>
-        //b.returns - a.returns
-        b.profit - a.profit
-    )[0];
-
-    console.dir(results.slice(0, 5));
-    console.dir(best);
-    console.dir(best.params);
-    console.dir(best.trades);
-    return results;
-}
-
-// ================== 使用示例 ==================
-async function main() {
-    //const dailies = await service.realtime(['0050']);
-    //console.log(dailies);
-    //await service.sync();
-    const TODAY = new Date().toLocaleDateString().replaceAll('/', '');
-    const TOP10 = ['2382', '2330', '2317', '6805', '2404', '4728', '6183', '3130', '6754', '2308', '6669', '2376', '2454'];
-
-    if (STOCK_CODE && STOCK_CODE != 'all' && STOCK_CODE != 'csv' && STOCK_CODE != 'invest' && STOCK_CODE != 'analysis') {
-        //const tests = await service.findTest(STOCK_CODE);
-        //console.log(tests[0].params);
-        const stock = await service.getStock(STOCK_CODE);
-        const result = await service.backtest(STOCK_CODE, params);
-        const profitRate = (result.profitRate * 100).scale(0) + '%';
-        console.log(`${stock.code} ${stock.name} MA${result.ma} ${result.profit} ${profitRate}`);
-        console.log(result);
-        //console.log(result.trades);
-        //const filePath = `${DATA_DIR}${stock.code} ${stock.name} MA${result.ma} (${result.profit} ${profitRate}).csv`;
-        //csv.writeFile(filePath, result.trades);
-        //await service.saveTest(stock, result);
-    }
-    if (STOCK_CODE == 'all') {
-		//const stock = await service.getStock('3130');
-		//console.log(await service.fetchDividendData(stock));
-
-        //console.log(await service.realtime(['0050', '3131', 'AAPL']));
-        //const stocks = await service.stocks();
-        //const codes = stocks.filter(s => s.country == 'tw').map(s => s.code);
-        //const result = await service.realtime(codes);
-        //await service.sync();
-        //console.log(await service.findStock('AAPL'));
-        const user = await service.getUser(1);
-        const params = user.settings.params;
-        params.userId = user.id;
-        console.log(params);
-        const result = await service.backtest('all', params);
-        console.log(result.length);
-		//const result = await service.backtest(['AAPL', '6721'], {
-        //    transient: true
-		//});
-        //console.log(service.invest(result));
-        //const codes = ['6721'];
-        //for (let i = 0; i < codes.length; i++) await service.sync(codes[i], true);
-        /*const stocks = await service.stocks();
-        const startDate = new Date('2024-06-06');
-        for (let i = 0; i < stocks.length; i++) {
-        	const stock = stocks[i];
-        	const dailies = await service.dailies(stock.code, startDate);
-        	stock.financial = Object.assign(stock.financial || {}, new BullBear(dailies).calculate());
-        	console.log(`${stock.code} ${JSON.stringify(stock.financial.bullscore)}`);
-        	service.saveStock(stock);
-        }*/
-    }
-    if (STOCK_CODE == 'csv') {
-        //const tests = await service.findTests(null, [
-        //    ['profitRate', 'DESC']
-		//]);
-		const stocks = await service.stocks();
-		const codes = stocks.filter(s => s.country == 'tw').map(s => s.code);
-		for (const year of [2023, 2024, 2025]) {
-			params.entryDate = new Date(year + '-01-01');
-			params.exitDate = new Date(year + '-12-31');
-			params.transient = true;
-			const tests = await service.backtest(codes, params);
-        	const csv = await service.exportCsv(tests);
-	        //console.log(csv);
-	        fs.writeFileSync(`${TODAY}-${year}-TOP10-金牛5％止盈不止損.csv`, csv);
+function parseGlobalUser() {
+	const argv = process.argv.slice(2);
+	for (let i = 0; i < argv.length; i++) {
+		if ((argv[i] === '-u' || argv[i] === '--user') && i + 1 < argv.length) {
+			process.argv.splice(process.argv.indexOf(argv[i]), 2);
+			return parseInt(argv[i + 1]);
 		}
-    }
-    if (STOCK_CODE == 'invest') {
-		const stocks = await service.stocks();
-        const money = 555022;
-        params.transient = true;
-        //params.dynamic = true;
-        //params.usingTigerMa = true;
-        const startDate = dateFns.addYears(new Date(), -2);
-        const csv = [];
-        for (const code of TOP10) {
-            console.log(`Investing ${code}`);
-            params.entryDate = new Date('2025-01-01');
-            const investor = new Investor([code], money, params);
-            const result = await investor.invest();
-            console.log(result.csv);
-            csv.push(result.csv);
-        }
-        fs.writeFileSync(`data/${TODAY}-TOP10.csv`, csv.join('\r\n\r\n'));
-    }
-    if (STOCK_CODE == 'analysis') {
-        const startDate = dateFns.addYears(new Date(), -2);
-        const csv = [];
-        for (const code of ['6669']) {
-            console.log(`Investing ${code}`);
-            const data = await service.dailies(code, startDate);
-            const adxResults = new Adx(data, { period: 14 }).calculate();
-            const atrResults = new Atr(data, { period: 14 }).calculate();
-            const analyzer = new VolatilityAnalyzer(adxResults, atrResults);
-            const today = new Date().toISOString().substring(0, 10);
-            const oneYearAgo = dateFns.addYears(new Date(), -1);
-            for (let i = 0; i <= 3600; i++) {
-                const targetDate = dateFns.addDays(oneYearAgo, i);
-                if (targetDate.toISOString().substring(0, 10) > today) break;
-                const result = analyzer.run(targetDate);
-                if (result.error) continue;
-                const note = JSON.stringify(result.note) + result.diSignal.split(' ')[0];
-                if (note != analyzer.note) {
-                    result.code = code;
-                    result.name = (await service.getStock(code)).name;
-                    analyzer.note = note;
-                    csv.push(JSON.stringify(result));
-                }
-            }
-        }
-        fs.writeFileSync(`data/${TODAY}-9996.csv`, csv.join('\r\n\r\n'));
-    }
+	}
+	return null;
 }
 
-main();
+async function resolveUser() {
+	if (_user) return _user;
+	if (!USER_ID) return null;
+	await db.initDb();
+	_user = await db.User.findByPk(USER_ID);
+	if (!_user) { console.error(`User #${USER_ID} not found`); process.exit(1); }
+	return _user;
+}
+
+async function userCodes() {
+	const user = await resolveUser();
+	if (!user) return null;
+	return user.settings?.stared?.filter(Boolean) || [];
+}
+
+function showHelp() {
+	console.log(`
+Usage: node main.js [-u <userId>] <command> [args...]
+
+Options:
+  -u, --user <id>      以使用者關注股票與策略參數執行
+
+Commands:
+  sync <code|all>              同步日線
+  sync-all [weekly]            同步全部台股
+  backtest <code|all> [策略]   跑回測 (adx, weeklyAdx, weeklyTrend, macd)
+  invest <code> [策略]         資金管理（日線）
+  invest-weekly <code> [策略]  資金管理（週線）
+  list-stocks                  列出股票
+
+範例:
+  node main.js backtest 2330 weeklyAdx drawdownRate=0.4
+  node main.js backtest-all weeklyAdx
+  node main.js -u 2 backtest-all weeklyAdx
+  node main.js -u 2 invest 2330
+`);
+}
+
+async function main() {
+	const [CMD, ...ARGS] = process.argv.slice(2);
+	switch (CMD) {
+	case 'sync':         return sync(ARGS[0]);
+	case 'sync-all':     return syncAll(ARGS[0]);
+	case 'backtest':     return backtest(ARGS[0], ARGS[1], ARGS.slice(2));
+	case 'backtest-all': return backtestAll(ARGS[0], ARGS.slice(1));
+	case 'invest':       return invest(ARGS[0], ARGS[1], ARGS.slice(2));
+	case 'invest-weekly':return invest(ARGS[0], ARGS[1], [...ARGS.slice(2), '--weekly']);
+	case 'list-stocks':  return listStocks();
+	default:             showHelp();
+	}
+}
+
+async function sync(code) {
+	if (code && code !== 'all') { await service.sync(code); console.log(`${code} done`); return; }
+	const stocks = await service.stocks();
+	for (const s of stocks) { process.stdout.write(`${s.code} ${s.name}... `); await service.sync(s.code); console.log('done'); }
+}
+
+async function syncAll(interval) {
+	const fn = interval === 'weekly' ? 'syncWeekly' : 'sync';
+	const codes = USER_ID ? await userCodes() : (await service.stocks()).filter(s => s.country === 'tw').map(s => s.code);
+	if (!codes?.length) { console.log(USER_ID ? 'User has no stared stocks' : 'No stocks found'); return; }
+	console.log(`Sync ${codes.length} stocks  ${interval||'daily'}${USER_ID ? `  user=#${USER_ID}` : ''}`);
+	for (const code of codes) { process.stdout.write(`${code}... `); await service[fn](code); console.log('done'); }
+}
+
+async function backtest(code, strategy = 'adx', extras = []) {
+	const s = { ...(STRATEGIES[strategy] || STRATEGIES.adx) };
+	const params = buildParams(s, extras);
+	const stock = await service.getStock(code);
+	if (!stock) { console.log('Stock not found:', code); return; }
+	const data = s.weekly ? await service.weeklies(code, new Date('2019-01-01')) : await service.dailies(code, new Date('2019-01-01'));
+	if (!data?.length) { console.log('No data'); return; }
+	const sys = new TradingSystem(data, { ...params, code });
+	const result = sys.backtest();
+	const trades = (result.trades || []).filter(t => t.duration > 0);
+	const profit = result.profit || 0;
+	console.log(`\n${stock.code} ${stock.name}  ${strategy}  Trades: ${trades.length}  Profit: ${profit > 0 ? '+' : ''}${profit.scale(0)}  Rate: ${((result.profitRate||0)*100).scale(1)}%`);
+	trades.forEach((t,i) => console.log(`  #${i+1} ${(t.entryDate?.toISOString?.()?.slice(0,10)||'').slice(2)}→${(t.exitDate?.toISOString?.()?.slice(0,10)||'').slice(2)}  ${t.entryPrice.scale(0)}→${t.exitPrice.scale(0)}  ${t.profit>0?'+':''}${t.profit.scale(0)}`));
+	fs.writeFileSync(`${DATA_DIR}${code}-${strategy}-${new Date().toISOString().slice(0,10)}.csv`, JSON.stringify(result.trades, null, 2));
+}
+
+async function backtestAll(strategy = 'adx', extras = []) {
+	const s = { ...(STRATEGIES[strategy] || STRATEGIES.adx) };
+	const params = buildParams(s, extras);
+	if (typeof params.entryDate === 'string') params.entryDate = new Date(params.entryDate);
+	if (typeof params.exitDate === 'string') params.exitDate = new Date(params.exitDate);
+	const codes = USER_ID ? await userCodes() : (await service.stocks()).filter(x => x.country === 'tw').map(x => x.code);
+	if (!codes?.length) { console.log(USER_ID ? 'User has no stared stocks' : 'No stocks found'); return; }
+	console.log(`\nBacktest ${codes.length} stocks  ${strategy}${USER_ID ? `  user=#${USER_ID}` : ''}`);
+	const results = [];
+	for (const code of codes) {
+		process.stdout.write(`${code}... `);
+		const r = await service.backtest(code, { ...params, transient: true, entryStrategy: s.entry, exitStrategy: s.exit }, true);
+		if (!r || !r.trades) { console.log('no data'); continue; }
+		const trades = (r.trades || []).filter(t => t.duration > 0).length;
+		const profit = r.profit || 0;
+		console.log(`${profit > 0 ? '+' : ''}${profit.scale(0)} (${trades})`);
+		results.push({ code, trades, profit, profitRate: r.profitRate || 0 });
+	}
+	if (!results.length) return;
+	const csv = ['code\ttrades\tprofit\tprofitRate', ...results.map(r => [r.code, r.trades, r.profit.scale(0), ((r.profitRate)*100).scale(1)+'%'].join('\t'))].join('\n');
+	fs.writeFileSync(`${DATA_DIR}backtest-${strategy}-user${USER_ID||'all'}-${new Date().toISOString().slice(0,10)}.csv`, csv);
+	console.log(`Saved: ${DATA_DIR}backtest-${strategy}-user${USER_ID||'all'}-${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+async function invest(code, strategy, extras = []) {
+	const user = await resolveUser();
+	if (!strategy && user?.settings?.params) {
+		const up = user.settings.params;
+		strategy = up.entryStrategy === 'WeeklyTrendEntry' ? 'weeklyTrend'
+			: up.entryStrategy === 'AdxEntry' ? (up.weekly ? 'weeklyAdx' : 'adx')
+			: up.entryStrategy === 'MacdEntry' ? 'macd' : 'adx';
+	}
+	const s = { ...(STRATEGIES[strategy] || STRATEGIES.adx) };
+	const useWeekly = extras.includes('--weekly') || s.weekly;
+	const params = buildParams(s, extras.filter(e => !e.startsWith('--')));
+	const explicitParams = new Set(extras.filter(e => !e.startsWith('--')).map(e => e.split('=')[0]));
+	if (user?.settings?.params) {
+		for (const k of ['adxRate', 'drawdownRate', 'raiseRate', 'reentry']) {
+			if (user.settings.params[k] !== undefined && !explicitParams.has(k)) params[k] = user.settings.params[k];
+		}
+	}
+	if (!params.entryDate) params.entryDate = new Date('2020-01-01');
+	if (typeof params.entryDate === 'string') params.entryDate = new Date(params.entryDate);
+	if (typeof params.exitDate === 'string') params.exitDate = new Date(params.exitDate);
+	const InvestorClass = useWeekly ? WeeklyInvestor : Investor;
+	const inv = new InvestorClass([code], 1000000, { ...params, entryStrategy: s.entry, exitStrategy: s.exit, weekly: useWeekly });
+	console.log(`Invest ${code}  ${strategy}  ${useWeekly ? 'weekly' : 'daily'}${user ? `  user=#${USER_ID}` : ''}`);
+	const result = await inv.invest();
+	const done = (result.trades || []).filter(t => t.status === 'done');
+	console.log(`Trades: ${done.length}  Profit: ${result.profit > 0 ? '+' : ''}${result.profit.scale(0)}  Final: ${result.money}`);
+	if (done.length > 0) { fs.writeFileSync(`${DATA_DIR}${code}-${strategy}-invest${user?'-u'+USER_ID:''}-${new Date().toISOString().slice(0,10)}.csv`, result.csv); }
+}
+
+function buildParams(s, extras) {
+	const p = { transient: true };
+	p.entryStrategy = st[s.entry];
+	p.exitStrategy = s.exit.map(e => st[e]).filter(Boolean);
+	for (const [k, v] of Object.entries(s.params || {})) p[k] = v;
+	for (const e of extras) { const [k, v] = e.split('='); if (k && v !== undefined) p[k] = isNaN(Number(v)) ? v : Number(v); }
+	return p;
+}
+
+async function listStocks() {
+	(await service.stocks()).forEach(s => console.log(s.code, s.country || 'tw'));
+}
+
+main().catch(console.error);

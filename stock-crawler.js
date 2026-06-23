@@ -103,18 +103,19 @@ class YahooCrawler extends Crawler {
 	}
 
     // 1. 歷史報價 (v8)
-    async fetchAll(period1, period2) {
+    async fetchAll(period1, period2, interval = '1d') {
         const symbol = this.getYahooSymbol();
         const p1 = Math.floor((period1 || new Date('2020-01-01')).getTime() / 1000);
         const p2 = Math.floor((period2 || new Date()).getTime() / 1000);
 
         try {
             const { data } = await axios.get(`${YAHOO_CHART}${symbol}`, {
-                params: { period1: p1, period2: p2, interval: '1d', events: 'history' },
+                params: { period1: p1, period2: p2, interval, events: 'history' },
                 headers: HEADERS, timeout: 5000
             });
             return this.parseChartData(data);
         } catch (error) {
+            if (interval !== '1d') throw error; // 週線/月線無備援來源
             console.warn(`[Yahoo Chart] 歷史抓取失敗，嘗試備案...`);
             const backup = this.country === 'us' ? new UsCrawler(this) : new TwCrawler(this);
             return await backup.fetchAll(period1, period2);

@@ -104,12 +104,21 @@ class Service {
 	}
 
 	async sync(code, forced) {
+		if (code) {
+			const stock = await this.getStock(code);
+			if (!stock) return;
+			const last = forced ? null : await db.StockDaily.last(code);
+			const result = await Crawler.create(stock).fetchAll(last ? new Date(last.date) : null);
+			for (const daily of result) {
+				daily.code = code;
+				this.saveDaily(daily);
+			}
+			db.Log.info(`${stock.code} ${stock.name} 股票 ${result.length} 筆資料同步完成`);
+			return;
+		}
 		const stocks = await this.stocks();
 		for (let i = 0; i < stocks.length; i++) {
 			const stock = stocks[i];
-			//if (!stock.otc) continue;
-			//if (stock.id < 264) continue;
-			if (code && stock.code != code) continue;
 			const last = forced ? null : await db.StockDaily.last(stock.code);
 			const result = await Crawler.create(stock).fetchAll(last ? new Date(last.date) : null);
 			for (let i = 0; i < result.length; i++) {
@@ -117,7 +126,30 @@ class Service {
 				daily.code = stock.code;
 				this.saveDaily(daily);
 			}
-			if (code) db.Log.info(`${stock.code} ${stock.name} 股票 ${result.length} 筆資料同步完成`);
+		}
+	}
+
+	async syncWeekly(code) {
+		if (code) {
+			const stock = await this.getStock(code);
+			if (!stock) return;
+			const last = await db.StockWeekly.last(code);
+			const result = await Crawler.create(stock).fetchAll(last ? new Date(last.date) : null, null, '1wk');
+			for (const weekly of result) {
+				weekly.code = code;
+				this.saveWeekly(weekly);
+			}
+			db.Log.info(`${stock.code} ${stock.name} 週線 ${result.length} 筆資料同步完成`);
+			return;
+		}
+		const stocks = await this.stocks();
+		for (const stock of stocks) {
+			const last = await db.StockWeekly.last(stock.code);
+			const result = await Crawler.create(stock).fetchAll(last ? new Date(last.date) : null, null, '1wk');
+			for (const weekly of result) {
+				weekly.code = stock.code;
+				this.saveWeekly(weekly);
+			}
 		}
 	}
 
@@ -205,10 +237,23 @@ class Service {
 		params.exitStrategy = params.exitStrategy.map(strategy => st[strategy]).filter(Boolean);
 		if (codes != 'all' && !Array.isArray(codes)) { // ma：從 params 設定取得
 			params.code = codes; // 設 code 讓 ADX_CACHE 正確區分各股
-			const startDate = dateFns.addYears(params.entryDate, -1);
-			const dailies = await this.dailies(codes, startDate);
-			if (!dailies.length) return {};
-			const sys = new TradingSystem(dailies, params);
+			const startLookback = params.weekly ? -2 : -1;
+			const startDate = dateFns.addYears(params.entryDate, startLookback);
+			const data = params.weekly
+				? await this.weeklies(codes, startDate)
+				: await this.dailies(codes, startDate);
+			if (!data.length) return {};
+
+			// maSensitive 策略：透過 findBest 做 walk-forward MA 優化（僅回測模式）
+			if (simulating) {
+				const maSensitive = params.entryStrategy?.maSensitive || params.exitStrategy?.find(s => s?.maSensitive);
+				if (maSensitive) {
+					const stock = await this.getStock(codes);
+					if (stock) return await this.findBest(stock, params, data, true);
+				}
+			}
+
+			const sys = new TradingSystem(data, params);
 			const backtest = sys.backtest();
 			const trade = backtest.trades[backtest.trades.length - 1];
 			const last = sys.data.pop();
@@ -232,22 +277,23 @@ class Service {
 		const stocks = await this.stocks();
 		for (const stock of stocks) {
 			if (Array.isArray(codes) && !codes.find(c => c == stock.code)) continue;
-			const count = await this.countDaily(stock.code);
-			if (!count) {
+			const startDate = dateFns.addYears(params.entryDate, -2);
+			const data = params.weekly
+				? await this.weeklies(stock.code, startDate)
+				: await this.dailies(stock.code, startDate);
+			if (!data.length) {
 				console.log(`${stock.code} ${stock.name} 缺歷史交易資料跳過`);
 				continue;
 			}
-			const startDate = dateFns.addYears(params.entryDate, -2);
-			const dailies = await this.dailies(stock.code, startDate);
 			const trade = stock.trades.find(t => t.entryDate && !t.exitDate);
 			let best = null;
 			if (trade || params.realtime) { // 平日或正在交易中，不改 MA
 				params.code = stock.code;
 				params.ma = trade?.ma || stock.defaultMa;
-				best = new TradingSystem(dailies, params).backtest();
+				best = new TradingSystem(data, params).backtest();
 			}
 			else {
-				best = await this.findBest(stock, params, dailies, simulating);
+				best = await this.findBest(stock, params, data, simulating);
 				stock.defaultMa = best.ma;
 			}
             const profitRate = (best.profitRate * 100).scale(0) + '%';
@@ -260,7 +306,7 @@ class Service {
 			//csv.writeFile(filePath, best.trades);
 			if (!params.transient) {
 				this.saveTest(stock, best);
-				stock.financial = Object.assign(stock.financial || {}, new BullBear(dailies).calculate());
+				stock.financial = Object.assign(stock.financial || {}, new BullBear(data).calculate());
 				this.saveStock(stock);
 				//console.log(`${stock.code} ${JSON.stringify(stock.financial)}`);
 			}
@@ -272,8 +318,9 @@ class Service {
 	}
 
 	async findBest(stock, params, dailies, simulating) {
-		// 若是回測，用 entryDate 的前一年資料來 找最佳 MA
-		const entryDate = simulating ? dateFns.addYears(params.entryDate, -1) : params.entryDate;
+		// 若是回測，用 entryDate 的前 N 年資料來找最佳 MA（週線 2 年、日線 1 年）
+		const lookback = simulating ? (params.weekly ? -2 : -1) : 0;
+		const entryDate = simulating ? dateFns.addYears(params.entryDate, lookback) : params.entryDate;
 		const exitDate = simulating ? new Date(params.entryDate) : params.exitDate;
 		if (params.usingTigerMa && stock.tigerMa) {
 			const ma = new String(stock.tigerMa).split(',')[0].split('/')[0];
@@ -297,7 +344,7 @@ class Service {
 			b.profit - a.profit
 		)[0];
 		params.code = stock.code;
-		params.ma = best?.ma || 20; // 沒有找到最佳 MA，則設為 20（月線）
+		params.ma = best?.ma || params.ma || 20; // 沒有找到最佳 MA，則保留用戶設定的 MA
 		return simulating ? new TradingSystem(dailies, params).backtest() : best;
 	}
 
@@ -477,11 +524,21 @@ class Service {
 		return await db.StockDaily.save(daily);
 	}
 
+	async saveWeekly(weekly) {
+		return await db.StockWeekly.save(weekly);
+	}
+
 	async countDaily(code) {
 		return await db.StockDaily.count({
 			where: {
 				code
 			}
+		});
+	}
+
+	async countWeekly(code) {
+		return await db.StockWeekly.count({
+			where: { code }
 		});
 	}
 
@@ -493,6 +550,21 @@ class Service {
 			result = await Crawler.create(stock).fetchAll();
 			await db.StockDaily.saveAll(code, result);
 			result = await db.StockDaily.query(code, startDate, new Date());
+		}
+		return result.map(s => s.toJSON()).map(s => ({
+			...s,
+			date: new Date(s.date)
+		}));
+	}
+
+	async weeklies(code, startDate) {
+		startDate = startDate || dateFns.addYears(new Date(), -2);
+		let result = await db.StockWeekly.query(code, startDate, new Date());
+		if (!result.length) {
+			const stock = await this.getStock(code);
+			result = await Crawler.create(stock).fetchAll(null, null, '1wk');
+			await db.StockWeekly.saveAll(code, result);
+			result = await db.StockWeekly.query(code, startDate, new Date());
 		}
 		return result.map(s => s.toJSON()).map(s => ({
 			...s,

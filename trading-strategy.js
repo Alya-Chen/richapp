@@ -1,4 +1,15 @@
 import * as dateFns from 'date-fns';
+// ============================================================
+// trading-strategy.js — 交易策略類別定義
+//
+// 結構：
+//   1. 基礎工具   → Cache, MACD_CACHE, RSI_CACHE, ADX_CACHE …
+//   2. 日線策略   → TwoDaysUpEntry, DynamicStopExit, Tiger, Rsi …
+//   3. 複合策略   → AdxMacdEntryExit, ObvMacdEntryExit, BBEntryExit
+//   4. 週線策略   → WeeklyTrendEntry, WeeklyTrendExit
+//   5. 預設組合   → STRATEGY_PRESETS（供 CLI / UI 匯入）
+// ============================================================
+
 import { Macd, Kdj, Rsi, BullBear, BollingerBands, Adx } from './static/js/macd-kdj.js';
 import { ObvMacd } from './static/js/obv-macd.js';
 
@@ -34,6 +45,7 @@ export class TwoDaysUpEntry {
 	static name = '連兩日走高進場策略';
 	static enabled = true;
 	static maSensitive = true;
+	static crossTimeframe = true;
 	constructor(data, params) {
 		this.data = data;
 		this.params = params;
@@ -59,6 +71,7 @@ export class TwoDaysUpEntry {
 export class DynamicStopExit {
 	static name = '動態止盈止損出場策略';
 	static enabled = true;
+	static crossTimeframe = true;
 	constructor(data, params) {
 		this.data = data;
 		this.params = params;
@@ -282,6 +295,7 @@ export class RsiExit {
 export class MaCrossEntryExit {
 	static name = 'MA 交叉進出場策略';
 	static enabled = true;
+	static crossTimeframe = true;
 	constructor(data, params) {
 		this.data = data || [];
 		this.params = params;
@@ -371,12 +385,14 @@ export class MaCrossEntryExit {
 export class AdxEntry {
 	static name = 'ADX 進場策略';
 	static enabled = true;
+	static crossTimeframe = true;
 	constructor(data, params) {
 		this.data = data || [];
 		this.params = params;
-		// ADX 三日斜率門檻，0 表示不使用
 		this.params.adxRate = params.adxRate || 0;
-		this.adx = ADX_CACHE.get(params.code, data);
+		this.adx = params.weekly
+			? new Adx(data, { period: 14, threshold: 25 }).calculate()
+			: ADX_CACHE.get(params.code, data);
 	}
 
 	// 開倉條件檢查
@@ -408,12 +424,14 @@ export class AdxEntry {
 export class AdxExit {
 	static name = 'ADX 出場策略';
 	static enabled = true;
+	static crossTimeframe = true;
 	constructor(data, params) {
 		this.data = data || [];
 		this.params = params;
-		// ADX 三日斜率門檻，0 表示不使用
 		this.params.adxRate = params.adxRate || 0;
-		this.adx = ADX_CACHE.get(params.code, data);
+		this.adx = params.weekly
+			? new Adx(data, { period: 14, threshold: 25 }).calculate()
+			: ADX_CACHE.get(params.code, data);
 	}
 
 	// 平倉條件檢查
@@ -433,10 +451,12 @@ export class AdxExit {
 		return adx.dead ? { reason: `${AdxExit.name} 死叉（${adx.minusDi.scale(2)} > ${adx.plusDi.scale(2)}）${adxNote}` } : null;
 	}
 }
+
 ///////////////////////////////////////////////////////////////////////////////
 export class MacdEntry {
 	static name = 'MACD 進場策略';
 	static enabled = true;
+	static crossTimeframe = true;
 	constructor(data, params) {
 		this.data = data || [];
 		this.params = params;
@@ -455,6 +475,7 @@ export class MacdEntry {
 export class MacdExit {
 	static name = 'MACD 出場策略';
 	static enabled = true;
+	static crossTimeframe = true;
 	constructor(data, params) {
 		this.data = data || [];
 		this.params = params;
@@ -477,6 +498,7 @@ export class AdxMacdEntryExit {
 	// 若 ADX > 25 且上升 → 停用 MACD，全面用 ADX
 	static name = 'ADX＋MACD 進出場策略';
 	static enabled = true;
+	static crossTimeframe = true;
 	constructor(data, params) {
 		this.data = data || [];
 		this.params = params;
@@ -590,6 +612,7 @@ export class BBEntryExit {
 	static name = '布林帶策略';
 	static enabled = true;
 	static maSensitive = true;
+	static crossTimeframe = true;
 	constructor(data, params = {}) {
 		this.data = data || [];
 		this.params = Object.assign({
@@ -673,7 +696,7 @@ export class BBEntryExit {
 	// ========= 規則 1：反轉多 =========
 	// Day1 收盤 < 下軌；Day2 收盤 > 下軌 且 > Day1 高點 → 開盤買
 	checkRule1Long(day, index) {
-		if (index < 1) return null;
+		if (index < 1 || !day.bb || !this.data[index-1]?.bb) return null;
 		const d1 = this.data[index - 1];
 		if ([d1.close, d1.bb.lower, day.close, day.bb.lower, d1.high].some(v => v == null)) return null;
 		const condDay1 = d1.close < d1.bb.lower;
@@ -706,7 +729,7 @@ export class BBEntryExit {
 	// ========= 規則 2：突破多 =========
 	// 帶寬 < 近 100 日 20% 分位；Day1 收盤 > 上軌；Day2 不回帶(收>上軌) 且 創短期新高 → 買
 	checkRule2Long(day, index) {
-		if (index < 1) return null;
+		if (index < 1 || !day.bb || !this.data[index-1]?.bb) return null;
 		const d1 = this.data[index - 1];
 		if ([d1.close, d1.bb.upper, day.close, day.bb.upper, day.high].some(v => v == null)) return null;
 		const bwThresh = this.getBandwidthPercentile(index);
@@ -749,7 +772,7 @@ export class BBEntryExit {
 	 */
 	checkPyramid(day, index, position) {
 		if (!position || position.status !== 'long') return null;
-		if (index < 1) return null;
+		if (index < 1 || !day.bb) return null;
 		const prev = this.data[index - 1];
 		if ([day.low, day.close, day.bb.middle, prev.close].some(v => v == null)) return null;
 		const touchedMiddle = day.low <= day.bb.middle * 1.001; // 允許一點誤差
@@ -772,11 +795,11 @@ export class BBEntryExit {
 	 */
 	checkExit(day, index, position) {
 		if (position.status == 'closed') return null;
-		if (index < 1) return null;
+		if (index < 1 || !day.bb) return null;
 		if (day.close > day.bb.middle) position.seenAboveMiddle = true;
 		const prev = this.data[index - 1];
 		// 規則2的出場：連續兩日收盤 < 中軌
-		if (position.seenAboveMiddle && day.bb.middle != null && prev.bb.middle != null) {
+		if (position.seenAboveMiddle && day.bb.middle != null && prev.bb?.middle != null) {
 			const twoDaysBelowMiddle = (prev.close < prev.bb.middle) && (day.close < day.bb.middle);
 			if (twoDaysBelowMiddle) {
 				return {
@@ -827,53 +850,291 @@ export class BBEntryExit {
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// 比例法則（適合慢牛市場）分批進場：資金分為 25%, 40%, 35%
-// 第一次投入 25% 每上漲超過 3% 再投入下一筆資金
-// 動態調整停損：
-// 第一筆入場後，停損點為入場價格 * (1 - 5%)
-// 第二筆入場後，因為總投入為 65%，停損點為兩筆資金平均價格 * (1 - 2%) 以確保總損失能在 1% 左右
-// 第三筆入場後，停損點為三筆資金平均價格，以符合不接受帳面盈餘虧損原則
-// 關鍵點買進出場法：單次 all-in 還是分批入場？
-// 動態調整停損：
-// 跌破均線出場 25%，若後續再破新低再出場 40%，最後的 35% 一樣要符合四大心法原則設定停損點出場
-// 跌破均線後若重新突破均線，再回頭加碼 40% -> 35%
-export class TigerPartialEntryExit {
-	static name = '金唬男均線分批進出場策略';
-	static enabled = false;
+// ============== 週線趨勢策略 ==============
+
+export class WeeklyTrendEntry {
+	static name = '週線趨勢進場';
+	static enabled = true;
 	constructor(data, params) {
 		this.data = data;
-		this.cost = []; // 已經投入的資金
 		this.params = params;
-		this.params.entryRates = [ 0.25, 0.4, 0.35 ]; // 資金分批進場比例
+		this.params.goldenLookback = params.goldenLookback || 3; // 金叉後 N 週內回踩 5MA 都算
+		this.params.maxDeviation = params.maxDeviation || 0.1;   // 價格偏離 MA5 上限（正乖離率）
+		this.params.maxWeeklyVol = params.maxWeeklyVol || 0.04; // 週波動率上限（過高波動不進）
+		this.calcMAs();
+		this.macd = new Macd(data).calculate();
 	}
 
-	// 開倉條件檢查
-	checkEntry(day, index, position) {
-		const {
-			entryRates
-		} = this.params;
-		if (index < ma) return false;
+	calcMAs() {
+		for (const [period, key] of [[5, 'ma5'], [10, 'ma10'], [20, 'ma20']]) {
+			for (let i = 0; i < this.data.length; i++) {
+				if (i < period - 1) {
+					this.data[i][key] = null;
+				} else {
+					let sum = 0;
+					for (let j = 0; j < period; j++) sum += this.data[i - j].close;
+					this.data[i][key] = sum / period;
+				}
+			}
+		}
+	}
 
-		if (position.status == 'closed') {
-			this.tigerEntry = new TigerEntry(this.data, this.params);
-			if (this.tigerEntry.checkEntry(day, index, position)) {
-				const idx = this.cost.length;
-				this.cost.push({ price: day.close, rate: entryRates[idx] });
+	checkEntry(day, index, position) {
+		if (index < 20 || position.status !== 'closed') return null;
+
+		// 多頭排列：MA5 > MA10（放掉 MA20，增加起漲點捕捉）
+		if (!(day.ma5 > day.ma10)) return null;
+
+		// MACD 週金叉（近 N 週內曾發生，預設 3 週）
+		const lb = Math.max(0, index - this.params.goldenLookback);
+		const recentGolden = this.macd.slice(lb, index + 1).some(m => m && m.golden);
+		if (!recentGolden) return null;
+
+		// 股價接近 MA5（正乖離率上限 maxDeviation，預設 10%）
+		if (day.close < day.ma5 * 0.97 || day.close > day.ma5 * (1 + this.params.maxDeviation)) return null;
+
+		// 成交量不低於前 5 週均量（只過濾極度萎縮）
+		const slice = this.data.slice(Math.max(0, index - 5), index);
+		const avgVol = slice.reduce((s, d) => s + (d.volume || 0), 0) / Math.min(5, Math.max(1, slice.length));
+		if (avgVol > 0 && (day.volume || 0) < avgVol * 1.0) return null;
+
+		// 週波動率過濾（近 10 週平均波動過高不進，避免高波動股假訊號）
+		const n = Math.min(10, index);
+		let sumVol = 0;
+		for (let i = 1; i <= n; i++) {
+			sumVol += Math.abs(this.data[index - i + 1].close - this.data[index - i].close) / this.data[index - i].close;
+		}
+		if (sumVol / n > this.params.maxWeeklyVol) return null;
+
+		return { reason: `${WeeklyTrendEntry.name} MA5:${day.ma5.scale()} MA10:${day.ma10.scale()} MA20:${day.ma20.scale()} Vol:${((day.volume || 0) / avgVol).scale(1)}x` };
+	}
+}
+
+export class WeeklyTrendExit {
+	static name = '週線趨勢出場';
+	static enabled = true;
+	constructor(data, params) {
+		this.data = data;
+		this.params = params;
+		this.params.trailingStopPct = params.trailingStopPct || 0.1; // 移動停利：從最高點回落 %
+		this.calcMAs();
+		this.macd = new Macd(data).calculate();
+	}
+
+	calcMAs() {
+		for (const [period, key] of [[5, 'ma5'], [10, 'ma10'], [20, 'ma20']]) {
+			for (let i = 0; i < this.data.length; i++) {
+				if (i < period - 1) {
+					this.data[i][key] = null;
+				} else {
+					let sum = 0;
+					for (let j = 0; j < period; j++) sum += this.data[i - j].close;
+					this.data[i][key] = sum / period;
+				}
+			}
+		}
+	}
+
+	checkExit(day, index, position) {
+		if (index < 20) return null;
+
+		const prev = this.data[index - 1];
+		const m = this.macd[index];
+		const mp = this.macd[index - 1];
+		const trailPct = this.params.trailingStopPct;
+		const profitRate = (day.close - position.entryPrice) / position.entryPrice;
+
+		// 追蹤持倉期間最高價
+		if (!position.highestPrice || day.close > position.highestPrice) {
+			position.highestPrice = day.close;
+		}
+
+		if (profitRate <= 0) {
+			// === 虧損/打平：MA5 死叉單週確認（快速停損） ===
+			if (prev.ma5 >= prev.ma10 && day.ma5 < day.ma10) {
+				return { reason: `${WeeklyTrendExit.name} 虧損MA5死叉 ${(profitRate * 100).scale(1)}%` };
+			}
+		} else {
+			// === 獲利中：移動停利 ===
+			const drawdown = 1 - day.close / position.highestPrice;
+			if (drawdown >= trailPct) {
+				return { reason: `${WeeklyTrendExit.name} 移動停利回撤${(drawdown * 100).scale(1)}% ${(profitRate * 100).scale(1)}%獲利了結` };
 			}
 		}
 
-		position.avgCost = this.getAvgCost();
-	}
+		// 備用出場條件（不分盈虧皆適用）
+		// MACD 死叉
+		if (m && m.dead) {
+			return { reason: `${WeeklyTrendExit.name} MACD死叉 DIF:${(m.diff || 0).scale()}` };
+		}
+		// MACD DIF 拐頭向下 + 紅柱
+		if (m && mp && m.histogram < 0 && m.diff < mp.diff) {
+			return { reason: `${WeeklyTrendExit.name} DIF拐頭 Hist:${(m.histogram || 0).scale()}` };
+		}
+		// 跌破 20MA（緊急停損）
+		if (day.close < day.ma20 * 0.97) {
+			return { reason: `${WeeklyTrendExit.name} 跌破20MA ${day.close.scale()} < ${(day.ma20 * 0.97).scale()}` };
+		}
 
-	getAvgCost() {
-		const cost = this.cost.reduce((sum, cost) => sum + (cost.price * cost.rate), 0);
-		const rate = this.cost.reduce((sum, cost) => sum + cost.rate, 0);
-		return cost / rate;
-	}
-
-	// 平倉條件檢查
-	checkExit(day, index, position) {
-
+		return null;
 	}
 }
+
+// ============================================================
+// 策略組合預設值（供 CLI / UI / 外部匯入使用）
+//
+// 每組包含:
+//   entry     — 進場策略類別名稱（對應 export class XxxEntry）
+//   exit      — 出場策略類別名稱陣列
+//   weekly    — true 表示此策略使用週線資料（選填）
+//   params    — 建議參數，可依情境覆寫
+// ============================================================
+// 策略預設組合（STRATEGY_PRESETS）
+// 每個 preset 包含：entry/exit 策略類別、是否週線(weekly)、簡短說明(desc)、參數群(params)
+// params 說明格式：參數名=預設值  說明
+// ============================================================
+export const STRATEGY_PRESETS = {
+	// ── 週線趨勢（保守波段） ──
+	// 週線 MA5>MA10 + MACD 金叉確認趨勢 + 回踩 5MA 進場 + 移動停利出場
+	// 參數: ma=20(TradingSystem day.ma用), goldenLookback=3(金叉確認期), maxDeviation=0.1(離MA偏差上限)
+	//       maxWeeklyVol=0.04(週漲幅上限), trailingStopPct=0.1(移動停利%)
+	weeklyTrend: {
+		entry: 'WeeklyTrendEntry', exit: ['WeeklyTrendExit'], weekly: true,
+		desc: '週線 MA5>MA10 + MACD 金叉 + 回踩5MA + 移動停利',
+		params: { ma: 20, goldenLookback: 3, maxDeviation: 0.1, maxWeeklyVol: 0.04, trailingStopPct: 0.1 }
+	},
+
+	// ── ADX 日線（短線趨勢） ──
+	// ADX +DI/-DI 金叉進場/死叉出場，adxRate 過濾斜率不足的假金叉
+	// 參數: ma=20(基礎均線), adxRate=0.1(ADX三日斜率門檻<0.1不進場), drawdownRate=0.2(ADX高點回撤率>20%出場)
+	//       reentry=true(允許返場), raiseRate=0.1(返場須ADX谷底回升>10%)
+	adx: {
+		entry: 'AdxEntry', exit: ['AdxExit'],
+		desc: 'ADX +DI/-DI 金叉/死叉 + 谷底回升返場',
+		params: { ma: 20, adxRate: 0.1, drawdownRate: 0.2, reentry: true, raiseRate: 0.1 }
+	},
+
+	// ── ADX 週線（波段版本） ──
+	// 同上但走週線資料，門檻調低避免週線訊號過少，勝率73%為週線組最高
+	// 參數同 ADX 日線，僅 ma=8、adxRate=0.05、drawdownRate=0.3
+	weeklyAdx: {
+		entry: 'AdxEntry', exit: ['AdxExit'], weekly: true,
+		desc: 'ADX 週線版，門檻調低避免過度敏感',
+		params: { ma: 8, adxRate: 0.05, drawdownRate: 0.3, reentry: true, raiseRate: 0.1 }
+	},
+
+	// ── MACD 週線 ──
+	// MACD DIF/DEA 金叉進場/死叉出場，週線過濾日線假訊號，勝率66%、期望值80.1
+	// 參數: ma=8(TradingSystem day.ma用，策略本身未使用)
+	weeklyMacd: {
+		entry: 'MacdEntry', exit: ['MacdExit'], weekly: true,
+		desc: 'MACD 週線版，過濾日線假金叉/死叉',
+		params: { ma: 8 }
+	},
+
+	// ── ADX+MACD 週線 ──
+	// ADX<20只用MACD → ADX 20~25 MACD為主、ADX試單 → ADX>25且上升全面用ADX
+	// 週線版勝率71%但盈虧比僅1.94，複合濾網提升勝率但犧牲盈虧比
+	// 參數: ma=8, adxRate=0.05(ADX下降率<-0.05出場), drawdownRate=0.3, reentry=true, raiseRate=0.1
+	weeklyAdxMacd: {
+		entry: 'AdxMacdEntryExit', exit: ['AdxMacdEntryExit'], weekly: true,
+		desc: 'ADX+MACD 週線版',
+		params: { ma: 8, adxRate: 0.05, drawdownRate: 0.3, reentry: true, raiseRate: 0.1 }
+	},
+
+	// ── MA交叉 週線 ──
+	// MA5 金叉 MA10 且收盤 ≥ 年線(MA52) 進場；MA5 死叉 MA10 出場
+	// 週線版期望值 104.5 為所有策略最高，盈虧比 6.16
+	// 參數: ma1=5(短週期), ma2=10(中週期), ma3=52(年線,多空分界)
+	weeklyMaCross: {
+		entry: 'MaCrossEntryExit', exit: ['MaCrossEntryExit'], weekly: true,
+		desc: 'MA 交叉週線版，MA3=52週(年線)',
+		params: { ma1: 5, ma2: 10, ma3: 52 }
+	},
+
+	// ── 布林通道週線 ──
+	// 規則1 反轉多：前週跌破下軌 → 本週反彈過前高入場
+	// 規則2 突破多：低波動壓縮(帶寬<歷史20%分位) + 連兩週站上上軌 + 創短期新高入場
+	// 出場：已上中軌後連兩週跌破中軌。盈虧比 16.71 為所有策略最高
+	// 參數: ma=20(BB中軌期數), bbPeriod=20, bbStdDev=2, atrPeriod=14, atrMult=1.5
+	//       bwLookback=52(帶寬歷史回看週數), shortHighLookback=12(短期新高回看週數)
+	weeklyBB: {
+		entry: 'BBEntryExit', exit: ['BBEntryExit'], weekly: true,
+		desc: '布林通道週線版，低波動壓縮後的大波段',
+		params: { ma: 20, bbPeriod: 20, bbStdDev: 2, atrPeriod: 14, atrMult: 1.5, bwLookback: 52, shortHighLookback: 12 }
+	},
+
+	// ── 連兩週走高週線 ──
+	// 連兩週收盤站上 8MA 進場，動態回撤(dynamicStopPct) 出場
+	// 策略對 MA 參數不敏感（MA=8 vs MA=16 結果相同），固定 MA=8 即可
+	// 參數: ma=8, threshold=0.005(收盤需高於MA比例), dynamicStopPct=0.07(動態回撤%)
+	weeklyTwoDays: {
+		entry: 'TwoDaysUpEntry', exit: ['DynamicStopExit'], weekly: true,
+		desc: '連兩週收盤站上均線進場 + 動態停損',
+		params: { ma: 8, threshold: 0.005, dynamicStopPct: 0.07 }
+	},
+
+	// ── MACD 金叉/死叉 ──
+	// MACD DIF/DEA 金叉進場 / 死叉出場，標準 MACD 交易法
+	// 日線版勝率 47%、期望值 48.7、總損益 +14,079，頻率最高(289筆)
+	// 參數: ma=20(TradingSystem day.ma用，策略本身未使用)
+	macd: {
+		entry: 'MacdEntry', exit: ['MacdExit'],
+		desc: 'MACD DIF/DEA 金叉進場 / 死叉出場',
+		params: { ma: 20 }
+	},
+
+	// ── ADX + MACD 複合 ──
+	// ADX<20只用MACD → ADX 20~25 MACD為主、ADX試單 → ADX>25且上升全面用ADX
+	// 勝率 50%居中，但總損益 +11,853 低於單用 ADX(+13,065) 或 MACD(+14,079)
+	// 複合濾網未提升表現，ADX+MACD 週線版(weeklyAdxMacd)較佳
+	adxMacd: {
+		entry: 'AdxMacdEntryExit', exit: ['AdxMacdEntryExit'],
+		desc: 'ADX 判斷趨勢強度 + MACD 決定進出',
+		params: { ma: 20, adxRate: 0.1, drawdownRate: 0.2, reentry: true, raiseRate: 0.1 }
+	},
+
+	// ── OBV + MACD（已移除） ──
+	// 2025/06 評估結論：期望值 13.3、勝率 44%，864 筆頻繁交易每筆僅賺 13 點，
+	// 交易成本吃掉大部分獲利，不建議使用。ObvMacdEntryExit 類別保留供參考。
+
+	// ── 布林通道 + ATR（僅保留週線版） ──
+	// 不支援日線：勝率 39%、期望值 8.2，回測效益最差 (2025/01~2026/06)
+	// 保留週線版 weeklyBB（低波動壓縮後的大波段，勝率 75%、盈虧比 16.71）
+
+	// ── MA 交叉（二條/三條） ──
+	// MA5 金叉 MA10 且收盤 ≥ 生命線(MA60) 進場；MA5 死叉或 RSI 死叉出場
+	// 日線版 366 筆交易、勝率 41%、期望值 34.6，週線版(weeklyMaCross)期望值 104.5 明顯較佳
+	// 參數: ma=20(TradingSystem day.ma用), ma1=5, ma2=10, ma3=60, rsiThreshold=70(RSI過熱不進場)
+	maCross: {
+		entry: 'MaCrossEntryExit', exit: ['MaCrossEntryExit'],
+		desc: '短線 MA 黃金交叉 / 死亡交叉 + 生命線',
+		params: { ma: 20, ma1: 5, ma2: 10, ma3: 60, rsiThreshold: 70 }
+	},
+
+	// ── 二日突破 + 動態停損 ──
+	// 連兩日收盤站上 MA 且成交量放大進場；跌破 MA、動態回撤或 ATR 停損出場
+	// 日線版總損益 +16,058 為所有策略最高，頻率 395 筆
+	// 參數: ma=20, threshold=0.005(收盤需高於MA比例), volumeRate=1.2(量比>1.2), breakout=true, dynamicStopPct=0.07
+
+	// ── Tiger 突破（日線） ──
+	tiger: {
+		entry: 'TigerEntry', exit: ['TigerExit', 'DynamicStopExit'],
+		desc: '收盤突破 MA 進場 / 跌破 MA 或動態停損出場',
+		params: { ma: 5, threshold: 0.005, stopLossPct: 0.03, dynamicStopPct: 0.07 }
+	},
+
+	// ── Bull Tiger（強勢突破） ──
+	bullTiger: {
+		entry: 'BullTigerEntry', exit: ['TigerExit', 'RsiHotExit'],
+		desc: '強勢突破 MA + RSI 過熱過濾',
+		params: { ma: 5, threshold: 0.005, rsiThreshold: 70 }
+	},
+
+	// ── MACD 進場 + RSI 出場 ──
+	macdRsi: {
+		entry: 'MacdEntry', exit: ['RsiExit'],
+		desc: 'MACD 金叉進場，短週期 RSI 跌破長週期 RSI 出場',
+		params: { ma: 20 }
+	},
+};

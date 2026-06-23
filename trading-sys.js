@@ -1,3 +1,14 @@
+/**
+ * 回測引擎 — 純內部元件，不應直接對外公開使用。
+ *
+ * 用途：給定 K 線資料與策略參數，跑一次回測。
+ * 呼叫方式：間接透過 stockService.backtest()，不要直接 new TradingSystem()。
+ *    ✓  stockService.backtest(code, params)
+ *    ✗  new TradingSystem(data, params).backtest()
+ *
+ * 理由：stockService.backtest() 負責 walk-forward MA 優化、資料快取、alert 計算等。
+ *       繞過它會造成結果不一致（見 README「策略回測」章節）。
+ */
 export class TradingSystem {
 	constructor(data, params) {
 		this.trades = [];

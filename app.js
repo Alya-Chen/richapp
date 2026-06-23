@@ -8,7 +8,8 @@ import {
 	stockService
 } from './stock-service.js';
 import {
-	Investor
+	Investor,
+	WeeklyInvestor
 } from './stock-investor.js';
 import * as st from './trading-strategy.js';
 
@@ -214,6 +215,7 @@ app.get('/simulate{/:codes}', async (req, res) => {
 		const strategies = { entryStrategies: [], exitStrategies: [] };
 		Object.keys(st).forEach(key => {
 			const strategy = st[key];
+			if (typeof strategy !== 'function' || !strategy?.prototype) return;
 			if (strategy.prototype.hasOwnProperty('checkEntry') && strategy.enabled) strategies.entryStrategies.push({ key, name: strategy.name });
 			if (strategy.prototype.hasOwnProperty('checkExit') && strategy.enabled) strategies.exitStrategies.push({ key, name: strategy.name });
 		});
@@ -230,7 +232,9 @@ app.post('/simulate', async (req, res) => {
 	params.exitDate = new Date(params.exitDate);
 	try {
 		stockService.simulating = true;
-		const result = await new Investor(codes, money, params).invest();
+		const isWeekly = params.weekly || /^Weekly/i.test(params.entryStrategy);
+		const InvestorClass = isWeekly ? WeeklyInvestor : Investor;
+		const result = await new InvestorClass(codes, money, params).invest();
   		res.json(result);
 	}
 	finally {

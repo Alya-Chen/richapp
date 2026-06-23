@@ -439,6 +439,141 @@ StockDaily.last = async function(code) {
 	}
 };
 
+// --- 週線資料表 ---
+const StockWeekly = sequelize.define('StockWeekly', {
+	id: {
+		type: DataTypes.INTEGER,
+		autoIncrement: true,
+		primaryKey: true,
+	},
+	code: {
+		type: DataTypes.STRING(10),
+		allowNull: false,
+		comment: '股票代號'
+	},
+	date: {
+		type: DataTypes.DATEONLY,
+		allowNull: false,
+		comment: '交易日期（該週最後交易日）'
+	},
+	open: {
+		type: DataTypes.FLOAT,
+		allowNull: false,
+		comment: '開盤價'
+	},
+	high: {
+		type: DataTypes.FLOAT,
+		allowNull: false,
+		comment: '最高價'
+	},
+	low: {
+		type: DataTypes.FLOAT,
+		allowNull: false,
+		comment: '最低價'
+	},
+	close: {
+		type: DataTypes.FLOAT,
+		allowNull: false,
+		comment: '收盤價'
+	},
+	volume: {
+		type: DataTypes.INTEGER,
+		allowNull: false,
+		comment: '成交量'
+	},
+	diff: {
+		type: DataTypes.FLOAT,
+		comment: '漲跌價差'
+	}
+}, {
+	indexes: [{
+		unique: true,
+		fields: ['code', 'date']
+	}, {
+		unique: false,
+		fields: ['code']
+	}, {
+		unique: false,
+		fields: ['date']
+	}],
+	timestamps: false
+});
+
+// 批量保存週線數據
+StockWeekly.saveAll = async function(code, data) {
+	try {
+		const records = data.map(item => ({
+			code,
+			open: item.open || 0,
+			...item
+		}));
+
+		const result = await StockWeekly.bulkCreate(records, {
+			updateOnDuplicate: ['open', 'high', 'low', 'close', 'volume', 'diff'],
+			conflictFields: ['code', 'date']
+		});
+
+		console.log(`成功寫入/更新 ${result.length} 條週線記錄`);
+		return result;
+	} catch (error) {
+		console.error('保存週線記錄失敗：', error.message);
+		throw error;
+	}
+};
+
+StockWeekly.save = async function(weekly) {
+	weekly.volume = weekly.volume || 0;
+	const loaded = await StockWeekly.query(weekly.code, weekly.date, weekly.date);
+	if (loaded.length) {
+		loaded[0].set(weekly);
+		return await loaded[0].save();
+	} else {
+		try {
+			weekly = await StockWeekly.create(weekly);
+			return await weekly.save();
+		} catch (error) {
+			console.error(weekly);
+			console.error('保存 StockWeekly 失敗:', error.message);
+		}
+	}
+};
+
+StockWeekly.query = async function(code, startDate, endDate) {
+	return StockWeekly.findAll({
+		where: {
+			code,
+			date: {
+				[Op.between]: [startDate, endDate]
+			}
+		},
+		order: [
+			['date', 'ASC']
+		]
+	});
+};
+
+StockWeekly.last = async function(code) {
+	if (code) {
+		return StockWeekly.findOne({
+			where: { code },
+			order: [['date', 'DESC']]
+		});
+	} else {
+		const latest = await StockWeekly.findAll({
+			attributes: ['code', [sequelize.fn('MAX', sequelize.col('date')), 'max_date']],
+			group: ['code'],
+			raw: true
+		});
+		const conditions = latest.map(item => ({
+			code: item.code,
+			date: item.max_date
+		}));
+		return await StockWeekly.findAll({
+			where: { [Op.or]: conditions }
+		});
+	}
+};
+
 const Backtest = sequelize.define('Backtest', {
 	id: {
 		type: DataTypes.INTEGER,
@@ -581,6 +716,7 @@ export {
 	User,
 	Stock,
 	StockDaily,
+	StockWeekly,
 	StockTrade,
 	Backtest,
 	Note,

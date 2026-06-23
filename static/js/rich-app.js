@@ -565,7 +565,7 @@
 				$$.showStareds(user);
 				service.strategies((strategies) => {
 					const params = user.settings.params || {};
-					$$.entryStrategy = { name: strategies.entryStrategies.find(s => s.key == params.entryStrategy).name, reentry: params.reentry };
+					$$.entryStrategy = { name: strategies.entryStrategies.find(s => s.key == params.entryStrategy).name, reentry: params.reentry, weekly: params.weekly };
 					$$.exitStrategy = { name: params.exitStrategy.map(strategy => strategies.exitStrategies.find(s => s.key == strategy).name).join('＆') };
 					if ($$.exitStrategy.name.includes('動態止盈止損')) {
 						$$.exitStrategy.dynamicStop = true;
