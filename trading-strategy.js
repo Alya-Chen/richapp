@@ -901,8 +901,10 @@ export class WeeklyTrendEntry {
 		// 週波動率過濾（近 10 週平均波動過高不進，避免高波動股假訊號）
 		const n = Math.min(10, index);
 		let sumVol = 0;
-		for (let i = 1; i <= n; i++) {
-			sumVol += Math.abs(this.data[index - i + 1].close - this.data[index - i].close) / this.data[index - i].close;
+		for (let i = 0; i < n; i++) {
+			const curr = this.data[index - i];
+			const prev = this.data[index - i - 1];
+			sumVol += Math.abs(curr.close - prev.close) / prev.close;
 		}
 		if (sumVol / n > this.params.maxWeeklyVol) return null;
 
@@ -939,6 +941,7 @@ export class WeeklyTrendExit {
 		if (index < 20) return null;
 
 		const prev = this.data[index - 1];
+		if (index >= this.macd.length || index - 1 >= this.macd.length) return null;
 		const m = this.macd[index];
 		const mp = this.macd[index - 1];
 		const trailPct = this.params.trailingStopPct;
@@ -951,7 +954,8 @@ export class WeeklyTrendExit {
 
 		if (profitRate <= 0) {
 			// === 虧損/打平：MA5 死叉單週確認（快速停損） ===
-			if (prev.ma5 >= prev.ma10 && day.ma5 < day.ma10) {
+			if (prev.ma5 != null && prev.ma10 != null && day.ma5 != null && day.ma10 != null &&
+			    prev.ma5 >= prev.ma10 && day.ma5 < day.ma10) {
 				return { reason: `${WeeklyTrendExit.name} 虧損MA5死叉 ${(profitRate * 100).scale(1)}%` };
 			}
 		} else {
@@ -972,7 +976,7 @@ export class WeeklyTrendExit {
 			return { reason: `${WeeklyTrendExit.name} DIF拐頭 Hist:${(m.histogram || 0).scale()}` };
 		}
 		// 跌破 20MA（緊急停損）
-		if (day.close < day.ma20 * 0.97) {
+		if (day.ma20 != null && day.close < day.ma20 * 0.97) {
 			return { reason: `${WeeklyTrendExit.name} 跌破20MA ${day.close.scale()} < ${(day.ma20 * 0.97).scale()}` };
 		}
 
