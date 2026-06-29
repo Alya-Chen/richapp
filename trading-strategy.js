@@ -22,17 +22,19 @@ class Cache {
 	}
 
 	get(code, data) {
+		const key = code + '-' + (data?.length || 0);
 		if (this.date != new Date().toDateString()) {
 			this.date = new Date().toDateString();
 			this.cache = {};
 		}
-		if (!this.cache[code]) {
-			this.cache[code] = new this.claz(data, this.params).calculate();
+		if (!this.cache[key]) {
+			this.cache[key] = new this.claz(data, this.params).calculate();
 		}
-		return this.cache[code];
+		return this.cache[key];
 	}
 	set(code, value) {
-		this.cache[code] = value;
+		const key = code + '-' + (value?.length || 0);
+		this.cache[key] = value;
 	}
 }
 
@@ -59,6 +61,7 @@ export class TwoDaysUpEntry {
 			threshold
 		} = this.params;
 		if (index < ma || position.status != 'closed') return false;
+		if (!marketFilter(this.params, day.date)) return false;
 
 		const prevDay = this.data[index - 1];
 		// 今日收盤價 > 今日 MA * 1.xx 而且 昨日收盤價 > 昨日 MA * 1.xx
@@ -400,7 +403,13 @@ export class AdxEntry {
 		const time = Date.parse(day.date);
 		const adx = this.adx.find(i => i && i.time == time);
 		// 若設定 adxRate 三日斜率門檻，先作過濾
-		if (index < 1 || position.status != 'closed' || adx == null || adx.adx == null || adx.adxRate < this.params.adxRate) return null;
+		if (index < 1 || position.status != 'closed' || adx == null || adx.adx == null || adx.adxRate < this.params.adxRate) {
+			return null;
+		}
+		// ADX 數值範圍濾網：過低（趨勢不明）或過高（過度延伸）都不進場
+		if (this.params.adxThreshold != null && adx.adx < this.params.adxThreshold) return null;
+		if (this.params.adxMaxThreshold != null && adx.adx > this.params.adxMaxThreshold) return null;
+		if (!marketFilter(this.params, day.date)) return null;
 
 		// 追蹤 ADX 低點（用於谷底回升率計算）
 		position.adxLow = Math.min(position.adxLow || 100, adx.adx);
@@ -468,7 +477,8 @@ export class MacdEntry {
 		const time = Date.parse(day.date);
 		const macd = this.macd.find(i => i && i.time == time);
 		if (index < 1 || position.status != 'closed' || macd == null) return null;
-        return macd.golden ? { reason: `${MacdEntry.name} 金叉，信心：${macd.score}（快 ${macd.diff.scale()} > 慢 ${macd.dea.scale()}）` } : null;
+		if (!marketFilter(this.params, day.date)) return null;
+		return macd.golden ? { reason: `${MacdEntry.name} 金叉，信心：${macd.score}（快 ${(macd.diff||0).scale()} > 慢 ${(macd.dea||0).scale()}）` } : null;
 	}
 }
 
@@ -487,7 +497,7 @@ export class MacdExit {
 		const time = Date.parse(day.date);
 		const macd = this.macd.find(i => i && i.time == time);
 		if (index < 1 || macd == null) return null;
-        return macd.dead ? { reason: `${MacdExit.name} 死叉，信心：${macd.score}（慢 ${macd.dea.scale()} > 快 ${macd.diff.scale()}）` } : null;
+		return macd.dead ? { reason: `${MacdExit.name} 死叉，信心：${macd.score}（慢 ${(macd.dea||0).scale()} > 快 ${(macd.diff||0).scale()}）` } : null;
 	}
 }
 
@@ -502,6 +512,7 @@ export class AdxMacdEntryExit {
 	constructor(data, params) {
 		this.data = data || [];
 		this.params = params;
+		this.params.macdBullishExtend = params.macdBullishExtend ?? false;
 		this.adx = ADX_CACHE.get(params.code, data);
 		this.adxEntry = new AdxEntry(data, params);
 		this.adxExit = new AdxExit(data, params);
@@ -514,9 +525,23 @@ export class AdxMacdEntryExit {
 		const time = Date.parse(day.date);
 		const adx = this.adx.find(i => i && i.time == time);
 		if (index < 1 || position.status != 'closed' || adx == null || adx.adx == null) return null;
+		if (!marketFilter(this.params, day.date)) return null;
 		if (adx.adx < 20) return this.macdEntry.checkEntry(day, index, position);
 		if (adx.adx >= 20 && adx.adx <= 25) return this.macdEntry.checkEntry(day, index, position) || this.adxEntry.checkEntry(day, index, position);
-		if (adx.adx > 25) return this.adxEntry.checkEntry(day, index, position);
+		if (adx.adx > 25) {
+			// 先試 ADX 本身訊號
+			const adxSignal = this.adxEntry.checkEntry(day, index, position);
+			if (adxSignal) return adxSignal;
+			// ADX>25 強勢趨勢但無 ADX 金叉：若 MACD 仍在多頭區間且動能持續加溫，視為延續訊號（可選，macdBullishExtend=true）
+			if (this.params.macdBullishExtend && adx.adx < 40) {
+				const macdData = this.macdEntry.macd?.find(i => i && i.time == time);
+				const prevAdx = this.adx.find(i => i && i.time < time);
+				if (macdData && macdData.diff != null && macdData.dea != null && macdData.diff > macdData.dea && adx.adx > (prevAdx?.adx || 0)) {
+					return { reason: `ADX強勢＋MACD多頭延續（${macdData.diff.scale(2)} > ${macdData.dea.scale(2)}）` };
+				}
+			}
+			return null;
+		}
 	}
 
 	// 平倉條件檢查
@@ -524,11 +549,30 @@ export class AdxMacdEntryExit {
 		const time = Date.parse(day.date);
 		const adx = this.adx.find(i => i && i.time == time);
 		if (index < 1 || adx == null || adx.adx == null) return null;
+		// macdBullishExtend 出場：ADX 高檔動能竭盡（ADX曾>40＋掉頭）
+		if (this.params.macdBullishExtend) {
+			const prevAdx = this.adx.reduce((best, i) => (i && i.time < time && (!best || i.time > best.time)) ? i : best, null);
+			if (prevAdx && prevAdx.adx > 40 && adx.adx < prevAdx.adx) {
+				return { reason: `ADX高檔動能竭盡（${prevAdx.adx.scale(2)}→${adx.adx.scale(2)}），波段停利` };
+			}
+		}
 		if (adx.adx < 20) return this.macdExit.checkExit(day, index, position);
 		if (adx.adx >= 20 && adx.adx <= 25) return this.macdExit.checkExit(day, index, position) || this.adxExit.checkExit(day, index, position);
 		if (adx.adx > 25) return this.adxExit.checkExit(day, index, position);
 	}
 }
+// ── 共用輔助函式 ──
+
+// 大盤濾網：檢查 dayDate 當日 0050 是否位於 MA20 之上
+function marketFilter(params, dayDate) {
+	if (!params.marketFilter) return true;
+	const time = Date.parse(dayDate);
+	// 找最接近當日（且 <= 當日）的 marketData 筆
+	const row = (params.marketData || []).slice().reverse().find(d => Date.parse(d.date) <= time);
+	if (!row || row.ma20 == null) return true; // MA 未就緒時不擋
+	return params.marketAboveMA !== false ? row.close > row.ma20 : row.close < row.ma20;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 export class ObvMacdEntryExit {
 	static name = 'OBV MACD 策略';
@@ -554,6 +598,7 @@ export class ObvMacdEntryExit {
 	// 開倉條件檢查
 	checkEntry(day, index, position) {
 		if (index < 1 || position.status != 'closed') return null;
+		if (!marketFilter(this.params, day.date)) return null;
 
 		const currentSignal = this.signals[index];
 		const prevSignal = this.signals[index - 1];
@@ -1043,7 +1088,8 @@ export const STRATEGY_PRESETS = {
 	weeklyAdxMacd: {
 		entry: 'AdxMacdEntryExit', exit: ['AdxMacdEntryExit'], weekly: true,
 		desc: 'ADX+MACD 週線版',
-		params: { ma: 8, adxRate: 0.05, drawdownRate: 0.3, reentry: true, raiseRate: 0.1 }
+		params: { ma: 8, adxRate: 0.05, drawdownRate: 0.3, reentry: true, raiseRate: 0.1,
+			marketFilter: false, marketCode: '0050', marketMAPeriod: 20, marketAboveMA: true }
 	},
 
 	// ── MA交叉 週線 ──

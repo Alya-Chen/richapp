@@ -33,9 +33,10 @@ class Investor {
 			entryDate, exitDate, maxEntryMoney,
 			entryStrategy: st[this.params.entryStrategy]?.name || this.params.entryStrategy,
 			exitStrategy: this.params.exitStrategy.map(s => st[s]?.name).filter(Boolean).join('＋'),
-			invested: { balance: this.money, unclosed: 0, profit: 0, maxDrawdown: 0 },
+			invested: { balance: this.money, unclosed: 0, profit: 0, maxDrawdown: 0, maxEquity: this.money },
 			trades: [],
-			csv: [`代號	公司	MA	購入日期	購入價格	購入股數	剩餘本金	賣出日期	賣出價格	單筆收益	單筆稅金	累積收益	單筆收益率	期末本金	出場原因`],
+			holdings: {}, // { [code]: { shares, entryPrice } } 獨立追蹤持倉，不受 backtest status 影響
+			csv: [`代號	公司	MA	購入日期	購入價格	購入股數	剩餘本金	入場總權益	賣出日期	賣出價格	單筆收益	單筆稅金	累積收益	單筆收益率	單筆回撤率	期末本金	出場總權益	出場原因`],
 			runningTests: [],
 			data: {
 				summary: { entryDate: new Date(entryDate), exitDate, initialMoney: this.money, maxEntryMoney, finalMoney: null, totalProfit: null, stockCount: this.stockCodes.length },
@@ -54,10 +55,14 @@ class Investor {
 		state.runningTests.push(test);
 		state.invested.balance -= trade.amount * trade.entryPrice;
 		trade.tax = Math.max(trade.amount * trade.entryPrice * FEE_RATE, 20).scale(2);
-		state.trades.push({ code: test.code, name: test.name, ma: test.ma, entryRemain: state.invested.balance, ...trade });
+		// 入場總權益 = 現金 + 新部位市價 + 既有持倉市值
+		const entryTotalEquity = this._calcTotalEquity(state) + trade.amount * trade.entryPrice;
+		state.trades.push({ code: test.code, name: test.name, ma: test.ma, entryRemain: state.invested.balance, entryTotalEquity, ...trade });
 		state.data.events.push({ type: 'buy', date: trade.entryDate, code: test.code, name: test.name, ma: test.ma, price: trade.entryPrice, amount: trade.amount, tax: trade.tax, remainMoney: state.invested.balance, reason: trade.entryReason });
 		if (!state.data.byCode[test.code]) state.data.byCode[test.code] = { code: test.code, name: test.name, ma: test.ma, trades: [] };
 		state.data.byCode[test.code].trades.push({ amount: trade.amount, status: trade.status, entryDate: trade.entryDate, entryPrice: trade.entryPrice, entryReason: trade.entryReason, exitDate: trade.exitDate, exitPrice: trade.exitPrice, exitReason: trade.exitReason, profit: (trade.amount * trade.profit).scale(), tax: trade.tax, reentry: trade.reentry || false });
+		// holdings 獨立追蹤目前持有的股數（不受 trade.status 影響）
+		state.holdings[test.code] = { shares: trade.amount, entryPrice: trade.entryPrice };
 	}
 
 	// 賣出執行
@@ -70,28 +75,56 @@ class Investor {
 		const found = state.trades.find(t => t.code == trade.code && t.amount == trade.amount);
 		if (found) found.status = 'done';
 		const reason = trade.exitReason + (trade.reentry ? '（返場）' : '');
-		state.csv.push(`${trade.code}	${trade.name}	${trade.ma}	${trade.entryDate.toLocaleDateString()}	${trade.entryPrice.scale(2)}	${trade.amount}	${trade.entryRemain.scale()}	${trade.exitDate.toLocaleDateString()}	${trade.exitPrice.scale()}	${trade.profit.scale()}	${trade.tax.scale()}	${state.invested.profit.scale()}	${trade.profitRate.scale(2)}	${state.invested.balance.scale()}	${reason}`);
+		// holdings 先移除已出場部位，避免 equity 重複計算（現金已入帳）
+		delete state.holdings[trade.code];
+		const exitTotalEquity = this._calcTotalEquity(state).scale();
+		state.csv.push(`${trade.code}	${trade.name}	${trade.ma}	${trade.entryDate.toLocaleDateString()}	${trade.entryPrice.scale(2)}	${trade.amount}	${trade.entryRemain.scale()}	${trade.entryTotalEquity.scale()}	${trade.exitDate.toLocaleDateString()}	${trade.exitPrice.scale()}	${trade.profit.scale()}	${trade.tax.scale()}	${state.invested.profit.scale()}	${trade.profitRate.scale(2)}	${trade.drawdownRate?.scale(4) || 0}	${state.invested.balance.scale()}	${exitTotalEquity}	${reason}`);
 		state.data.events.push({ type: 'sell', date: trade.exitDate, code: trade.code, name: trade.name, ma: trade.ma, price: trade.exitPrice, amount: trade.amount, profit: trade.profit, profitRate: trade.profitRate, tax: trade.tax, remainMoney: state.invested.balance, reason });
 		state.runningTests = state.runningTests.filter(t => t.code != trade.code);
-		state.invested.maxDrawdown = this.calculateMDD(state.invested, state.trades);
+		// 基於總權益（現金 + 持倉市值）的 MDD
+		const totalEquity = this._calcTotalEquity(state);
+		state.invested.maxEquity = Math.max(totalEquity, state.invested.maxEquity);
+		state.invested.maxDrawdown = Math.max(
+			state.invested.maxDrawdown || 0,
+			(state.invested.maxEquity - totalEquity) / state.invested.maxEquity
+		);
+	}
+
+	// 計算當下總權益：現金 + 所有持倉市值（使用 _closeMap + holdings 獨立追蹤）
+	_calcTotalEquity(state) {
+		let equity = state.invested.balance;
+		for (const [code, h] of Object.entries(state.holdings)) {
+			if (h.shares > 0) {
+				const close = state._closeMap?.[code] || h.entryPrice;
+				equity += h.shares * close;
+			}
+		}
+		return equity;
 	}
 
 	// 最終摘要與回傳
 	_finalize(state) {
 		state.data.summary = Object.assign(state.data.summary, this.calculateMetrics(state.trades));
-		state.data.summary.finalMoney = state.invested.balance;
-		state.data.summary.totalProfit = state.invested.profit;
-		state.data.summary.profitRate = (state.data.summary.totalProfit / this.money);
-		state.data.summary.netProfitRate = (state.data.summary.netProfit / this.money);
+		// 含未實現損益的總權益（backward compatible：無持倉時與原邏輯一致）
+		const unrealizedProfit = state.invested.unrealizedProfit || 0;
+		const openEquity = state.invested.openEquity || 0;
+		const unclosed = state.invested.unclosed || 0;
+		const totalEquity = state.invested.balance + openEquity;
+		const totalProfit = state.invested.profit + unrealizedProfit;
+		state.data.summary.finalMoney = totalEquity;
+		state.data.summary.totalProfit = totalProfit;
+		state.data.summary.unclosed = unclosed;
+		state.data.summary.profitRate = (totalProfit / this.money).scale(2);
+		state.data.summary.netProfitRate = (state.data.summary.netProfit / this.money).scale(2);
 		state.data.summary.maxDrawdown = state.invested.maxDrawdown?.scale(2);
-		state.csv.unshift(`${state.data.summary.finalMoney.scale()}	0	${state.data.summary.totalProfit.scale()}	${state.data.summary.profitRate.scale(2)}	${state.data.summary.tax.scale()}	${state.data.summary.netProfit.scale()}	${state.data.summary.netProfitRate.scale(2)}	${state.data.summary.tradeCount}	${state.data.summary.winRate.scale(2)}	${state.data.summary.pnl}	${state.data.summary.expectation}	${state.data.summary.maxDrawdown.scale(2)}	${state.data.summary.reentry}	${state.data.summary.reentryWinRate.scale(2)}	${state.data.summary.reentryProfit.scale()}`);
+		state.csv.unshift(`${totalEquity.scale()}	${unclosed}	${totalProfit.scale()}	${state.data.summary.profitRate.scale(2)}	${state.data.summary.tax.scale()}	${state.data.summary.netProfit.scale()}	${state.data.summary.netProfitRate.scale(2)}	${state.data.summary.tradeCount}	${state.data.summary.winRate.scale(2)}	${state.data.summary.pnl}	${state.data.summary.expectation}	${state.data.summary.maxDrawdown.scale(2)}	${state.data.summary.reentry}	${state.data.summary.reentryWinRate.scale(2)}	${state.data.summary.reentryProfit.scale()}`);
 		state.csv.unshift(`最後本金	未平倉	總獲利	總獲利率	總稅金	稅後淨利	淨利率	總交易次數	總勝率	盈虧比	期望值	最大回撤率	返場次數	返場勝率	返場獲利`);
 		state.csv.unshift(`入場日期	${state.entryDate.toLocaleDateString()}	出場日期	${state.exitDate.toLocaleDateString()}	入場策略	${state.entryStrategy}	出場策略	${state.exitStrategy}`);
 		return {
 			csv: state.csv.join('\r\n'),
 			data: state.data,
-			money: state.invested.balance.scale(),
-			profit: state.invested.profit.scale(),
+			money: totalEquity.scale(),
+			profit: totalProfit.scale(),
 			trades: state.trades
 		};
 	}
@@ -109,13 +142,19 @@ class Investor {
 	 */
 	async invest() {
 		const state = this._state();
-		const entryDate = state.entryDate;
+		const entryDate = new Date(state.entryDate);
 		const exitDate = state.exitDate;
 		let tests = null;
 
 		while (entryDate.getTime() < exitDate.getTime()) {
 			const codes = this.stockCodes.filter(code => !state.runningTests.map(t => t.code).includes(code));
 			tests = this.params.dynamic ? state.runningTests.concat(await this.getTests(codes, entryDate)) : (tests || await this.getTests(codes, entryDate));
+			// 建立當日收盤價對照表，供 _calcTotalEquity 計算持倉市值
+			state._closeMap = {};
+			for (const t of tests) {
+				const price = t.prices?.find(p => +p.date === +entryDate);
+				if (price) state._closeMap[t.code] = price.close;
+			}
 			for (let i = 0; i < tests.length; i++) {
 				const test = tests[i];
 				test.trades = test.trades || test.result.trades;
@@ -126,42 +165,53 @@ class Investor {
 			}
 			entryDate.addDays(1);
 		}
+		// 處理持倉中交易：CSV 明細 + 未實現損益
+		const openTrades = state.trades.filter(t => t.status === 'open' && t.amount > 0);
+		if (openTrades.length > 0 && tests) {
+			const testByCode = Object.fromEntries((tests || []).map(t => [t.code, t]));
+			let unrealizedTotal = 0, openEquity = 0;
+			for (const openTrade of openTrades) {
+				const test = testByCode[openTrade.code];
+				const close = test?.close;
+				if (!close) continue;
+				const unrealized = ((close - openTrade.entryPrice) * openTrade.amount).scale();
+				unrealizedTotal += ((close - openTrade.entryPrice) * openTrade.amount);
+				openEquity += openTrade.amount * close;
+				const entryTotalEquity = openTrade.entryTotalEquity || (openTrade.entryRemain + openTrade.amount * openTrade.entryPrice);
+				state.csv.push(`${openTrade.code}	${openTrade.name}	${openTrade.ma}	${openTrade.entryDate.toLocaleDateString()}	${openTrade.entryPrice.scale(2)}	${openTrade.amount}	${openTrade.entryRemain.scale()}	${entryTotalEquity.scale()}	持倉中	-	${unrealized}	0	-	-	-	-	-	${openTrade.entryReason}（持倉中）`);
+				state.data.events.push({ type: 'hold', date: exitDate, code: openTrade.code, name: openTrade.name, ma: openTrade.ma, price: openTrade.entryPrice, amount: openTrade.amount, unrealizedProfit: unrealized, lastClose: close, reason: openTrade.entryReason });
+			}
+			state.invested.unclosed = (state.invested.unclosed || 0) + openTrades.length;
+			state.invested.unrealizedProfit = (state.invested.unrealizedProfit || 0) + unrealizedTotal;
+			state.invested.openEquity = (state.invested.openEquity || 0) + openEquity;
+		}
 		return this._finalize(state);
-	}
-
-	/**
-	 * 計算最大回撤率（簡單版本：盈虧峰值到谷底）
-	 */
-	calculateMDD(invested, trades) {
-		const profit = trades.reduce((sum, t) => sum + t.profit, 0);
-		invested.minProfit = Math.min(profit, invested.minProfit || 0);
-		invested.maxProfit = Math.max(profit, invested.maxProfit || 0);
-		return (invested.maxProfit - invested.minProfit) / invested.maxProfit;
 	}
 
 	/**
 	 * 計算交易統計指標：勝率、盈虧比、期望值、返場統計
 	 */
 	calculateMetrics(trades) {
-		const wins = trades.filter(t => t.profit > 0);
-		const reentry = trades.filter(t => t.reentry);
-		const reentryWins = trades.filter(t => (t.reentry && t.profit > 0));
-		const reentryProfit = trades.reduce((sum, t) => sum + (t.reentry ? t.profit : 0), 0);
-		const profit = trades.reduce((sum, t) => sum + (t.profit > 0 ? t.profit : 0), 0);
-		const totalLoss = trades.reduce((sum, t) => sum + (t.profit < 0 ? t.profit : 0), 0);
-		const tax = trades.reduce((sum, t) => sum + t.tax, 0);
+		const closed = trades.filter(t => t.status !== 'open');
+		const wins = closed.filter(t => t.profit > 0);
+		const reentry = closed.filter(t => t.reentry);
+		const reentryWins = closed.filter(t => (t.reentry && t.profit > 0));
+		const reentryProfit = closed.reduce((sum, t) => sum + (t.reentry ? t.profit : 0), 0);
+		const profit = closed.reduce((sum, t) => sum + (t.profit > 0 ? t.profit : 0), 0);
+		const totalLoss = closed.reduce((sum, t) => sum + (t.profit < 0 ? t.profit : 0), 0);
+		const tax = closed.reduce((sum, t) => sum + t.tax, 0);
 		const pnl = profit / Math.abs(totalLoss || 1);
-		const winRate = wins.length / trades.length;
+		const winRate = wins.length / (closed.length || 1);
 		const expectation = (pnl * winRate) - (1 - winRate);
 		return {
-			tradeCount: trades.length,
+			tradeCount: closed.length,
 			totalLoss: totalLoss.scale(),
 			tax,
 			netProfit: (profit + totalLoss - tax).scale(),
 			winRate: winRate.scale(),
 			reentry: reentry.length,
 			reentryWins: reentryWins.length,
-			reentryWinRate: (reentryWins.length / reentry.length).scale(),
+			reentryWinRate: (reentryWins.length / (reentry.length || 1)).scale(),
 			reentryProfit: reentryProfit.scale(),
 			pnl: pnl.scale(),
 			expectation: expectation.scale()
@@ -218,26 +268,94 @@ class WeeklyInvestor extends Investor {
 			params, true
 		);
 
-		// 多股回測回傳陣列，需攤平所有交易
+		// 多股回測回傳陣列
 		const allResults = Array.isArray(backtestResult) ? backtestResult : [backtestResult];
+
+		// 收集所有進出場事件，依時間序處理
+		const events = [];
 		for (const result of allResults) {
 			if (!result || !result.trades) continue;
-			const trades = result.trades.filter(t => t.duration > 0);
+			const resultCode = result.code || this.stockCodes[0];
+			const name = result.name || '';
+			const ma = result.ma || this.params.ma1 || '';
+			const trades = result.trades.filter(t => t.duration > 0 || t.status === 'open');
 			for (const trade of trades) {
-				const test = { code: result.code || this.stockCodes[0], name: '', ma: this.params.ma };
-				trade.status = trade.status || 'closed';
-				this._executeEntry(test, trade, state);
-				if (trade.exitDate && trade.amount > 0) {
-					const stored = state.trades.find(t => t.code == test.code && t.status == 'closed' && t.amount == trade.amount);
-					if (stored) {
-						stored.exitDate = trade.exitDate;
-						stored.exitPrice = trade.exitPrice;
-						stored.exitReason = trade.exitReason;
-						stored.profit = trade.profit;
-						stored.profitRate = trade.profitRate;
-						this._executeExit(stored, state);
-					}
+				events.push({ date: new Date(trade.entryDate), type: 'entry', code: resultCode, name, ma, trade, result });
+				if (trade.exitDate) {
+					events.push({ date: new Date(trade.exitDate), type: 'exit', code: resultCode, trade });
 				}
+			}
+		}
+		// 同日期先出場再入場（出場資金可用於同日入場）
+		events.sort((a, b) => a.date - b.date || (a.type === b.type ? 0 : a.type === 'exit' ? -1 : 1));
+
+		// 為 _calcTotalEquity 建立收盤價對照表（供持倉市值計算）
+		state._closeMap = {};
+		const closeIndex = {}; // { code: { timestamp: close } } 依日期索引
+		for (const result of allResults) {
+			if (result && result.code && result.close != null) {
+				state._closeMap[result.code] = result.close;
+			}
+			if (result && result.code && result.prices) {
+				closeIndex[result.code] = {};
+				for (const p of result.prices) {
+					closeIndex[result.code][+p.date] = p.close;
+				}
+			}
+		}
+
+		for (const event of events) {
+			// 更新 _closeMap：找 <= event.date 的最後一筆收盤價
+			// （不同股票週線收盤日可能不同，如 Mon vs Wed，不能用精確 timestamp 比對）
+			for (const code of Object.keys(state.holdings)) {
+				if (closeIndex[code]) {
+					const ts = +event.date;
+					const prices = Object.entries(closeIndex[code]).map(([k, v]) => [+k, v]);
+					const valid = prices.filter(([t]) => t <= ts).sort(([a], [b]) => b - a);
+					if (valid.length > 0) state._closeMap[code] = valid[0][1];
+				}
+			}
+			if (event.type === 'entry') {
+				const test = { code: event.code, name: event.name, ma: event.ma };
+				const trade = event.trade;
+				trade.status = 'open';
+				this._executeEntry(test, trade, state);
+			} else if (event.type === 'exit') {
+				const trade = event.trade;
+				// 找出當時進場真正買到的 stored 紀錄（用 status='open'，不依賴 backtest 傳入的 amount）
+				const stored = state.trades.find(t => t.code == event.code && t.status == 'open');
+				if (stored) {
+					stored.exitDate = trade.exitDate;
+					stored.exitPrice = trade.exitPrice;
+					stored.exitReason = trade.exitReason;
+					// 設定 per-share profit（_executeExit 會再乘 amount）
+					const priceDiff = stored.exitPrice - stored.entryPrice;
+					stored.profit = priceDiff;
+					stored.profitRate = priceDiff / stored.entryPrice;
+					stored.status = 'closed';
+					this._executeExit(stored, state);
+				}
+			}
+		}
+
+		// 處理各股持倉中交易：CSV 明細 + 未實現損益
+		for (const result of allResults) {
+			if (!result || !result.trades) continue;
+			const resultCode = result.code || this.stockCodes[0];
+			const openTrades = state.trades.filter(t => t.code == resultCode && t.status === 'open' && t.amount > 0);
+			if (openTrades.length > 0 && result.close) {
+				for (const openTrade of openTrades) {
+					const unrealized = ((result.close - openTrade.entryPrice) * openTrade.amount).scale();
+					const entryTotalEquity = openTrade.entryTotalEquity || (openTrade.entryRemain + openTrade.amount * openTrade.entryPrice);
+					const drawdown = openTrade.drawdownRate ?? ((openTrade.lowPrice ? (openTrade.entryPrice - openTrade.lowPrice) / openTrade.entryPrice : 0).scale(4));
+					state.csv.push(`${openTrade.code}	${openTrade.name}	${openTrade.ma}	${openTrade.entryDate.toLocaleDateString()}	${openTrade.entryPrice.scale(2)}	${openTrade.amount}	${openTrade.entryRemain.scale()}	${entryTotalEquity.scale()}	持倉中	-	${unrealized}	0	-	-	${drawdown}	-	-	${openTrade.entryReason}（持倉中）`);
+					state.data.events.push({ type: 'hold', date: params.exitDate, code: openTrade.code, name: openTrade.name, ma: openTrade.ma, price: openTrade.entryPrice, amount: openTrade.amount, unrealizedProfit: unrealized, lastClose: result.close, reason: openTrade.entryReason });
+				}
+				const unrealizedTotal = openTrades.reduce((s, t) => s + ((result.close - t.entryPrice) * t.amount), 0);
+				const openEquity = openTrades.reduce((s, t) => s + t.amount * result.close, 0);
+				state.invested.unclosed = (state.invested.unclosed || 0) + openTrades.length;
+				state.invested.unrealizedProfit = (state.invested.unrealizedProfit || 0) + unrealizedTotal;
+				state.invested.openEquity = (state.invested.openEquity || 0) + openEquity;
 			}
 		}
 		return this._finalize(state);

@@ -13,6 +13,8 @@ import {
 } from './stock-investor.js';
 import * as st from './trading-strategy.js';
 
+process.env.TZ = 'Asia/Taipei';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

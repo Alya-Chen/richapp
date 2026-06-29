@@ -4,6 +4,8 @@ import {
 	Op
 } from 'sequelize';
 
+process.env.TZ = 'Asia/Taipei';
+
 // 初始化數據庫連接
 const sequelize = new Sequelize({
 	dialect: 'sqlite',

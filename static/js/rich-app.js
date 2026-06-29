@@ -914,6 +914,13 @@
 							//event.profitRate = (event.exitPrice - event.entryPrice) / event.entryPrice;
 							event.exitReason = event.reason.replace('\n', '<br/>');
 						}
+						else if (event.type == 'hold') {
+							event.entryDate = new Date(event.date);
+							event.entryPrice = event.price;
+							event.entryReason = event.reason;
+							event.profit = event.unrealizedProfit;
+							event.profitRate = (event.lastClose - event.price) / event.price;
+						}
 					});
 					$interval.cancel($$.start.timer);
 					$$.simulating = '';

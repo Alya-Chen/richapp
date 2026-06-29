@@ -78,9 +78,7 @@ export class TradingSystem {
 		const exitStrategy = this.params.exitStrategy.map(strategy => new strategy(this.data, this.params));
 		const entryTime = Date.parse(this.params.entryDate);
 		const exitTime = Date.parse(this.params.exitDate || new Date()) + (8 * 3600 * 1000); // EIGHT_HOURS
-		let position = {
-			status: 'closed'
-		};
+		let position = { status: 'closed' };
 		this.data.forEach((day, index) => {
 			const time = Date.parse(day.date);
 			if (time < entryTime || time > exitTime) return;
@@ -95,6 +93,8 @@ export class TradingSystem {
 			}
 			// 平倉檢查
 			if (position.status != 'closed') {
+				// 追蹤持有期間最低價（用於計算單筆回撤率）
+				position.lowPrice = Math.min(position.lowPrice, day.close);
 				for (const strategy of exitStrategy) {
 					const exitCondition = strategy.checkExit(day, index, position);
 					if (exitCondition) {
@@ -178,7 +178,8 @@ export class TradingSystem {
 			entryDate: day.date,
 			entryPrice: day.close,
 			entryReason: condition.reason,
-			status: 'open'
+			status: 'open',
+			lowPrice: day.close // 追蹤持有期間最低價
 		});
 		if (this.trades.length > 0) {
 			// 前次交易過熱出場，且前兩日的收盤價在 MA 上表示「返場」
@@ -222,6 +223,8 @@ export class TradingSystem {
 		reasons.push(reason);
 		position.exitReason = reasons.join('\n');
 		position.status = 'closed';
+		// 單筆回撤率 = (進場價 - 持有期間最低價) / 進場價
+		position.drawdownRate = ((position.entryPrice - position.lowPrice) / position.entryPrice).scale(4);
 	}
 }
 

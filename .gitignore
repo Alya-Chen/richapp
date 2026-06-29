@@ -8,4 +8,5 @@ stock-sqlite.db
 package-lock.json
 .vscode
 .openclaude
+.claude/
 app.pid

@@ -94,7 +94,10 @@ class Service {
 		for (let i = 0; i < dailies.length; i++) {
 			const daily = dailies[i];
 			try {
-				if (!daily.open) continue; //!today.isSameDay(daily.date) ||
+				if (!daily.open || !daily.close) {
+					if (daily.code) db.Log?.info?.(`${daily.code} 缺資料跳過：open=${!!daily.open} close=${!!daily.close} date=${daily.date?.toLocaleDateString?.() || daily.date}`);
+					continue;
+				}
 				await db.StockDaily.save(daily);
 			} catch (error) {
 				db.Log.error(`${daily.code} 股票即時資料儲存失敗`, error);
@@ -129,11 +132,11 @@ class Service {
 		}
 	}
 
-	async syncWeekly(code) {
+	async syncWeekly(code, forced) {
 		if (code) {
 			const stock = await this.getStock(code);
 			if (!stock) return;
-			const last = await db.StockWeekly.last(code);
+			const last = forced ? null : await db.StockWeekly.last(code);
 			const result = await Crawler.create(stock).fetchAll(last ? new Date(last.date) : null, null, '1wk');
 			for (const weekly of result) {
 				weekly.code = code;
@@ -144,7 +147,7 @@ class Service {
 		}
 		const stocks = await this.stocks();
 		for (const stock of stocks) {
-			const last = await db.StockWeekly.last(stock.code);
+			const last = forced ? null : await db.StockWeekly.last(stock.code);
 			const result = await Crawler.create(stock).fetchAll(last ? new Date(last.date) : null, null, '1wk');
 			for (const weekly of result) {
 				weekly.code = stock.code;
@@ -253,28 +256,66 @@ class Service {
 				}
 			}
 
+			const stock = await this.getStock(codes);
+			// 大盤濾網：載入 0050 週線 MA20 資料
+			if (params.marketFilter) {
+				const marketStart = dateFns.addYears(params.entryDate, -2);
+				const marketRows = await this.weeklies('0050', marketStart);
+				const closes = marketRows.map(r => r.close).filter(c => c != null);
+				const period = params.marketMAPeriod || 20;
+				params.marketData = marketRows.map((r, i) => {
+					if (i < period - 1) return { date: r.date, close: r.close, ma20: null };
+					const ma = closes.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period;
+					return { date: r.date, close: r.close, ma20: ma };
+				});
+			}
 			const sys = new TradingSystem(data, params);
 			const backtest = sys.backtest();
+			backtest.code = codes;
+			backtest.name = stock?.name || '';
+			// 取回測截止日前的最後收盤價（用於未實現損益計算）
+			const exitData = data.filter(d => new Date(d.date) <= params.exitDate);
+			backtest.close = exitData.length > 0 ? exitData[exitData.length - 1].close : null;
+			backtest.prices = exitData.map(d => ({ date: new Date(d.date), close: d.close }));
+			// 加計持倉中未實現損益（與 weeklyAnalysis 一致）
+			const openPnL = (backtest.trades || [])
+				.filter(t => t.status === 'open')
+				.reduce((sum, t) => sum + ((backtest.close || t.entryPrice) - t.entryPrice), 0);
+			if (openPnL) backtest.profit = ((backtest.profit || 0) + openPnL).scale();
 			const trade = backtest.trades[backtest.trades.length - 1];
 			const last = sys.data.pop();
 			const prev = sys.data.pop();
 			backtest.alerts = null;
-			const alerts = {
-				code: codes,
-				date: last.date,
-                ma: last.ma.scale(2),
-				close: last.close
-			};
-			if (trade && !trade.exitDate) { // 開倉中
-				if (prev.close > prev.ma && last.ma > last.close) backtest.alerts = alerts;
-			}
-			if (trade && trade.exitDate) {
-				if (prev.ma > prev.close && last.close > last.ma) backtest.alerts = alerts;
+			if (last && prev) {
+				const alerts = {
+					code: codes,
+					date: last.date,
+					ma: last.ma?.scale(2),
+					close: last.close
+				};
+				if (trade && !trade.exitDate) {
+					if (prev.close > prev.ma && last.ma > last.close) backtest.alerts = alerts;
+				}
+				if (trade && trade.exitDate) {
+					if (prev.ma > prev.close && last.close > last.ma) backtest.alerts = alerts;
+				}
 			}
 			return backtest;
 		}
 		const result = [];
 		const stocks = await this.stocks();
+		// 大盤濾網：載入 0050 週線 MA20 資料（共用一次）
+		if (params.marketFilter) {
+			const marketStart = dateFns.addYears(params.entryDate, -2);
+			const marketRows = await this.weeklies('0050', marketStart);
+			const closes = marketRows.map(r => r.close).filter(c => c != null);
+			const period = params.marketMAPeriod || 20;
+			params.marketData = marketRows.map((r, i) => {
+				if (i < period - 1) return { date: r.date, close: r.close, ma20: null };
+				const ma = closes.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period;
+				return { date: r.date, close: r.close, ma20: ma };
+			});
+		}
 		for (const stock of stocks) {
 			if (Array.isArray(codes) && !codes.find(c => c == stock.code)) continue;
 			const startDate = dateFns.addYears(params.entryDate, -2);
@@ -299,6 +340,15 @@ class Service {
             const profitRate = (best.profitRate * 100).scale(0) + '%';
 			best.code = stock.code;
 			best.name = stock.name;
+			// 取回測截止日前的最後收盤價（用於未實現損益計算）
+			const exitData = data.filter(d => new Date(d.date) <= params.exitDate);
+			best.close = exitData.length > 0 ? exitData[exitData.length - 1].close : null;
+			best.prices = exitData.map(d => ({ date: new Date(d.date), close: d.close }));
+			// 加計持倉中未實現損益
+			const openPnL2 = (best.trades || [])
+				.filter(t => t.status === 'open')
+				.reduce((sum, t) => sum + ((best.close || t.entryPrice) - t.entryPrice), 0);
+			if (openPnL2) best.profit = ((best.profit || 0) + openPnL2).scale();
 			best.opened = best.trades.find(trade => trade.status != 'closed') !== undefined;
 			//console.log(`[${new Date().toLocaleString()}] ${stock.code} ${stock.name} MA${best.ma} ${best.profit} ${profitRate} ${best.opened ? '開倉中' : ''}`);
 			//console.log(best.trades);

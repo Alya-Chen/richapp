@@ -205,9 +205,24 @@ node main.js invest 2330 adx                      # 日線 Investor
 node main.js invest-weekly 2330 weeklyAdx         # 週線 WeeklyInvestor
 node main.js -u 2 invest 2330                     # 使用使用者 2 的策略參數
 
+# 注意：backtest-all 已修復週線 flag 遺漏問題（2026-06-26）
+# 之前週線策略被錯誤地以日線資料執行，修復後 data/*.csv 需重新產生
+
+# ⚠️ 連續回測 vs 逐年分析（2026-06-27）
+# backtest-all 是連續回測（同方向交易合併），交易次數遠少於逐年重設的 weekly-analysis。
+# 例：MACD 週線 USER1，連續 16 筆 → 逐年 242 筆（15 倍差）。
+# 比較時不可混合使用：總覽的總筆數若源自逐年分析，賺錢股數也須來自逐年。
+# 需逐年數據請執行：node main.js -u 1 backtest-all <策略> entryDate=202X-01-02 exitDate=202X-12-31
+
 # 同步資料
 node main.js sync 2330                            # 單股日線
-node main.js sync-all weekly                      # 全部台股週線
+node main.js sync 2330 forced                     # 單股日線強制完整同步（從頭抓）
+node main.js -u 1 sync all                        # 使用者 1 關注股全部同步
+node main.js -u 1 sync all forced                 # 使用者 1 關注股強制完整同步
+node main.js sync all                             # 全部台股同步（無 -u 時）
+node main.js sync-weekly 2330                     # 單股週線
+node main.js -u 1 sync-weekly all                 # 使用者 1 關注股週線同步
+node main.js sync-weekly all                      # 全部台股週線同步
 
 # 參數覆寫
 node main.js backtest 2330 weeklyAdx drawdownRate=0.4
