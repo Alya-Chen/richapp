@@ -198,10 +198,10 @@ button:hover {
 }
 
 .rich-app_blocks .blocks_cell_usa {
-  background-image: url("data:image/svg+xml,%3Csvg%20width%3D%22300%22%20height%3D%2216%22%20viewBox%3D%220%200%20300%2016%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Crect%20y%3D%220%22%20width%3D%22300%22%20height%3D%224%22%20fill%3D%22%23b22234%22/%3E%3Crect%20y%3D%228%22%20width%3D%22300%22%20height%3D%224%22%20fill%3D%22%23b22234%22/%3E%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%2240%22%20height%3D%2216%22%20fill%3D%22%233c3b6e%22/%3E%3Cpolygon%20points%3D%228%2C5%209%2C8%2012%2C8%209.5%2C10%2010.5%2C13%208%2C11.5%205.5%2C13%206.5%2C10%204%2C8%207%2C8%22%20fill%3D%22%23fff%22/%3E%3Cpolygon%20points%3D%2220%2C5%2021%2C8%2024%2C8%2021.5%2C10%2022.5%2C13%2020%2C11.5%2017.5%2C13%2018.5%2C10%2016%2C8%2019%2C8%22%20fill%3D%22%23fff%22/%3E%3Cpolygon%20points%3D%2232%2C5%2033%2C8%2036%2C8%2033.5%2C10%2034.5%2C13%2032%2C11.5%2029.5%2C13%2030.5%2C10%2028%2C8%2031%2C8%22%20fill%3D%22%23fff%22/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg%20width%3D%2240%22%20height%3D%2216%22%20viewBox%3D%220%200%2040%2016%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%2240%22%20height%3D%2216%22%20fill%3D%22%233c3b6e%22/%3E%3Cpolygon%20points%3D%228%2C5%209%2C8%2012%2C8%209.5%2C10%2010.5%2C13%208%2C11.5%205.5%2C13%206.5%2C10%204%2C8%207%2C8%22%20fill%3D%22%23fff%22/%3E%3Cpolygon%20points%3D%2220%2C5%2021%2C8%2024%2C8%2021.5%2C10%2022.5%2C13%2020%2C11.5%2017.5%2C13%2018.5%2C10%2016%2C8%2019%2C8%22%20fill%3D%22%23fff%22/%3E%3Cpolygon%20points%3D%2232%2C5%2033%2C8%2036%2C8%2033.5%2C10%2034.5%2C13%2032%2C11.5%2029.5%2C13%2030.5%2C10%2028%2C8%2031%2C8%22%20fill%3D%22%23fff%22/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: left top;
-  background-size: 300px 16px;
+  background-size: 40px 16px;
 }
 
 .rich-app_blocks .blocks_cell_code {
@@ -483,7 +483,7 @@ button:hover {
 }
 
 .info-banner--win {
-  background: linear-gradient(to right, #ff7777, white 30%);
+  background: linear-gradient(to right, #ff7777, white 60%);
 }
 
 .info-banner--win .pct--result {
@@ -491,7 +491,7 @@ button:hover {
 }
 
 .info-banner--loss {
-  background: linear-gradient(to right, #98d7a4, white 30%);
+  background: linear-gradient(to right, #98d7a4, white 60%);
 }
 
 .info-banner--loss .pct--result {

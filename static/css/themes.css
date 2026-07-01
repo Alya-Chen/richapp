@@ -67,6 +67,291 @@
     --border-btn: 1px;
 }
 
+[data-theme="tavily"] {
+    name: "tavily";
+    default: false;
+    prefersdark: false;
+    color-scheme: "light";
+
+    /* Primary：冷藍（AI感） */
+    --color-primary: oklch(62% 0.16 255);
+    /* #4a7dff */
+    --color-primary-focus: oklch(52% 0.20 255);
+    /* deeper blue */
+    --color-primary-content: oklch(100% 0 0);
+
+    /* Secondary：偏藍紫灰 */
+    --color-secondary: oklch(78% 0.06 250);
+    /* soft lavender-gray */
+    --color-secondary-focus: oklch(70% 0.08 250);
+    --color-secondary-content: oklch(20% 0.02 250);
+
+    /* Accent：亮青藍（AI highlight） */
+    --color-accent: oklch(75% 0.14 200);
+    /* cyan-blue */
+    --color-accent-focus: oklch(65% 0.18 200);
+    --color-accent-content: oklch(100% 0 0);
+
+    /* Neutral：偏冷深灰紫 */
+    --color-neutral: oklch(18% 0.02 260);
+    /* near-black with blue tint */
+    --color-neutral-focus: oklch(14% 0.02 260);
+    --color-neutral-content: oklch(100% 0 0);
+
+    /* Base：乾淨冷白 */
+    --color-base-100: oklch(98% 0.01 240);
+    /* #f7f9fc */
+    --color-base-200: oklch(95% 0.01 240);
+    --color-base-300: oklch(92% 0.01 240);
+    --color-base-content: oklch(28% 0.02 260);
+
+    /* Semantic colors */
+    --color-info: oklch(70% 0.12 250);
+    /* blue info */
+    --color-success: oklch(70% 0.16 145);
+    /* soft green */
+    --color-success-content: oklch(98% 0 0);
+
+    --color-warning: oklch(80% 0.16 85);
+    /* muted amber */
+    --color-error: oklch(65% 0.20 25);
+    /* soft red */
+
+    /* UI feel */
+    --rounded-box: 0.9rem;
+    --rounded-btn: 0.7rem;
+    --rounded-badge: 999px;
+
+    --animation-btn: 0.15s;
+    --animation-input: 0.15s;
+
+    --btn-text-case: none;
+    --navbar-padding: 0.75rem;
+    --border-btn: 1px;
+}
+
+[data-theme="chatgpt"] {
+    name: "chatgpt";
+    default: false;
+    prefersdark: false;
+    color-scheme: "light";
+
+    /* Primary：低飽和藍綠（ChatGPT signature hint） */
+    --color-primary: oklch(44.531% 0.02916 202.666);
+    /* soft teal-blue */
+    --color-primary-focus: oklch(60% 0.12 200);
+    --color-primary-content: oklch(100% 0 0);
+
+    /* Secondary：極淡灰藍 */
+    --color-secondary: oklch(94% 0.01 240);
+    --color-secondary-focus: oklch(88% 0.02 240);
+    --color-secondary-content: oklch(25% 0.02 240);
+
+    /* Accent：偏綠青（用於 highlight / link） */
+    --color-accent: oklch(45.823% 0.01213 57.864);
+    --color-accent-focus: oklch(48.435% 0.1484 41.19);
+    --color-accent-content: oklch(100% 0 0);
+
+    /* Neutral：深灰（不是純黑） */
+    --color-neutral: oklch(41.686% 0.02682 256.841);
+    --color-neutral-focus: oklch(43.507% 0.07939 267.673);
+    --color-neutral-content: oklch(100% 0 0);
+
+    /* Base：ChatGPT 經典「暖白 + 微灰」 */
+    --color-base-100: oklch(98% 0.005 240);
+    /* #f7f7f8 */
+    --color-base-200: oklch(96% 0.005 240);
+    --color-base-300: oklch(92% 0.006 240);
+    --color-base-content: oklch(28% 0.02 260);
+
+    /* Info / states（非常克制） */
+    --color-info: oklch(65% 0.10 230);
+    --color-success: oklch(70% 0.10 145);
+    --color-success-content: oklch(98% 0 0);
+
+    --color-warning: oklch(80% 0.12 80);
+    --color-error: oklch(65% 0.16 30);
+
+    /* UI feel：ChatGPT 很「圓但不甜」 */
+    --rounded-box: 0.75rem;
+    --rounded-btn: 0.6rem;
+    --rounded-badge: 999px;
+
+    --animation-btn: 0.12s;
+    --animation-input: 0.12s;
+
+    --btn-text-case: none;
+    --navbar-padding: 0.75rem;
+    --border-btn: 1px;
+
+    /* subtle UI depth hint */
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="midnight"] {
+    name: "midnight";
+    default: false;
+    prefersdark: true;
+    color-scheme: dark;
+
+    /* Brand */
+    --color-primary: oklch(70% 0.12 195);
+    --color-primary-focus: oklch(63% 0.14 195);
+    --color-primary-content: oklch(16% 0.01 250);
+
+    --color-secondary: oklch(62% 0.06 265);
+    --color-secondary-focus: oklch(56% 0.08 265);
+    --color-secondary-content: white;
+
+    --color-accent: oklch(75% 0.13 165);
+    --color-accent-focus: oklch(67% 0.15 165);
+    --color-accent-content: oklch(18% 0.01 250);
+
+    /* Background */
+    --color-base-100: oklch(18% 0.012 255);
+    --color-base-200: oklch(21% 0.012 255);
+    --color-base-300: oklch(26% 0.013 255);
+
+    --color-base-content: oklch(93% 0.01 255);
+
+    /* Sidebar */
+    --color-neutral: oklch(15% 0.015 255);
+    --color-neutral-focus: oklch(12% 0.015 255);
+    --color-neutral-content: white;
+
+    /* Status */
+    --color-info: oklch(72% 0.11 235);
+
+    --color-success: oklch(74% 0.12 150);
+    --color-success-content: oklch(18% 0.01 255);
+
+    --color-warning: oklch(82% 0.15 80);
+
+    --color-error: oklch(68% 0.19 28);
+
+    /* Radius */
+    --rounded-box: 0.85rem;
+    --rounded-btn: 0.7rem;
+    --rounded-badge: 999px;
+
+    --animation-btn: .15s;
+    --animation-input: .15s;
+
+    --btn-text-case: none;
+    --navbar-padding: .75rem;
+    --border-btn: 1px;
+}
+
+[data-theme="clover"] {
+    name: "clover";
+    default: false;
+    prefersdark: true;
+    color-scheme: dark;
+
+    /* Clover Green */
+    --color-primary: oklch(64.798% 0.03675 18.034);
+    --color-primary-focus: oklch(42.007% 0.02469 21.805);
+    --color-primary-content: white;
+
+    /* Wood Brown */
+    --color-secondary: oklch(66.574% 0.06802 91.765);
+    --color-secondary-focus: oklch(64.596% 0.09766 114.994);
+    --color-secondary-content: white;
+
+    /* Brass */
+    --color-accent: oklch(82% 0.12 82);
+    --color-accent-focus: oklch(74% 0.14 82);
+    --color-accent-content: oklch(20% 0.01 60);
+
+    /* Coffee */
+    --color-neutral: oklch(33% 0.015 60);
+    --color-neutral-focus: oklch(28% 0.015 60);
+    --color-neutral-content: white;
+
+    /* Latte Background */
+    --color-base-100: oklch(30% 0.008 70);
+    --color-base-200: oklch(34% 0.008 70);
+    --color-base-300: oklch(39% 0.008 70);
+
+    --color-base-content: oklch(93% 0.01 70);
+
+    --color-info: oklch(72% 0.09 235);
+
+    --color-success: oklch(72% 0.12 150);
+    --color-success-content: white;
+
+    --color-warning: oklch(82% 0.12 82);
+
+    --color-error: oklch(68% 0.18 28);
+
+    --rounded-box: .9rem;
+    --rounded-btn: .7rem;
+    --rounded-badge: 999px;
+
+    --animation-btn: .15s;
+    --animation-input: .15s;
+
+    --btn-text-case: none;
+    --navbar-padding: .75rem;
+    --border-btn: 1px;
+}
+
+[data-theme="canvas"] {
+    name: "canvas";
+    default: false;
+    prefersdark: false;
+    color-scheme: light;
+
+    /* ChatGPT Canvas 幾乎沒有品牌色 */
+    --color-primary: oklch(59% 0.08 202);
+    --color-primary-focus: oklch(53% 0.10 202);
+    --color-primary-content: white;
+
+    --color-secondary: oklch(95% 0.004 250);
+    --color-secondary-focus: oklch(91% 0.006 250);
+    --color-secondary-content: oklch(28% 0.01 250);
+
+    /* Link / Active */
+    --color-accent: oklch(67% 0.10 185);
+    --color-accent-focus: oklch(60% 0.12 185);
+    --color-accent-content: white;
+
+    /* Sidebar */
+    --color-neutral: oklch(24% 0.01 255);
+    --color-neutral-focus: oklch(19% 0.01 255);
+    --color-neutral-content: white;
+
+    /* Canvas Background */
+    --color-base-100: oklch(99.2% 0.002 255);
+    --color-base-200: oklch(97.6% 0.003 255);
+    --color-base-300: oklch(94.5% 0.004 255);
+
+    --color-base-content: oklch(27% 0.01 255);
+
+    --color-info: oklch(68% 0.09 235);
+
+    --color-success: oklch(67% 0.11 155);
+    --color-success-content: white;
+
+    --color-warning: oklch(82% 0.14 82);
+
+    --color-error: oklch(63% 0.18 28);
+
+    /* Canvas 的特色 */
+    --rounded-box: 0.75rem;
+    /* 12px */
+    --rounded-btn: 0.6rem;
+    /* 10px */
+    --rounded-badge: 999px;
+
+    --animation-btn: .15s;
+    --animation-input: .15s;
+
+    --btn-text-case: none;
+    --navbar-padding: .75rem;
+    --border-btn: 1px;
+}
+
 [data-theme="lowkeynoodle"] {
     name: "lowkeynoodle";
     default: false;

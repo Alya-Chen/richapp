@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW" data-theme="rosewood">
+<html lang="zh-TW" data-theme="clover">
 
 <head>
   <base href="/">
@@ -14,8 +14,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/css/output.css?date=20251017" />
-  <!-- 自定義樣式 --><!-- 自定義主題 CSS -->
+  <link rel="stylesheet" href="/css/output.css?date=20260630" />
+  <!-- 自定義樣式 --><!-- 自定義主題 CSS 
+ -->
   <link href="css/themes.css" rel="stylesheet" type="text/css" />
   <script src="/js/highstock.js"></script>
   <script src="/js/highstock-data.js"></script>
@@ -178,46 +179,196 @@
       </div>
     </div>
   </div>
-  <div ng-view class=""></div>
+  <div class="flex min-h-screen">
+    <!-- Left Column (20%) -->
+    <div class="w-1/5 p-4 space-y-4">
+      <div class="stats cursor-pointer mx-auto stats-vertical">
+        <!-- 
+        <div class="stat">
+          <div class="stat-title">角色</div>
+          <div class="stat-value text-rich-master" ng-click="showTrades(true)">Master</div>
+          <div class="stat-value" ng-click="showTrades()">實際</div>
+        </div>
+         -->
+        <div class="stat">
+          <div class="stat-figure text-secondary">
+            <svg fill="currentColor" class="icon-gold size-[3em] ">
+              <use xlink:href="css/symbol-defs.svg#icon-gold"></use>
+            </svg>
+          </div>
+          <div class="stat-title">總資金</div>
+          <!-- 
+          <div class="stat-value text-rich-master"><span class="font-price"
+              ng-bind="invested.totalCapital | number:0"></span>
+          </div>
+          -->
+          <div class="stat-value"><span class="font-price" ng-bind="invested.totalCapital | number:0"></span></div>
+        </div>
+        <div class="stat">
+          <div class="stat-figure text-secondary">
+            <svg fill="currentColor" class="icon-salary size-[3em]">
+              <use xlink:href="css/symbol-defs.svg#icon-salary"></use>
+            </svg>
+          </div>
+          <div class="stat-title">目前投資</div>
+          <!-- 
+          <div class="stat-value text-rich-master"><span class="font-price" ng-bind="shadowed.cost | number:0"></span>
+          </div>-->
+          <div class="stat-value"><span class="font-price" ng-bind="invested.cost | number"></span></div>
+        </div>
+        <div class="stat">
+          <div class="stat-figure text-secondary">
+            <svg fill="currentColor" class="icon-wallet size-[3em]">
+              <use xlink:href="css/symbol-defs.svg#icon-wallet"></use>
+            </svg>
+          </div>
+          <div class="stat-title">剩餘資金</div>
+          <!-- 
+          <div class="stat-value text-rich-master"><span class="font-price"
+              ng-bind="(invested.totalCapital - shadowed.cost) | number:0"></span>
+          </div>
+          -->
+          <div class="stat-value"><span class="font-price"
+              ng-bind="(invested.totalCapital - invested.cost) | number:0"></span>
+          </div>
+        </div>
+        <div class="stat">
+          <div class="stat-figure text-secondary">
+            <svg fill="currentColor" class="icon-wallet size-[3em]">
+              <use xlink:href="css/symbol-defs.svg#icon-wallet"></use>
+            </svg>
+          </div>
+          <div class="stat-title">績效</div>
+          <!-- 
+          <div class="stat-value"><span class="font-price" ng-bind="shadowed.profit.scale() | number"></span></div>
+          -->
+          <div class="stat-value"><span class="font-price" ng-bind="invested.profit.scale() | number"></span></div>
+          <div class="stat-desc">偏差值 <span ng-bind="invested.diffRate.scale(2) | pct"></span>％</div>
+        </div>
+      </div>
+      <ul class="menu menu-horizontal bg-base-200 rounded-box m-auto flex">
+        <li>
+          <a>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </a>
+        </li>
+        <li>
+          <a>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </a>
+        </li>
+        <li>
+          <a>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </a>
+        </li>
+      </ul>
+      <div class="mockup-code bg-success text-success-content">
+        <div class="flex ml-10">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+            stroke="currentColor" class="size-4 text-white">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="m9 13.5 3 3m0 0 3-3m-3 3v-6m1.06-4.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+          </svg>
+          <span class="ml-2">入場策略：</span>
+          <span ng-bind="entryStrategy.name"></span>
+          <span class="text-accent" ng-if="entryStrategy.reentry">（返場）</span>
+          <span class="text-secondary" ng-if="entryStrategy.adxRate">＋三日斜率閥值 <span ng-bind="entryStrategy.adxRate"
+              class="text-error"></span>％</span>
+        </div>
+        <div class="flex ml-10">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+            stroke="currentColor" class="size-4 text-white">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+          </svg>
+          <span class="ml-2">出場策略：</span>
+          <span ng-bind="exitStrategy.name"></span>
+          <span class="text-secondary" ng-if="exitStrategy.reentry">（返場）</span>
+          <span class="text-secondary" ng-if="exitStrategy.dynamicStop">＋動態止損 <span ng-bind="exitStrategy.stopLossPct"
+              class="text-error"></span>％</span>
+          <span class="text-secondary" ng-if="exitStrategy.dynamicStop">止盈 <span ng-bind="exitStrategy.takeProfitPct"
+              class="text-error"></span>％</span>
+          <span class="text-secondary" ng-if="exitStrategy.adxRate">＋三日斜率閥值 <span ng-bind="exitStrategy.adxRate"
+              class="text-error"></span>％</span>
+          <span class="text-secondary" ng-if="exitStrategy.drawdownRate">＋最高回撤出清 <span
+              ng-bind="exitStrategy.drawdownRate" class="text-error"></span>％</span>
+        </div>
+      </div>
 
-  <div id="sql-form" style="display: none">
-    <br />
-    <div>
-      <textarea style="border: 1px solid #ccc;" rows="4" cols="50" ng-model="sql.commands"></textarea>
-      <pre style="text-align: left; overflow-y: scroll; width: 96%;" id="sql-result" class="json-body"></pre>
+      <div class="list">
+        <div class="self-end">
+          <button class="btn btn-primary" ng-click="note.edit()"><svg fill="currentColor"
+              class="icon-addnote size-[1.5em]">
+              <use xlink:href="css/symbol-defs.svg#icon-addnote"></use>
+            </svg></button>
+        </div>
+        <div class="list-row cursor-pointer hover:bg-base-100" ng-repeat="note in notes" ng-click="edit(note)">
+          <span ng-bind="note.date | date:'MM/dd'" class="font-date text-xl text-accent"></span>
+          <span ng-bind="note.title" class=""></span>
+        </div>
+        <div class="list-row hover:bg-base-100" ng-repeat="log in logs">
+          <span ng-bind="log.date | date:'MM/dd HH:mm'" class="font-date text-xl text-info"></span>
+          <span ng-bind="log.msg"></span>
+        </div>
+      </div>
     </div>
-    <div>
-      <p>
-        <button ng-click="sql.exec()">確認</button>
-      </p>
+
+    <!-- Right Column (80%) -->
+    <div class="w-4/5 p-4 space-y-4">
+      <div ng-view class=""></div>
     </div>
-  </div>
-  <script src="/js/lang.js"></script>
-  <script src="/js/svg-helper.js"></script>
-  <script src="/js/svg-init.js"></script>
-  <!-- SVG 開發工具 - 開發階段使用
+
+    <div id="sql-form" style="display: none">
+      <br />
+      <div>
+        <textarea style="border: 1px solid #ccc;" rows="4" cols="50" ng-model="sql.commands"></textarea>
+        <pre style="text-align: left; overflow-y: scroll; width: 96%;" id="sql-result" class="json-body"></pre>
+      </div>
+      <div>
+        <p>
+          <button ng-click="sql.exec()">確認</button>
+        </p>
+      </div>
+    </div>
+    <script src="/js/lang.js"></script>
+    <script src="/js/svg-helper.js"></script>
+    <script src="/js/svg-init.js"></script>
+    <!-- SVG 開發工具 - 開發階段使用
   <script src="/js/svg-dev-tools.js"></script>
   -->
-  <script type="module">
-    import { Macd, Kdj, Cci, Rsi, Adx, BullBear, ExitAlert, BollingerBands } from '/js/macd-kdj.js';
-    window.Macd = Macd;
-    window.Kdj = Kdj;
-    window.Cci = Cci;
-    window.Rsi = Rsi;
-    window.Adx = Adx;
-    window.BullBear = BullBear;
-    window.ExitAlert = ExitAlert;
-    window.BollingerBands = BollingerBands;
-    Number.prototype.scale = function (digits = 0) {
-      return Number(this.toFixed(digits));
-    }
-  </script>
-  <script src="/js/tiger-invest.js"></script>
-  <script src="/js/rsi-invest.js"></script>
-  <script src="/js/adx-invest.js"></script>
-  <script src="/js/stock-chart.js"></script>
-  <script src="/js/rich-app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/json-browse@0.2.0/json-browse/jquery.json-browse.min.js"></script>
+    <script type="module">
+      import { Macd, Kdj, Cci, Rsi, Adx, BullBear, ExitAlert, BollingerBands } from '/js/macd-kdj.js';
+      window.Macd = Macd;
+      window.Kdj = Kdj;
+      window.Cci = Cci;
+      window.Rsi = Rsi;
+      window.Adx = Adx;
+      window.BullBear = BullBear;
+      window.ExitAlert = ExitAlert;
+      window.BollingerBands = BollingerBands;
+      Number.prototype.scale = function (digits = 0) {
+        return Number(this.toFixed(digits));
+      }
+    </script>
+    <script src="/js/tiger-invest.js"></script>
+    <script src="/js/rsi-invest.js"></script>
+    <script src="/js/adx-invest.js"></script>
+    <script src="/js/stock-chart.js"></script>
+    <script src="/js/rich-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/json-browse@0.2.0/json-browse/jquery.json-browse.min.js"></script>
 </body>
 
 </html>

@@ -105,6 +105,7 @@
     </div>
   </div>
 </div>
+<div id="stock-chart" style="height: 800px; min-width: 800px"></div>
 <div ng-if="stock.trade.invest" class="mb-6 w-[85%] mx-auto max-w-6xl"
   ng-class="{'border-2 border-warning': stock.trade.invest.rsiHot}">
   <h3 class="text-2xl font-bold text-primary mb-4 flex items-center gap-2">
@@ -365,7 +366,7 @@
           <div ng-if="trade.invest">
             <br />
             <div>【分批進出操作模擬】</div>
-             <br />
+            <br />
             <div ng-if="log.act" ng-repeat="log in trade.invest.logs">
               <span class="font-date" ng-bind="log.day.date.toLocaleDateString()"></span>
               <span class="font-price" ng-bind="log.day.close.scale(2)"></span>
@@ -477,4 +478,3 @@
     <a target="_blank" ng-href="{{ axis.url }}"><span ng-bind="axis.id"></span></a>
   </label>
 </div>
-<div id="stock-chart" style="height: 800px; min-width: 800px"></div>
