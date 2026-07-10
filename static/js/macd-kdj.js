@@ -1,13 +1,43 @@
+const Utils = {
+    toWeekly: function(data, { weekEndDay = 5 } = {}) {
+        const weeks = {};
+        for (const d of data) {
+            const date = new Date(d.date || d.time);
+            const day = date.getDay();
+            // 以 weekEndDay（5=週五, 3=週三）為該週分組依據
+            const ref = new Date(date);
+            ref.setDate(date.getDate() + (day === 0 ? -(7 - weekEndDay) : weekEndDay - day));
+            const key = ref.toISOString().slice(0, 10);
+            if (!weeks[key]) {
+                weeks[key] = { date: new Date(d.date || d.time), open: d.open, high: d.high, low: d.low, close: d.close, volume: d.volume || 0 };
+            } else {
+                const w = weeks[key];
+                w.date = new Date(d.date || d.time); // 更新為該週實際最後交易日
+                if (d.high > w.high) w.high = d.high;
+                if (d.low < w.low) w.low = d.low;
+                w.close = d.close;
+                w.volume += d.volume || 0;
+            }
+        }
+        return Object.values(weeks).sort((a, b) => a.date - b.date);
+    }
+};
+
+export { Utils };
 export class Macd {
     constructor(data, {
         fast = 12,
         slow = 26,
-        dea = 9
+        dea = 9,
+        weekly = false
     } = {}) {
         this.data = data;
         this.fast = fast;
         this.slow = slow;
         this.dea = dea;
+        if (weekly) {
+            this.data = Utils.toWeekly(this.data);
+        }
     }
 
     calculate() {
@@ -980,7 +1010,10 @@ export class Adx {
                     if (current.plusDi > current.minusDi) {
                         current.golden = true;
                     } else if (current.minusDi > current.plusDi) {
-                        current.dead = true;
+                        // 需檢查是否真的發生 -DI/+DI 穿越，避免長期 -DI>+DI 誤判為死叉
+                        if (prev.minusDi <= prev.plusDi && current.minusDi > current.plusDi) {
+                            current.dead = true;
+                        }
                     }
                 } else {
                     // +DI 向上穿越 -DI（黃金交叉）
