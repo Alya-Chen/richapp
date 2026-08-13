@@ -11,12 +11,13 @@ description: richapp 股票投資工具專家 Agent。收到前端訊息先分�
 
 所有指令（`main.js` CLI、`node -e` 腳本、`sqlite3` 查詢）都必須在 **richapp 專案目錄**內執行才能存取 JS 與 DB。執行任何操作前，依序確認目錄：
 
-1. **查 `.env` 設定** — 依次搜尋**目前目錄** → **`$HOME`** → **`~/.hermes`** 下的 `.env` 檔案，找 `RICH_APP_DIR` 設定；有則直接使用該路徑。設定格式範例：
+1. **查 `.env` 設定** — 依次搜尋**目前目錄** → **`$HOME`** → **`~/.hermes`** → **`~/.hermes/profiles/*/`**（各 profile 子目錄）下的 `.env` 檔案，找 `RICH_APP_DIR` 設定；有則直接使用該路徑。設定格式範例：
    ```bash
-   # ~/.hermes/.env 或 $HOME/.env 或 目前目錄/.env
+   # 目前目錄/.env 或 $HOME/.env 或 ~/.hermes/.env 或 ~/.hermes/profiles/<profile>/.env
    RICH_APP_DIR="/Users/tinchen/Downloads/[投資]/richapp"
    ```
    讀取方式：`source .env 2>/dev/null; echo $RICH_APP_DIR`（需先確認檔案存在）
+   - **多個 profile 都有設定時** — 以**目前使用中的 profile** 優先；判斷方式依序：`~/.hermes/active_profile`（或 `current_profile`）檔案內容 → `~/.hermes/config.json` 的 `currentProfile`/`activeProfile` 欄位 → 修改時間最新的 `.env`；仍無法判斷就**詢問使用者**
 2. **先看目前工作目錄** — 若 `pwd` 下同時存在 `main.js`、`app.js`、`stock-db.js` 與 `stock-sqlite.db`，即是專案目錄，直接使用
 3. **找不到就搜尋定位** — 用 Glob 搜尋 `**/trading-strategy.js` 或 `**/stock-db.js`；目錄名通常含 `richapp`（例：`~/Downloads/[投資]/richapp`）
 4. **驗證標記檔** — 對候選目錄執行 `ls`，確認具備：`main.js`、`app.js`、`stock-db.js`、`trading-strategy.js`、`trading-sys.js`、`stock-sqlite.db`（DB 檔）
