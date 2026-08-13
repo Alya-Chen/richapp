@@ -1,68 +1,69 @@
 <!-- 目前投資中 -->
-<div class="grid grid-cols-[1fr_1fr] p-4 gap-4 max-w-6xl">
-  <div class="gap-2 cursor-pointer hover:bg-base-200" ng-if="stocks.length && stock.trade.invest"
-    ng-repeat="stock in stocks" ng-class="{'stock_usa': stock.country == 'us'}">
+<div>
+  <div class="grid grid-cols-[1fr_1fr] p-4 gap-4 max-w-6xl mx-auto">
+    <div class="gap-2 cursor-pointer hover:bg-base-200" ng-if="stocks.length && stock.trade.invest"
+      ng-repeat="stock in stocks" ng-class="{'stock_usa': stock.country == 'us'}">
 
-    <!-- Row 1: Primary info (code + name + badges) -->
-    <div class="flex flex-wrap items-center gap-5 w-full pt-4">
-      <span ng-click="$event.stopPropagation()" class="pb-2">
-        <input type="checkbox" ng-model="stock.checked" ng-change="checked(stock)"
-          class="checkbox checkbox-primary checkbox-sm" />
-      </span>
-      <span class="text-2xl font-title text-primary font-bold" ng-bind="stock.name"></span>
-      <span class="text-success font-bold text-lg" ng-bind="stock.code"></span>
-      <span ng-if="stock.otc">🌱</span>
-      <span ng-if="stock.financial" ng-mouseover="financial(stock, $event)" class="ml-auto badge badge-ghost">
-        <span ng-bind="stock.financial.bullscore"></span>
-      </span>
-    </div>
-
-    <!-- Row 2: MA + expectation + winRate + profitRate -->
-    <div class="flex flex-wrap items-center gap-2 w-full text-sm">
-      <div class="badge badge-outline badge-sm" ng-click="changeTo(stock.code)">
-        MA <span ng-bind="stock.defaultMa"></span>
+      <!-- Row 1: Primary info (code + name + badges) -->
+      <div class="flex flex-wrap items-center gap-5 w-full pt-4">
+        <span ng-click="$event.stopPropagation()" class="pb-2">
+          <input type="checkbox" ng-model="stock.checked" ng-change="checked(stock)"
+            class="checkbox checkbox-primary checkbox-sm" />
+        </span>
+        <span class="text-2xl font-title text-primary font-bold" ng-bind="stock.name"></span>
+        <span class="text-success font-bold text-lg" ng-bind="stock.code"></span>
+        <span ng-if="stock.otc">🌱</span>
+        <span ng-if="stock.financial" ng-mouseover="financial(stock, $event)" class="ml-auto badge badge-ghost">
+          <span ng-bind="stock.financial.bullscore"></span>
+        </span>
       </div>
-      <span ng-if="stock.tigerMa" class="badge badge-ghost badge-sm">
-        虎<span ng-bind="stock.tigerMa"></span>
-      </span>
-      <span ng-if="stock.expectation" class="badge badge-ghost badge-sm gap-1">
-        期望 <span ng-bind="stock.expectation"></span>
-        <span ng-if="stock.expectation > 1"><svg fill="currentColor" class="icon-thumbs-up size-[0.8em]">
+
+      <!-- Row 2: MA + expectation + winRate + profitRate -->
+      <div class="flex flex-wrap items-center gap-2 w-full text-sm">
+        <div class="badge badge-outline badge-sm" ng-click="changeTo(stock.code)">
+          MA <span ng-bind="stock.defaultMa"></span>
+        </div>
+        <span ng-if="stock.tigerMa" class="badge badge-ghost badge-sm">
+          虎<span ng-bind="stock.tigerMa"></span>
+        </span>
+        <span ng-if="stock.expectation" class="badge badge-ghost badge-sm gap-1">
+          期望 <span ng-bind="stock.expectation"></span>
+          <span ng-if="stock.expectation > 1"><svg fill="currentColor" class="icon-thumbs-up size-[0.8em]">
+              <use xlink:href="css/symbol-defs.svg#icon-thumbs-up"></use>
+            </svg></span>
+        </span>
+        <span class="font-pct" ng-bind="stock.winRate | pct"></span>
+        <span ng-if="stock.winRate < 0.4"><svg fill="currentColor" class="icon-thumbs-down size-[0.8em]">
+            <use xlink:href="css/symbol-defs.svg#icon-thumbs-down"></use>
+          </svg></span>
+        <span ng-if="stock.winRate >= 0.4"><svg fill="currentColor" class="icon-thumbs-up size-[0.8em]">
             <use xlink:href="css/symbol-defs.svg#icon-thumbs-up"></use>
           </svg></span>
-      </span>
-      <span class="font-pct" ng-bind="stock.winRate | pct"></span>
-      <span ng-if="stock.winRate < 0.4"><svg fill="currentColor" class="icon-thumbs-down size-[0.8em]">
-          <use xlink:href="css/symbol-defs.svg#icon-thumbs-down"></use>
-        </svg></span>
-      <span ng-if="stock.winRate >= 0.4"><svg fill="currentColor" class="icon-thumbs-up size-[0.8em]">
-          <use xlink:href="css/symbol-defs.svg#icon-thumbs-up"></use>
-        </svg></span>
-      <span class="font-pct ml-1" ng-bind="stock.profitRate | pct"></span>
-      <span ng-if="stock.profitRate < 0"><svg fill="currentColor" class="icon-arrow-down size-[0.8em]">
-          <use xlink:href="css/symbol-defs.svg#icon-arrow-down"></use>
-        </svg></span>
-      <span ng-if="stock.profitRate > 0"><svg fill="currentColor" class="icon-arrow-up size-[0.8em]">
-          <use xlink:href="css/symbol-defs.svg#icon-arrow-up"></use>
-        </svg></span>
-    </div>
+        <span class="font-pct ml-1" ng-bind="stock.profitRate | pct"></span>
+        <span ng-if="stock.profitRate < 0"><svg fill="currentColor" class="icon-arrow-down size-[0.8em]">
+            <use xlink:href="css/symbol-defs.svg#icon-arrow-down"></use>
+          </svg></span>
+        <span ng-if="stock.profitRate > 0"><svg fill="currentColor" class="icon-arrow-up size-[0.8em]">
+            <use xlink:href="css/symbol-defs.svg#icon-arrow-up"></use>
+          </svg></span>
+      </div>
 
-    <!-- Row 3: Realtime price -->
-    <div class="flex flex-wrap items-center gap-2 w-full pt-4 pb-4" ng-if="stock.realtime">
-      <span class="border-l-4 border-accent pl-2 flex items-center gap-2">
-        <span class="font-price text-2xl text-accent" ng-bind="stock.realtime.close.scale(2)"></span>
-        <span class="font-pct" ng-bind="stock.realtime.diffRate | pct"></span>
-      </span>
-      <span class="flex items-center gap-1 text-sm opacity-60">
-        <svg fill="currentColor" class="icon-clock size-[1em]">
-          <use xlink:href="css/symbol-defs.svg#icon-clock"></use>
-        </svg>
-        <span class="font-date" ng-if="stock.realtime.isToday" ng-bind="stock.realtime.date | date:'H:mm'"></span>
-        <span class="font-date" ng-if="!stock.realtime.isToday" ng-bind="stock.realtime.date | date:'M/d'"></span>
-      </span>
-    </div>
+      <!-- Row 3: Realtime price -->
+      <div class="flex flex-wrap items-center gap-2 w-full pt-4 pb-4" ng-if="stock.realtime">
+        <span class="border-l-4 border-accent pl-2 flex items-center gap-2">
+          <span class="font-price text-3xl text-accent" ng-bind="stock.realtime.close.scale(2)"></span>
+          <span class="font-pct" ng-bind="stock.realtime.diffRate | pct"></span>
+        </span>
+        <span class="flex items-center gap-1 text-sm opacity-60">
+          <svg fill="currentColor" class="icon-clock size-[1em]">
+            <use xlink:href="css/symbol-defs.svg#icon-clock"></use>
+          </svg>
+          <span class="font-date" ng-if="stock.realtime.isToday" ng-bind="stock.realtime.date | date:'H:mm'"></span>
+          <span class="font-date" ng-if="!stock.realtime.isToday" ng-bind="stock.realtime.date | date:'M/d'"></span>
+        </span>
+      </div>
 
-    <!-- Row 4: Entry info <div ng-if="!stock.trade.invest"
+      <!-- Row 4: Entry info <div ng-if="!stock.trade.invest"
           class="flex flex-wrap items-center gap-2 w-full bg-[linear-gradient(to_right,_theme(colors.rich-red),_theme(colors.base-100)_25%)] rounded-lg p-2"
           title="入場">
           <svg fill="currentColor" class="icon-add-cart size-[1.2em]">
@@ -78,7 +79,7 @@
         </div>-->
 
 
-    <!-- Row 5: Exit info <div ng-if="stock.trade.exitDate" class="flex flex-wrap items-center gap-2 w-full rounded-lg p-2"
+      <!-- Row 5: Exit info <div ng-if="stock.trade.exitDate" class="flex flex-wrap items-center gap-2 w-full rounded-lg p-2"
           ng-class="{'blocks_cell_hot': stock.trade.rsiHot, 'bg-[linear-gradient(to_right,_theme(colors.rich-green),_theme(colors.base-100)_25%)]': stock.trade.profit < 0, 'bg-[linear-gradient(to_right,_theme(colors.rich-red),_theme(colors.base-100)_25%)]': stock.trade.profit > 0}"
           title="出場">
           <span ng-if="stock.trade.profit < 0"><svg fill="currentColor" class="icon-crying size-[1.2em]">
@@ -96,27 +97,27 @@
         </div>-->
 
 
-    <!-- Row 6: Invest logs -->
-    <span class="badge badge-outline badge-sm text-info mb-2">MACD 週線</span>
-    <div ng-if="stock.trade.invest" class="w-full rounded-box bg-primary/50 overflow-hidden"
-      ng-class="{'bg-primary': stock.trade.invest.rsiHot}">
+      <!-- Row 6: Invest logs -->
+      <span class="badge badge-primary text-primary-content badge-sm text-info mb-2">MACD 週線</span>
+      <div ng-if="stock.trade.invest" class="w-full rounded-box bg-primary/50 overflow-hidden"
+        ng-class="{'bg-primary': stock.trade.invest.rsiHot}">
 
-      <div ng-class="{'bg-secondary': log.act == '清倉'}" ng-if="log.act" ng-repeat="log in stock.trade.invest.logs"
-        ng-click="invest.edit(log); $event.stopPropagation()"
-        class="flex flex-wrap items-center gap-2 p-2 border-b border-base-200 last:border-b-0">
-        <span class="font-date text-sm opacity-60" ng-bind="(log.date || log.day.date) | date:'MM/dd'"></span>
-        <span class="font-price text-lg text-base-100" ng-bind="(log.price || log.day.close).scale(2)"></span>
-        <span class="text-sm"><span ng-bind="log.act"></span> <span class="italic underline"
-            ng-bind="log.amount"></span>股</span>
-        <span ng-if="log.profit != 0" class="ml-auto">
-          <span class="badge"><span class="font-price" ng-bind="log.profit.scale(2)"></span> <span
-              class="font-pct text-xs font-bold pl-1" ng-bind="log.profitRate"></span></span>
-        </span>
-        <span class="badge badge-primary badge-sm ml-1" ng-if="stock.trade.invest.rsiHot">過熱</span>
+        <div ng-class="{'bg-secondary': log.act == '清倉'}" ng-if="log.act" ng-repeat="log in stock.trade.invest.logs"
+          ng-click="invest.edit(log); $event.stopPropagation()"
+          class="flex flex-wrap items-center gap-2 p-2 border-b border-base-200 last:border-b-0">
+          <span class="font-date text-sm opacity-60" ng-bind="(log.date || log.day.date) | date:'MM/dd'"></span>
+          <span class="font-price text-3xl text-base-100" ng-bind="(log.price || log.day.close).scale(2)"></span>
+          <span class="text-sm"><span ng-bind="log.act"></span> <span class="italic underline"
+              ng-bind="log.amount"></span>股</span>
+          <span ng-if="log.profit != 0" class="ml-auto">
+            <span class="badge"><span class="font-price" ng-bind="log.profit.scale(2)"></span> <span
+                class="font-pct text-xs font-bold pl-1" ng-bind="log.profitRate"></span></span>
+          </span>
+          <span class="badge badge-primary badge-sm ml-1" ng-if="stock.trade.invest.rsiHot">過熱</span>
+        </div>
       </div>
-    </div>
 
-    <!-- Row 7: 大師投資參考 <div ng-if="stock.shadow.invest"
+      <!-- Row 7: 大師投資參考 <div ng-if="stock.shadow.invest"
           class="w-full rounded-box bg-primary/50 overflow-hidden border-2 border-dashed border-rich-master"
           ng-class="{'bg-primary': stock.shadow.invest.rsiHot}">
           <div ng-class="{'bg-secondary': log.act == '清倉'}" ng-if="log.act" ng-repeat="log in stock.shadow.invest.logs"
@@ -135,126 +136,188 @@
         </div>-->
 
 
-    <!-- Row 8: Alerts -->
-    <div ng-if="stock.alerts" class="flex flex-wrap items-center gap-2 w-full rounded-lg p-2 border border-dashed"
-      ng-class="{'border-rich-red bg-rich-red/10': stock.alerts.close >= stock.alerts.ma, 'border-rich-green bg-rich-green/10': stock.alerts.close < stock.alerts.ma}">
-      <span ng-if="stock.alerts.close >= stock.alerts.ma"><svg fill="currentColor" class="icon-grin size-[1.2em]">
-          <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
-        </svg></span>
-      <span ng-if="stock.alerts.close < stock.alerts.ma"><svg fill="currentColor" class="icon-crying size-[1.2em]">
-          <use xlink:href="css/symbol-defs.svg#icon-crying"></use>
-        </svg></span>
-      <span class="font-price text-lg" ng-bind="stock.alerts.close.scale(2)"></span>
-      <span class="font-date text-sm" ng-class="{'font-date': stock.alerts.date.isToday()}"
-        ng-bind="stock.alerts.date | date:'MM/dd'"></span>
-      <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.alerts.close >= stock.alerts.ma">漲破</span>
-      <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.alerts.close < stock.alerts.ma">跌破</span>
+      <!-- Row 8: Alerts -->
+      <div ng-if="stock.alerts" class="flex flex-wrap items-center gap-2 w-full rounded-lg p-2 border border-dashed"
+        ng-class="{'border-rich-red bg-rich-red/10': stock.alerts.close >= stock.alerts.ma, 'border-rich-green bg-rich-green/10': stock.alerts.close < stock.alerts.ma}">
+        <span ng-if="stock.alerts.close >= stock.alerts.ma"><svg fill="currentColor" class="icon-grin size-[1.2em]">
+            <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
+          </svg></span>
+        <span ng-if="stock.alerts.close < stock.alerts.ma"><svg fill="currentColor" class="icon-crying size-[1.2em]">
+            <use xlink:href="css/symbol-defs.svg#icon-crying"></use>
+          </svg></span>
+        <span class="font-price text-lg" ng-bind="stock.alerts.close.scale(2)"></span>
+        <span class="font-date text-sm" ng-class="{'font-date': stock.alerts.date.isToday()}"
+          ng-bind="stock.alerts.date | date:'MM/dd'"></span>
+        <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.alerts.close >= stock.alerts.ma">漲破</span>
+        <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.alerts.close < stock.alerts.ma">跌破</span>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- 清單中 -->
-<div class="tabs tabs-lift w-full">
-  <label ng-repeat-start="(title, stocks) in blocks" ng-if="stocks.length" ng-if="stocks.length" class="tab">
-    <input type="radio" class="tab" name="stock_tabs" ng-checked="$index === 0" />
-    <span class="font-bold text-lg" ng-bind="title"></span>
-  </label>
+  <!-- 清單中 -->
+  <div class="tabs tabs-lift w-full">
+    <label ng-repeat-start="(title, stocks) in blocks" ng-if="stocks.length" ng-if="stocks.length" class="tab">
+      <input type="radio" class="tab" name="stock_tabs" ng-checked="$index === 0" />
+      <span class="font-bold text-lg" ng-bind="title"></span>
+    </label>
 
-  <div class="tab-content bg-base-100 border-base-300 rounded-[0]" ng-repeat-end>
-    <div class="list p-4 max-w-6xl mx-auto">
-      <div class="list-row flex-col items-start gap-1.5 hover:bg-base-200 transition-colors" ng-if="stocks.length"
-        ng-repeat="stock in stocks" ng-class="{'stock_usa': stock.country == 'us'}">
-        <div class="w-96">
-          <!-- Row 1: Primary info (code + name + badges) -->
-          <div class="flex flex-wrap items-center gap-2 pb-3 w-full">
-            <span ng-click="$event.stopPropagation()">
-              <input type="checkbox" ng-model="stock.checked" ng-change="checked(stock)"
-                class="checkbox checkbox-primary checkbox-sm border-0" />
-            </span>
+    <div class="tab-content bg-base-100 border-base-300 rounded-[0]" ng-repeat-end>
+      <div class="list p-4 max-w-6xl mx-auto">
+        <div class="list-row flex-col items-start gap-1.5 hover:bg-base-200 transition-colors" ng-if="stocks.length"
+          ng-repeat="stock in stocks" ng-class="{'stock_usa': stock.country == 'us'}">
+          <div class="w-96">
+            <!-- Row 1: Primary info (code + name + badges) -->
+            <div class="flex flex-wrap items-center gap-2 pb-3 w-full">
+              <span ng-click="$event.stopPropagation()">
+                <input type="checkbox" ng-model="stock.checked" ng-change="checked(stock)"
+                  class="checkbox checkbox-primary checkbox-sm border-0" />
+              </span>
 
-            <span class="cursor-pointer text-2xl font-title text-primary font-bold" ng-bind="stock.name"
-              ng-click="changeTo(stock.code)"></span>
-            <span class="text-success font-bold text-lg" ng-bind="stock.code"></span>
-            <span ng-if="stock.otc">🌱</span>
-            <span ng-if="stock.financial" ng-mouseover="financial(stock, $event)" class="ml-auto badge badge-ghost">
-              <span ng-bind="stock.financial.bullscore"></span>
-            </span>
-          </div>
-
-          <!-- Row 2: MA + expectation + winRate + profitRate -->
-          <div class="flex flex-wrap items-center gap-2 w-full text-sm">
-            <div class="badge badge-outline badge-sm">
-              MA <span ng-bind="stock.defaultMa"></span>
+              <span class="cursor-pointer text-2xl font-title text-primary font-bold" ng-bind="stock.name"
+                ng-click="changeTo(stock.code)"></span>
+              <span class="text-success font-bold text-lg" ng-bind="stock.code"></span>
+              <span ng-if="stock.otc">🌱</span>
+              <span ng-if="stock.financial" ng-mouseover="financial(stock, $event)" class="ml-auto badge badge-ghost">
+                <span ng-bind="stock.financial.bullscore"></span>
+              </span>
             </div>
-            <span ng-if="stock.tigerMa" class="badge badge-ghost badge-sm">
-              虎<span ng-bind="stock.tigerMa"></span>
-            </span>
-            <span ng-if="stock.expectation" class="badge badge-ghost badge-sm gap-1">
-              期望 <span ng-bind="stock.expectation"></span>
-              <span ng-if="stock.expectation > 1"><svg fill="currentColor" class="icon-thumbs-up size-[0.8em]">
+
+            <!-- Row 2: MA + expectation + winRate + profitRate -->
+            <div class="flex flex-wrap items-center gap-2 w-full text-sm">
+              <div class="badge badge-outline badge-sm">
+                MA <span ng-bind="stock.defaultMa"></span>
+              </div>
+              <span ng-if="stock.tigerMa" class="badge badge-ghost badge-sm">
+                虎<span ng-bind="stock.tigerMa"></span>
+              </span>
+              <span ng-if="stock.expectation" class="badge badge-ghost badge-sm gap-1">
+                期望 <span ng-bind="stock.expectation"></span>
+                <span ng-if="stock.expectation > 1"><svg fill="currentColor" class="icon-thumbs-up size-[0.8em]">
+                    <use xlink:href="css/symbol-defs.svg#icon-thumbs-up"></use>
+                  </svg></span>
+              </span>
+              <span class="font-pct" ng-bind="stock.winRate | pct"></span>
+              <span ng-if="stock.winRate < 0.4"><svg fill="currentColor" class="icon-thumbs-down size-[0.8em]">
+                  <use xlink:href="css/symbol-defs.svg#icon-thumbs-down"></use>
+                </svg></span>
+              <span ng-if="stock.winRate >= 0.4"><svg fill="currentColor" class="icon-thumbs-up size-[0.8em]">
                   <use xlink:href="css/symbol-defs.svg#icon-thumbs-up"></use>
                 </svg></span>
+              <span class="font-pct ml-1" ng-bind="stock.profitRate | pct"></span>
+              <span ng-if="stock.profitRate < 0"><svg fill="currentColor" class="icon-arrow-down size-[0.8em]">
+                  <use xlink:href="css/symbol-defs.svg#icon-arrow-down"></use>
+                </svg></span>
+              <span ng-if="stock.profitRate > 0"><svg fill="currentColor" class="icon-arrow-up size-[0.8em]">
+                  <use xlink:href="css/symbol-defs.svg#icon-arrow-up"></use>
+                </svg></span>
+            </div>
+          </div>
+          <!-- Row 3: Realtime price -->
+          <div class="flex flex-wrap items-center gap-2 w-full" ng-if="stock.realtime">
+            <span class="border-l-4 border-accent pl-2 flex items-center gap-2">
+              <span class="font-price text-2xl text-accent" ng-bind="stock.realtime.close.scale(2)"></span>
+              <span class="font-pct" ng-bind="stock.realtime.diffRate | pct"></span>
             </span>
-            <span class="font-pct" ng-bind="stock.winRate | pct"></span>
-            <span ng-if="stock.winRate < 0.4"><svg fill="currentColor" class="icon-thumbs-down size-[0.8em]">
-                <use xlink:href="css/symbol-defs.svg#icon-thumbs-down"></use>
-              </svg></span>
-            <span ng-if="stock.winRate >= 0.4"><svg fill="currentColor" class="icon-thumbs-up size-[0.8em]">
-                <use xlink:href="css/symbol-defs.svg#icon-thumbs-up"></use>
-              </svg></span>
-            <span class="font-pct ml-1" ng-bind="stock.profitRate | pct"></span>
-            <span ng-if="stock.profitRate < 0"><svg fill="currentColor" class="icon-arrow-down size-[0.8em]">
-                <use xlink:href="css/symbol-defs.svg#icon-arrow-down"></use>
-              </svg></span>
-            <span ng-if="stock.profitRate > 0"><svg fill="currentColor" class="icon-arrow-up size-[0.8em]">
-                <use xlink:href="css/symbol-defs.svg#icon-arrow-up"></use>
-              </svg></span>
-          </div>
-        </div>
-        <!-- Row 3: Realtime price -->
-        <div class="flex flex-wrap items-center gap-2 w-full" ng-if="stock.realtime">
-          <span class="border-l-4 border-accent pl-2 flex items-center gap-2">
-            <span class="font-price text-2xl text-accent" ng-bind="stock.realtime.close.scale(2)"></span>
-            <span class="font-pct" ng-bind="stock.realtime.diffRate | pct"></span>
-          </span>
-        </div>
-
-        <div class="flex w-56 flex-wrap gap-2">
-          <!-- Row 4: Entry info -->
-          <span class="badge badge-outline badge-sm text-info">MACD 週線</span>
-
-          <div class="flex flex-wrap items-center gap-2 w-full bg-accent-content rounded-lg p-2" title="入場">
-            <svg class="icon-add-cart size-[1.2em] fill-rich-red">
-              <use xlink:href="css/symbol-defs.svg#icon-add-cart"></use>
-            </svg>
-            <span class="font-price text-lg text-primary font-bold" ng-bind="stock.trade.entryPrice.scale(2)"></span>
-            <span ng-class="{'date--today': stock.trade.entryDate.isToday()}" class="font-date"
-              ng-bind="stock.trade.entryDate | date:'MM/dd'"></span>
-            <span class="font-pct font-bold" ng-if="stock.realtime.profitRate"
-              ng-bind="stock.realtime.profitRate | pct"></span>
-            <span class="badge badge-secondary badge-sm ml-auto" ng-if="stock.trade.reentry">返場</span>
-            <span class="badge badge-secondary badge-sm ml-auto" ng-if="stock.trade.breakout">二日</span>
           </div>
 
-          <!-- Row 5: Exit info -->
-          <div ng-if="stock.trade.exitDate" class="flex flex-wrap items-center gap-2 rounded-lg p-2 w-full"
-            ng-class="{'blocks_cell_hot': stock.trade.rsiHot, 'bg-[linear-gradient(to_right,_theme(colors.rich-green),_theme(colors.base-100)_50%)]': stock.trade.profit < 0, 'bg-[linear-gradient(to_right,_theme(colors.rich-red),_theme(colors.base-100)_50%)]': stock.trade.profit > 0}"
-            title="出場">
-            <span ng-if="stock.trade.profit < 0"><svg class="icon-crying size-[1.2em] fill-primary-content">
-                <use xlink:href="css/symbol-defs.svg#icon-crying"></use>
-              </svg></span>
-            <span ng-if="stock.trade.profit > 0"><svg class="icon-grin size-[1.2em] fill-primary-content">
-                <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
-              </svg></span>
-            <span class="font-price text-lg text-primary font-bold" ng-bind="stock.trade.exitPrice.scale(2)"></span>
-            <span ng-class="{'date--today': stock.trade.exitDate.isToday()}" class="font-date"
-              ng-bind="stock.trade.exitDate | date:'MM/dd'"></span>
-            <span class="font-pct font-bold"
-              ng-bind="(stock.trade.profitRate || stock.trade.invest.profitRate) | pct"></span>
-            <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.trade.rsiHot">過熱</span>
-          </div>
+          <div class="flex w-56 flex-wrap gap-2">
+            <!-- Row 4: Entry info -->
+            <div class="relative inline-block">
+              <span class="badge badge-outline badge-sm text-info cursor-pointer"
+                ng-click="openStrategyPanel(stock, $event)">MACD 週線</span>
+              <div ng-if="stock._strategyOpen" class="card bg-base-100 shadow-xl border border-base-300 rounded-box"
+                style="position:absolute; top:100%; left:0; margin-top:0.25rem; z-index:50; width:560px;">
+                <div class="card-body p-3 gap-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-bold text-primary">策略選擇</span>
+                    <div class="flex items-center gap-1">
+                      <button class="btn btn-ghost btn-xs btn-circle" title="重新載入"
+                        ng-click="reloadStrategies(stock, $event)">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                          stroke="currentColor" class="size-4">
+                          <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                      </button>
+                      <button class="btn btn-ghost btn-xs btn-circle" title="關閉" ng-click="stock._strategyOpen = false">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                          stroke="currentColor" class="size-4">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div ng-if="!stock._strategiesLoaded"
+                    class="flex items-center gap-2 text-sm text-base-content/60 py-4 justify-center">
+                    <span class="loading loading-spinner loading-sm text-primary"></span>
+                    載入中...
+                  </div>
+                  <div ng-if="stock._strategiesLoaded" class="list p-0">
+                    <div class="list-row items-center text-xs text-base-content/50 font-medium py-1">
+                      <span class="w-6 text-center">#</span>
+                      <span class="min-w-[90px]">策略</span>
+                      <div class="list-col-grow grid grid-cols-7 gap-1 text-center">
+                        <span>總筆</span><span>原始損益</span><span>稅後損益</span><span>費用%</span>
+                        <span>勝率</span><span>盈虧比</span><span>稅後/筆</span>
+                      </div>
+                      <span class="w-12"></span>
+                    </div>
+                    <div class="list-row items-center hover:bg-base-200/50 py-1" ng-repeat="s in stock._strategies">
+                      <span class="w-6 text-center font-bold"
+                        ng-class="s.rank <= 3 ? 'text-accent' : 'text-base-content/50'" ng-bind="s.rank"></span>
+                      <span class="badge badge-outline badge-xs text-info min-w-[90px]" ng-bind="s.strategy"></span>
+                      <div class="list-col-grow grid grid-cols-7 gap-1 text-xs text-center whitespace-nowrap">
+                        <span ng-bind="s.total"></span>
+                        <span class="font-price"
+                          ng-class="{'text-rich-red': s.rawProfit > 0, 'text-rich-green': s.rawProfit < 0}"
+                          ng-bind="s.rawProfit | number"></span>
+                        <span class="font-price"
+                          ng-class="{'text-rich-red': s.afterTaxProfit > 0, 'text-rich-green': s.afterTaxProfit < 0}"
+                          ng-bind="s.afterTaxProfit | number"></span>
+                        <span class="font-pct text-base-content/70" ng-bind="s.costRatio"></span>
+                        <span class="font-pct" ng-bind="s.winRate"></span>
+                        <span ng-bind="s.profitFactor"></span>
+                        <span class="font-price" ng-bind="s.afterTaxPerTrade"></span>
+                      </div>
+                      <button ng-click="selectStrategy(stock, s, $event)"
+                        class="btn btn-primary btn-xs w-12">選擇</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 w-full bg-accent-content rounded-lg p-2" title="入場">
+              <svg class="icon-add-cart size-[1.2em] fill-rich-red">
+                <use xlink:href="css/symbol-defs.svg#icon-add-cart"></use>
+              </svg>
+              <span class="font-price text-lg text-primary font-bold" ng-bind="stock.trade.entryPrice.scale(2)"></span>
+              <span ng-class="{'date--today': stock.trade.entryDate.isToday()}" class="font-date"
+                ng-bind="stock.trade.entryDate | date:'MM/dd'"></span>
+              <span class="font-pct font-bold" ng-if="stock.realtime.profitRate"
+                ng-bind="stock.realtime.profitRate | pct"></span>
+              <span class="badge badge-secondary badge-sm ml-auto" ng-if="stock.trade.reentry">返場</span>
+              <span class="badge badge-secondary badge-sm ml-auto" ng-if="stock.trade.breakout">二日</span>
+            </div>
 
-          <!-- Row 6: Invest logs <div ng-if="stock.trade.invest" class="w-full rounded-box bg-primary/50 overflow-hidden"
+            <!-- Row 5: Exit info -->
+            <div ng-if="stock.trade.exitDate" class="flex flex-wrap items-center gap-2 rounded-lg p-2 w-full"
+              ng-class="{'blocks_cell_hot': stock.trade.rsiHot, 'bg-[linear-gradient(to_right,_theme(colors.rich-green),_theme(colors.base-100)_50%)]': stock.trade.profit < 0, 'bg-[linear-gradient(to_right,_theme(colors.rich-red),_theme(colors.base-100)_50%)]': stock.trade.profit > 0}"
+              title="出場">
+              <span ng-if="stock.trade.profit < 0"><svg class="icon-crying size-[1.2em] fill-primary-content">
+                  <use xlink:href="css/symbol-defs.svg#icon-crying"></use>
+                </svg></span>
+              <span ng-if="stock.trade.profit > 0"><svg class="icon-grin size-[1.2em] fill-primary-content">
+                  <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
+                </svg></span>
+              <span class="font-price text-lg text-primary font-bold" ng-bind="stock.trade.exitPrice.scale(2)"></span>
+              <span ng-class="{'date--today': stock.trade.exitDate.isToday()}" class="font-date"
+                ng-bind="stock.trade.exitDate | date:'MM/dd'"></span>
+              <span class="font-pct font-bold"
+                ng-bind="(stock.trade.profitRate || stock.trade.invest.profitRate) | pct"></span>
+              <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.trade.rsiHot">過熱</span>
+            </div>
+
+            <!-- Row 6: Invest logs <div ng-if="stock.trade.invest" class="w-full rounded-box bg-primary/50 overflow-hidden"
                 ng-class="{'bg-primary': stock.trade.invest.rsiHot}">
                 <div ng-class="{'bg-secondary': log.act == '清倉'}" ng-if="log.act"
                   ng-repeat="log in stock.trade.invest.logs" ng-click="invest.edit(log); $event.stopPropagation()"
@@ -272,7 +335,7 @@
               </div>-->
 
 
-          <!-- Row 7: 大師投資參考 <div ng-if="stock.shadow.invest"
+            <!-- Row 7: 大師投資參考 <div ng-if="stock.shadow.invest"
                 class="w-full rounded-box bg-primary/50 overflow-hidden border-2 border-dashed border-rich-master"
                 ng-class="{'bg-primary': stock.shadow.invest.rsiHot}">
                 <div ng-class="{'bg-secondary': log.act == '清倉'}" ng-if="log.act"
@@ -290,27 +353,29 @@
                 </div>
               </div> -->
 
-          <!-- Row 8: Alerts -->
-          <div ng-if="stock.alerts" class="flex flex-wrap items-center gap-2 w-full rounded-lg p-2 border border-dashed"
-            ng-class="{'border-rich-red bg-rich-red/10': stock.alerts.close >= stock.alerts.ma, 'border-rich-green bg-rich-green/10': stock.alerts.close < stock.alerts.ma}">
-            <span ng-if="stock.alerts.close >= stock.alerts.ma"><svg fill="currentColor" class="icon-grin size-[1.2em]">
-                <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
-              </svg></span>
-            <span ng-if="stock.alerts.close < stock.alerts.ma"><svg fill="currentColor"
-                class="icon-crying size-[1.2em]">
-                <use xlink:href="css/symbol-defs.svg#icon-crying"></use>
-              </svg></span>
-            <span class="font-price text-lg" ng-bind="stock.alerts.close.scale(2)"></span>
-            <span class="font-date text-sm" ng-class="{'font-date': stock.alerts.date.isToday()}"
-              ng-bind="stock.alerts.date | date:'MM/dd'"></span>
-            <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.alerts.close >= stock.alerts.ma">漲破</span>
-            <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.alerts.close < stock.alerts.ma">跌破</span>
+            <!-- Row 8: Alerts -->
+            <div ng-if="stock.alerts"
+              class="flex flex-wrap items-center gap-2 w-full rounded-lg p-2 border border-dashed"
+              ng-class="{'border-rich-red bg-rich-red/10': stock.alerts.close >= stock.alerts.ma, 'border-rich-green bg-rich-green/10': stock.alerts.close < stock.alerts.ma}">
+              <span ng-if="stock.alerts.close >= stock.alerts.ma"><svg fill="currentColor"
+                  class="icon-grin size-[1.2em]">
+                  <use xlink:href="css/symbol-defs.svg#icon-grin"></use>
+                </svg></span>
+              <span ng-if="stock.alerts.close < stock.alerts.ma"><svg fill="currentColor"
+                  class="icon-crying size-[1.2em]">
+                  <use xlink:href="css/symbol-defs.svg#icon-crying"></use>
+                </svg></span>
+              <span class="font-price text-lg" ng-bind="stock.alerts.close.scale(2)"></span>
+              <span class="font-date text-sm" ng-class="{'font-date': stock.alerts.date.isToday()}"
+                ng-bind="stock.alerts.date | date:'MM/dd'"></span>
+              <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.alerts.close >= stock.alerts.ma">漲破</span>
+              <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.alerts.close < stock.alerts.ma">跌破</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 </div>
 </div>
 
@@ -386,3 +451,48 @@
         ng-bind="trades.totalDividend | number"></span>
     </span>
   </div>
+
+  <!-- 策略選擇浮層 -->
+  <div ng-if="strategyPanel.open" ng-click="closeStrategyPanel($event)"
+    style="position:fixed !important; top:0 !important; left:0 !important; width:100vw !important; height:100vh !important; z-index:9999 !important; display:flex !important; justify-content:center; align-items:flex-start; padding-top:5rem; background:rgba(0,0,0,0.3);">
+    <div ng-click="$event.stopPropagation()"
+      style="position:relative; background:var(--color-base-100); border-radius:var(--radius-box); box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); border:1px solid var(--color-base-300); width:min(92vw,920px); max-height:80vh; overflow:auto; padding:0;">
+      <button ng-click="closeStrategyPanel($event)"
+        style="position:absolute; right:0.75rem; top:0.75rem; z-index:10; background:transparent; border:none; cursor:pointer; font-size:1.25rem; line-height:1;">✕</button>
+      <div style="padding:1.25rem 1.5rem 0.75rem; border-bottom:1px solid var(--color-base-300);">
+        <h3 style="font-size:1.125rem; font-weight:700; color:var(--color-primary);">策略選擇</h3>
+        <p style="font-size:0.75rem; color:rgba(0,0,0,0.5);">點擊以下策略後按「選擇」</p>
+      </div>
+      <div class="list" style="padding:0.5rem;">
+        <div class="list-row items-center hover:bg-base-200/50" ng-repeat="s in strategyPanel.list">
+          <span class="w-8 text-center font-bold" ng-class="s.rank <= 3 ? 'text-accent' : 'text-base-content/50'"
+            ng-bind="s.rank"></span>
+          <span class="badge badge-outline badge-sm text-info min-w-[110px]" ng-bind="s.strategy"></span>
+          <div class="list-col-grow grid grid-cols-7 gap-2 text-sm text-center">
+            <span ng-bind="s.total"></span>
+            <span class="font-price" ng-class="{'text-rich-red': s.rawProfit > 0, 'text-rich-green': s.rawProfit < 0}"
+              ng-bind="s.rawProfit | number"></span>
+            <span class="font-price"
+              ng-class="{'text-rich-red': s.afterTaxProfit > 0, 'text-rich-green': s.afterTaxProfit < 0}"
+              ng-bind="s.afterTaxProfit | number"></span>
+            <span class="font-pct text-base-content/70" ng-bind="s.costRatio"></span>
+            <span class="font-pct" ng-bind="s.winRate"></span>
+            <span ng-bind="s.profitFactor"></span>
+            <span class="font-price" ng-bind="s.afterTaxPerTrade"></span>
+          </div>
+          <button ng-click="selectStrategy(s)" class="btn btn-primary btn-sm">選擇</button>
+        </div>
+      </div>
+      <div
+        style="padding:0.5rem 1.5rem; border-top:1px solid var(--color-base-300); display:grid; grid-template-columns:repeat(8,1fr); gap:0.5rem; font-size:0.625rem; color:rgba(0,0,0,0.5); font-weight:500;">
+        <span style="grid-column:span 1; text-align:center;">排名</span>
+        <span style="grid-column:span 1;">策略</span>
+        <span
+          style="grid-column:span 7; display:grid; grid-template-columns:repeat(7,1fr); gap:0.5rem; text-align:center;">
+          <span>總筆數</span><span>原始損益</span><span>稅後損益</span><span>費用佔比</span>
+          <span>勝率</span><span>盈虧比</span><span>稅後/筆</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>

@@ -274,6 +274,15 @@
 			$$.name = '發財 APP';
 			$$.mas = [...Array(30).keys()].map(i => i + 16);
 			$$.stocks = [];
+			$$.invested = {
+				date: new Date(),
+				totalCapital: 0,
+				cost: 0,
+				profit: 0,
+				diffRate: 0,
+				profitRate: 0,
+				stocks: []
+			};
 			$$.add = {
 				blank: function() {
 					this.save.result = '';
@@ -326,6 +335,35 @@
 			};
 			$$.changeMa = function() {
 				$$.$broadcast('maChanged', $$.stock.defaultMa);
+			};
+			$$.theme = {
+				list: ['rosewood', 'tavily', 'chatgpt', 'midnight', 'clover', 'canvas', 'lowkeynoodle', 'fardream', 'fullanimal', 'unfriendlyqueen', 'fancyriver'],
+				current: document.documentElement.getAttribute('data-theme') || 'clover',
+				change: function() {
+					document.documentElement.setAttribute('data-theme', $$.theme.current);
+					try { localStorage.setItem('rich-theme', $$.theme.current); } catch (e) {}
+				}
+			};
+			try {
+				const saved = localStorage.getItem('rich-theme');
+				if (saved && $$.theme.list.indexOf(saved) >= 0) {
+					$$.theme.current = saved;
+					document.documentElement.setAttribute('data-theme', saved);
+				}
+			} catch (e) {}
+			$$.chat = {
+				messages: [],
+				input: '',
+				send: function() {
+					const text = ($$.chat.input || '').trim();
+					if (!text) return;
+					$$.chat.messages.push({ from: 'user', text });
+					$$.chat.input = '';
+					$$.chat.messages.push({ from: 'ai', text: '（AI 功能尚未實作）' });
+				},
+				keypress: function(evt) {
+					if (evt.keyCode === 13) $$.chat.send();
+				}
 			};
 			$$.note = {
 				edit: function(model) {
@@ -392,6 +430,25 @@
 				stock.profit = `${test.profit} ➜ ${profitRate}%`;
 				stock.ma = `【${stock.defaultMa}${stock.tigerMa ? ' ' + stock.tigerMa : ''}】`;
 			});
+			$$.$on('inited', (_, user, totalCapital) => {
+				$$.invested.totalCapital = totalCapital;
+				service.strategies((strategies) => {
+					const params = user.settings.params || {};
+					$$.entryStrategy = { name: strategies.entryStrategies.find(s => s.key == params.entryStrategy).name, reentry: params.reentry, weekly: params.weekly };
+					$$.exitStrategy = { name: params.exitStrategy.map(strategy => strategies.exitStrategies.find(s => s.key == strategy).name).join('＆') };
+					if ($$.exitStrategy.name.includes('動態止盈止損')) {
+						$$.exitStrategy.dynamicStop = true;
+						$$.exitStrategy.stopLossPct = params.stopLossPct * 100;
+						$$.exitStrategy.takeProfitPct = params.takeProfitPct * 100;
+					}
+					[$$.entryStrategy, $$.exitStrategy].filter(s => s.name.includes('ADX')).forEach(s => {
+						s.adxRate = params.adxRate * 100;
+						s.drawdownRate = params.drawdownRate * 100;
+						s.raiseRate = params.raiseRate * 100;
+					});
+					if (!$$.$$phase) $$.$apply();
+				});
+			});
 			service.users((users, user, totalCapital) => {
 				$$.users = users;
 				$$.user = user;
@@ -406,6 +463,45 @@
 			$$.todays = [];
 			$$.closeds = [];
 			$$.bulls = [];
+			$$.strategyPanel = {
+				open: false,
+				list: [
+					{ rank: 1, strategy: 'MACD 週線', total: 245, rawProfit: 12921, afterTaxProfit: 12492, costRatio: '3.3%', winRate: '53.9%', profitFactor: 3.98, afterTaxPerTrade: 51.06 },
+					{ rank: 2, strategy: 'ADX 週線', total: 138, rawProfit: 5698, afterTaxProfit: 5457, costRatio: '4.2%', winRate: '60.1%', profitFactor: 2.80, afterTaxPerTrade: 39.50 },
+					{ rank: 3, strategy: 'ADX+MACD 週線', total: 220, rawProfit: 9025, afterTaxProfit: 8640, costRatio: '4.3%', winRate: '54.1%', profitFactor: 3.31, afterTaxPerTrade: 39.30 },
+					{ rank: 4, strategy: 'MA 交叉週線', total: 366, rawProfit: 12153, afterTaxProfit: 11513, costRatio: '5.3%', winRate: '48.4%', profitFactor: 3.01, afterTaxPerTrade: 31.43 },
+					{ rank: 5, strategy: '週線趨勢', total: 116, rawProfit: 2958, afterTaxProfit: 2755, costRatio: '6.9%', winRate: '48.3%', profitFactor: 4.14, afterTaxPerTrade: 23.75 },
+					{ rank: 6, strategy: '二日突破週線', total: 695, rawProfit: 16018, afterTaxProfit: 14802, costRatio: '7.6%', winRate: '35.1%', profitFactor: 2.59, afterTaxPerTrade: 21.30 },
+					{ rank: 7, strategy: '布林通道週線', total: 55, rawProfit: 498, afterTaxProfit: 402, costRatio: '19.3%', winRate: '41.8%', profitFactor: 2.16, afterTaxPerTrade: 7.31 }
+				]
+			};
+			$$.openStrategyPanel = function(stock, evt) {
+				if (evt && evt.stopPropagation) evt.stopPropagation();
+				stock._strategyOpen = !stock._strategyOpen;
+				if (stock._strategyOpen && !stock._strategiesLoaded) {
+					$$.loadStrategies(stock);
+				}
+			};
+			$$.loadStrategies = function(stock) {
+				stock._strategiesLoading = true;
+				stock._strategiesLoaded = false;
+				setTimeout(function() {
+					stock._strategies = $$.strategyPanel.list;
+					stock._strategiesLoading = false;
+					stock._strategiesLoaded = true;
+					if (!$$.$$phase) $$.$apply();
+				}, 600);
+			};
+			$$.reloadStrategies = function(stock, evt) {
+				if (evt && evt.stopPropagation) evt.stopPropagation();
+				stock._strategiesLoaded = false;
+				$$.loadStrategies(stock);
+			};
+			$$.selectStrategy = function(stock, s, evt) {
+				if (evt && evt.stopPropagation) evt.stopPropagation();
+				console.log('[strategyPanel] selectStrategy', stock.code, s.strategy);
+				stock._strategyOpen = false;
+			};
 			$$.invested = {  // 已經購買的股票紀錄
 				date: new Date(),
 				totalCapital: 0,
@@ -598,6 +694,39 @@
 		},
 		stock: function($$, $params, $timeout, service) {
 			$$.tests = [];
+			$$.tradePanelOpen = true;
+			$$.strategyComparison = {
+				period: '2020/01 ~ 2026/06',
+				current: { name: 'MACD 週線', winRate: '53.9%', profitFactor: 3.98, afterTaxPerTrade: '+51.06' },
+				loaded: false,
+				loading: false,
+				list: [],
+				load: function() {
+					if ($$.strategyComparison.loaded || $$.strategyComparison.loading) return;
+					$$.strategyComparison.loading = true;
+					setTimeout(function() {
+						$$.strategyComparison.list = [
+							{ rank: 1, strategy: 'MACD 週線', total: 245, rawProfit: 12921, afterTaxProfit: 12492, costRatio: '3.3%', winRate: '53.9%', profitFactor: 3.98, afterTaxPerTrade: '+51.06', moneyStock: '—' },
+							{ rank: 2, strategy: 'ADX 週線', total: 138, rawProfit: 5698, afterTaxProfit: 5457, costRatio: '4.2%', winRate: '60.1%', profitFactor: 2.80, afterTaxPerTrade: '+39.50', moneyStock: '—' },
+							{ rank: 3, strategy: 'ADX+MACD 週線', total: 220, rawProfit: 9025, afterTaxProfit: 8640, costRatio: '4.3%', winRate: '54.1%', profitFactor: 3.31, afterTaxPerTrade: '+39.30', moneyStock: '—' },
+							{ rank: 4, strategy: 'MA 交叉週線', total: 366, rawProfit: 12153, afterTaxProfit: 11513, costRatio: '5.3%', winRate: '48.4%', profitFactor: 3.01, afterTaxPerTrade: '+31.43', moneyStock: '—' },
+							{ rank: 5, strategy: '週線趨勢', total: 116, rawProfit: 2958, afterTaxProfit: 2755, costRatio: '6.9%', winRate: '48.3%', profitFactor: 4.14, afterTaxPerTrade: '+23.75', moneyStock: '13/23' },
+							{ rank: 6, strategy: '二日突破週線', total: 695, rawProfit: 16018, afterTaxProfit: 14802, costRatio: '7.6%', winRate: '35.1%', profitFactor: 2.59, afterTaxPerTrade: '+21.30', moneyStock: '28/29' },
+							{ rank: 7, strategy: '布林通道週線', total: 55, rawProfit: 498, afterTaxProfit: 402, costRatio: '19.3%', winRate: '41.8%', profitFactor: 2.16, afterTaxPerTrade: '+7.31', moneyStock: '13/21' }
+						];
+						$$.strategyComparison.loading = false;
+						$$.strategyComparison.loaded = true;
+						if (!$$.$$phase) $$.$apply();
+					}, 600);
+				},
+				reload: function() {
+					$$.strategyComparison.loaded = false;
+					$$.strategyComparison.load();
+				},
+				select: function(s) {
+					console.log('[strategyComparison] select', s.strategy);
+				}
+			};
 			$$.$on('maChanged', (_, ma) => {
 				$$.backtest(ma);
 			});
