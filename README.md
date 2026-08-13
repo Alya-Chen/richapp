@@ -2,6 +2,18 @@
 
 - 共同開發者：tinehen（廷嘉）, pinname（小宇）
 
+## 目錄
+
+- [專案簡介](#專案簡介)
+- [技術架構](#技術架構)
+- [資料庫 Schema](#資料庫-schema-sqlite)
+- [CLI 工具（main.js）](#cli-工具-mainjs)
+- [HTTP API（Express）](#http-api-express)
+- [工程規範](#工程規範)
+- [開發流程](#開發流程)
+- [週線資料基礎建設](#週線資料基礎建設)
+- [策略回測全面比較](#策略回測全面比較-20250102--20260622)
+
 ## 專案簡介
 
 基於 Node.js + SQLite 的股票波段投資輔助工具，支援台股與美股，提供技術指標分析、策略回測、即時報價等功能。
@@ -13,6 +25,211 @@
 - **前端**：HTML/JS、Tailwind CSS、DaisyUI、Highcharts
 - **測試**：Node.js 內建測試執行器（`node --test`）
 - **資料來源**：Yahoo Finance API（主要），TWSE/TPEX（台股備援），Finnhub/Stooq（美股備援）
+
+## 資料庫 Schema（SQLite）
+
+模型定義於 `stock-db.js`（Sequelize ORM），DB 檔案為 `./stock-sqlite.db`。啟動時以 `sequelize.sync({ force: false })` 自動建立表（不重置）。時間一律用 `DATE`/`DATEONLY`（`TZ=Asia/Taipei`），不使用 Sequelize 自動時間戳。
+
+### Users — 使用者
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `id` | INTEGER PK | 自動流水號 |
+| `name` | VARCHAR, UNIQUE | 用戶名稱 |
+| `settings` | JSON | 偏好設定（含策略參數 `settings.params`、關注股 `stared`） |
+
+### Stocks — 股票
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `id` | INTEGER PK | 自動流水號 |
+| `code` | VARCHAR(10), UNIQUE | 股票代號 |
+| `country` | STRING(10) | 國別（`tw`/`us`） |
+| `name` | VARCHAR | 股票名稱 |
+| `defaultMa` | INTEGER | 金唬男 MA 值（預設 16） |
+| `tigerMa` | STRING(10) | 預設 MA 值 |
+| `otc` | BOOLEAN | 是否上櫃 |
+| `financial` | JSON | 財報資料 |
+| `stared` / `trades` | TINYINT / JSON | ⚠️ 舊欄位（model 未定義，僅 DB 殘留） |
+
+### StockDailies — 日線
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `id` | INTEGER PK | 自動流水號 |
+| `code` | VARCHAR(10) | 股票代號 |
+| `date` | DATE | 交易日期 |
+| `open` / `high` / `low` / `close` | FLOAT | OHLC |
+| `volume` | INTEGER | 成交量 |
+| `diff` | FLOAT | 漲跌價差 |
+| `transCount` | INTEGER | ⚠️ 舊欄位（model 未定義，僅 DB 殘留） |
+
+- Unique index：`(code, date)`；另有 `code`、`date` 一般索引
+- `saveAll()` 以 `bulkCreate({ updateOnDuplicate })` 更新 `open/high/low/close/volume/diff`
+
+### StockWeeklies — 週線
+
+結構同 StockDailies（無 `transCount`），Unique index `(code, date)`。`date` 為該週最後交易日，因股票而異（非固定週五）。詳細抓取流程見下方「週線資料基礎建設」。
+
+### StockTrades — 交易記錄
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `id` | INTEGER PK | 自動流水號 |
+| `code` | VARCHAR(10) | 股票代號 |
+| `userId` | INTEGER | 使用者流水號 |
+| `shadow` | BOOLEAN | 是否影子使用者 |
+| `act` | VARCHAR(5) | `買入` / `賣出` |
+| `ma` | INTEGER | MA 值 |
+| `date` | DATE | 交易日期 |
+| `price` | FLOAT | 交易價 |
+| `tax` | FLOAT | 手續費＋稅 |
+| `amount` | INTEGER | 買賣股數 |
+| `remain` | INTEGER | 剩餘股數 |
+
+- 索引：`userId`、`code`、`date`
+- `save()` 自動計算 `tax`：買入＝金額×0.1425%×0.6（最低 $20）；賣出＝金額×0.4425%
+
+### Backtests — 回測結果
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `id` | INTEGER PK | 自動流水號 |
+| `code` | VARCHAR(10) | 股票代號 |
+| `userId` | INTEGER | 使用者流水號 |
+| `name` | VARCHAR | 股票名稱 |
+| `ma` | INTEGER | 測試的 MA 值（預設 16） |
+| `params` | JSON | 測試參數 |
+| `startDate` / `endDate` | DATE | 回測區間 |
+| `profit` / `profitRate` | FLOAT | 利潤 / 利潤率 |
+| `result` | JSON | 完整回測結果 |
+| `opened` | BOOLEAN | 是否有執行中交易 |
+| `lastModified` | DATE | 修改時間 |
+
+- Unique index：`(code, userId)` — 同股同使用者只留一份
+
+### Notes — 筆記
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `id` | INTEGER PK | 自動流水號 |
+| `owner` | VARCHAR | 擁有者 |
+| `title` | VARCHAR | 標題 |
+| `content` | VARCHAR | 內容 |
+| `date` | DATETIME | 建立時間 |
+
+### Logs — 日誌
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `id` | INTEGER PK | 自動流水號 |
+| `level` | VARCHAR | `info` / `error` |
+| `msg` | VARCHAR | 訊息 |
+| `date` | DATETIME | 建立時間 |
+
+## CLI 工具 (`main.js`)
+
+```bash
+# 回測
+node main.js backtest 2330 adx                    # 單股日線 ADX
+node main.js backtest 2330 weeklyAdx             # 單股週線 ADX
+node main.js backtest-all weeklyAdx              # 全部台股週線 ADX
+node main.js -u 2 backtest-all weeklyAdx         # 使用者 2 的關注股票
+
+# 資金管理模擬
+node main.js invest 2330 adx                      # 日線 Investor
+node main.js invest-weekly 2330 weeklyAdx         # 週線 WeeklyInvestor
+node main.js invest-weekly 2330 weeklyMacdMix      # 混合策略走日線（無 --weekly）
+node main.js -u 2 invest 2330                     # 使用使用者 2 的策略參數
+
+# 注意：invest-weekly 對「混合」策略（weeklyMacdMix）不會加 --weekly（2026-08-13）
+# 因其為「日線資料 + 內部壓週線 MACD」，直接以日線 Investor 執行，
+# 由 MacdMixEntry/MacdMixExit 在策略內部自壓週線。
+
+# 注意：backtest-all 已修復週線 flag 遺漏問題（2026-06-26）
+# 之前週線策略被錯誤地以日線資料執行，修復後 data/*.csv 需重新產生
+
+# ⚠️ 連續回測 vs 逐年分析（2026-06-27）
+# backtest-all 是連續回測（同方向交易合併），交易次數遠少於逐年重設的 weekly-analysis。
+# 例：MACD 週線 USER1，連續 16 筆 → 逐年 242 筆（15 倍差）。
+# 比較時不可混合使用：總覽的總筆數若源自逐年分析，賺錢股數也須來自逐年。
+# 需逐年數據請執行：node main.js -u 1 backtest-all <策略> entryDate=202X-01-02 exitDate=202X-12-31
+
+# 同步資料
+node main.js sync 2330                            # 單股日線
+node main.js sync 2330 forced                     # 單股日線強制完整同步（從頭抓）
+node main.js -u 1 sync all                        # 使用者 1 關注股全部同步
+node main.js -u 1 sync all forced                 # 使用者 1 關注股強制完整同步
+node main.js sync all                             # 全部台股同步（無 -u 時）
+node main.js sync-weekly 2330                     # 單股週線
+node main.js -u 1 sync-weekly all                 # 使用者 1 關注股週線同步
+node main.js sync-weekly all                      # 全部台股週線同步
+
+# 參數覆寫
+node main.js backtest 2330 weeklyAdx drawdownRate=0.4
+
+# 結果存於 data/ 目錄
+ls data/
+```
+
+## HTTP API（Express）
+
+Web server 監聽 `http://localhost:5001`，靜態檔由 `static/` 提供，API 回傳 JSON。使用者身份以 session 綁定（`GET /users/:userId` 切換）。
+
+### 使用者與設定
+
+| Method | Path | 說明 |
+|--------|------|------|
+| GET | `/users{/:userId}` | 使用者列表、目前使用者、總資金；同時切換 session 使用者 |
+| GET | `/sys/params` | 目前使用者的策略參數 |
+| POST | `/sys/params` | 儲存策略參數（忽略 `entryDate`/`exitDate`/`codes`） |
+| GET | `/star/:code` | 切換關注股星號 |
+
+### 股票與行情
+
+| Method | Path | 說明 |
+|--------|------|------|
+| GET | `/stocks` | 全部股票 |
+| GET | `/stock/:code{/:ma}` | 個股資料（含 `defaultMa`）；`Accept: application/json` 才回 JSON，否則回 index.html |
+| GET | `/stock/add/:code/:name` | 新增股票 |
+| POST | `/stock/:code/financial` | 合併更新財務資料 |
+| GET | `/realtime{/:codes}` | 即時報價；`all` 回全部股票最後一筆，多檔以 `\|` 分隔 |
+| GET | `/dailies/:code` | 個股日線 |
+| GET | `/dailies/check` | 檢查日線資料完整性 |
+
+### 交易與配息
+
+| Method | Path | 說明 |
+|--------|------|------|
+| GET | `/trades` | 交易列表（依 userId + query 過濾，`shadow=true` 轉布林） |
+| GET | `/dividends` | 有 `payDate` 的交易（配息） |
+| POST | `/stock/:code/trade` | 新增/更新交易（`trade.userId` 固定 1）；`destroy: true` 時依 `id` 刪除 |
+| POST | `/stock/:code/dividend` | 新增/更新/刪除配息（`amount` 為空即刪除） |
+
+### 回測與模擬
+
+| Method | Path | 說明 |
+|--------|------|------|
+| GET | `/backtest/opened` | 未平倉的回測任務 |
+| GET | `/backtest/:code{/:ma}` | 回測結果；`all` 依每位使用者 params 全跑；有 `ma` 回該組、無 `ma` 回獲利最高組（查無則現跑） |
+| GET | `/simulate{/:codes}` | `strategies` 回傳可用進/出場策略清單；其餘回 index.html |
+| POST | `/simulate` | 執行資金模擬（`params.weekly` 或 Entry 名稱以 Weekly 開頭 → `WeeklyInvestor`，否則 `Investor`） |
+
+### 同步與維護
+
+| Method | Path | 說明 |
+|--------|------|------|
+| POST | `/sql` | 執行 SQL 指令（body: `{ commands }`） |
+| GET | `/sync/:code{/:forced}` | 同步個股日線並回測；`all` 同步全部並全面回測 |
+| GET | `/logs` | 日誌（固定回 20 筆；`req.params.limit` 未接線） |
+
+### 筆記
+
+| Method | Path | 說明 |
+|--------|------|------|
+| GET | `/notes/:owner` | 指定所有人的筆記 |
+| POST | `/note` | 新增/更新筆記 |
+| DELETE | `/note/:id` | 刪除筆記 |
 
 ## 工程規範
 
@@ -191,42 +408,14 @@ const inv = new WeeklyInvestor(['2330'], 1000000, {
 const result = await inv.invest();
 ```
 
-## CLI 工具 (`main.js`)
+### MACD 混合週線（`weeklyMacdMix`）
 
-```bash
-# 回測
-node main.js backtest 2330 adx                    # 單股日線 ADX
-node main.js backtest 2330 weeklyAdx             # 單股週線 ADX
-node main.js backtest-all weeklyAdx              # 全部台股週線 ADX
-node main.js -u 2 backtest-all weeklyAdx         # 使用者 2 的關注股票
+日線資料 + 內部自壓週線 MACD（`MacdMixEntry`/`MacdMixExit`），只在完整週結束日檢查訊號，可搭配日線多頭濾網。
 
-# 資金管理模擬
-node main.js invest 2330 adx                      # 日線 Investor
-node main.js invest-weekly 2330 weeklyAdx         # 週線 WeeklyInvestor
-node main.js -u 2 invest 2330                     # 使用使用者 2 的策略參數
+| 條件 | 說明 |
+|------|------|
+| 進場 | 週線 DIF/DEA 金叉，且日線 MACD 柱狀圖較前一日向上（動能增強中） |
+| 出場 | 週線 DIF/DEA 死叉 |
 
-# 注意：backtest-all 已修復週線 flag 遺漏問題（2026-06-26）
-# 之前週線策略被錯誤地以日線資料執行，修復後 data/*.csv 需重新產生
-
-# ⚠️ 連續回測 vs 逐年分析（2026-06-27）
-# backtest-all 是連續回測（同方向交易合併），交易次數遠少於逐年重設的 weekly-analysis。
-# 例：MACD 週線 USER1，連續 16 筆 → 逐年 242 筆（15 倍差）。
-# 比較時不可混合使用：總覽的總筆數若源自逐年分析，賺錢股數也須來自逐年。
-# 需逐年數據請執行：node main.js -u 1 backtest-all <策略> entryDate=202X-01-02 exitDate=202X-12-31
-
-# 同步資料
-node main.js sync 2330                            # 單股日線
-node main.js sync 2330 forced                     # 單股日線強制完整同步（從頭抓）
-node main.js -u 1 sync all                        # 使用者 1 關注股全部同步
-node main.js -u 1 sync all forced                 # 使用者 1 關注股強制完整同步
-node main.js sync all                             # 全部台股同步（無 -u 時）
-node main.js sync-weekly 2330                     # 單股週線
-node main.js -u 1 sync-weekly all                 # 使用者 1 關注股週線同步
-node main.js sync-weekly all                      # 全部台股週線同步
-
-# 參數覆寫
-node main.js backtest 2330 weeklyAdx drawdownRate=0.4
-
-# 結果存於 data/ 目錄
-ls data/
-```
+- 執行 `invest-weekly 2330 weeklyMacdMix` 時**不會加 `--weekly`**，直接以日線資料執行（參閱上方 CLI 注意事項）
+- 2026-08-13 新增，尚未納入上方「策略回測全面比較」12 策略表，比較數據待回測

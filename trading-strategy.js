@@ -10,7 +10,7 @@ import * as dateFns from 'date-fns';
 //   5. 預設組合   → STRATEGY_PRESETS（供 CLI / UI 匯入）
 // ============================================================
 
-import { Macd, Kdj, Rsi, BullBear, BollingerBands, Adx } from './static/js/macd-kdj.js';
+import { Macd, Kdj, Rsi, BullBear, BollingerBands, Adx, Utils } from './static/js/macd-kdj.js';
 import { ObvMacd } from './static/js/obv-macd.js';
 
 class Cache {
@@ -498,6 +498,80 @@ export class MacdExit {
 		const macd = this.macd.find(i => i && i.time == time);
 		if (index < 1 || macd == null) return null;
 		return macd.dead ? { reason: `${MacdExit.name} 死叉，信心：${macd.score}（慢 ${(macd.dea||0).scale()} > 快 ${(macd.diff||0).scale()}）` } : null;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// MacdMixEntry/MacdMixExit — 日線資料 + 內部週線 MACD
+// 接收日線資料，內部壓成週線計算 MACD，只在完整週結束日檢查訊號。
+// 進場條件：週線金叉 && (日線 DIF ≥ 0 || 日線金叉)
+// 出場條件：週線死叉
+///////////////////////////////////////////////////////////////////////////////
+export class MacdMixEntry {
+	static name = 'MACD 混合進場策略';
+	static enabled = true;
+	static crossTimeframe = true;
+	constructor(data, params) {
+		this.data = data || [];
+		this.params = params;
+		const weeklyData = Utils.toWeekly(data, { weekEndDay: 5 });
+		this.macd = new Macd(data).calculate();
+		this.weeklyMacd = new Macd(weeklyData).calculate();
+	}
+
+	_isWeekEnd(index) {
+		if (index >= this.data.length - 1) return true;
+		const d1 = new Date(this.data[index].date);
+		const d2 = new Date(this.data[index + 1].date);
+		// 若下筆資料與本筆不在同一 ISO 週，則本筆為週末
+		const w1 = dateFns.getISOWeek(d1);
+		const w2 = dateFns.getISOWeek(d2);
+		return w1 !== w2 || d1.getFullYear() !== d2.getFullYear();
+	}
+
+	checkEntry(day, index, position) {
+		if (index < 1 || position.status != 'closed') return null;
+		if (!this._isWeekEnd(index)) return null; // 只在本週末檢查
+		const time = Date.parse(day.date);
+		const w = this.weeklyMacd.find(i => i && i.time == time);
+		if (!w?.golden) return null;
+		// 日線濾網：柱狀圖向上（動能增強中）
+		const idx = this.macd.findIndex(i => i && i.time == time);
+		const d = this.macd[idx];
+		const prev = this.macd[idx - 1];
+		if (!d || !prev || d.histogram <= prev.histogram) return null;
+		if (!marketFilter(this.params, day.date)) return null;
+		return { reason: `${MacdMixEntry.name} 週金叉+日柱向上（週DIF ${(w.diff||0).scale()} > 週DEA ${(w.dea||0).scale()}，日柱 ${(d.histogram||0).scale()} > ${(prev.histogram||0).scale()}）` };
+	}
+}
+
+export class MacdMixExit {
+	static name = 'MACD 混合出場策略';
+	static enabled = true;
+	static crossTimeframe = true;
+	constructor(data, params) {
+		this.data = data || [];
+		this.params = params;
+		const weeklyData = Utils.toWeekly(data, { weekEndDay: 5 });
+		this.macd = new Macd(data).calculate();
+		this.weeklyMacd = new Macd(weeklyData).calculate();
+	}
+
+	_isWeekEnd(index) {
+		if (index >= this.data.length - 1) return true;
+		const d1 = new Date(this.data[index].date);
+		const d2 = new Date(this.data[index + 1].date);
+		const w1 = dateFns.getISOWeek(d1);
+		const w2 = dateFns.getISOWeek(d2);
+		return w1 !== w2 || d1.getFullYear() !== d2.getFullYear();
+	}
+
+	checkExit(day, index, position) {
+		if (index < 1) return null;
+		const time = Date.parse(day.date);
+		const w = this.weeklyMacd.find(i => i && i.time == time);
+		if (!w?.dead) return null;
+		return { reason: `${MacdMixExit.name} 週死叉（週DIF ${(w.diff||0).scale()} < 週DEA ${(w.dea||0).scale()}）` };
 	}
 }
 
@@ -1064,7 +1138,6 @@ export const STRATEGY_PRESETS = {
 	},
 
 	// ── ADX 週線（波段版本） ──
-	// 同上但走週線資料，門檻調低避免週線訊號過少，勝率73%為週線組最高
 	// 參數同 ADX 日線，僅 ma=8、adxRate=0.05、drawdownRate=0.3
 	weeklyAdx: {
 		entry: 'AdxEntry', exit: ['AdxExit'], weekly: true,
@@ -1073,17 +1146,23 @@ export const STRATEGY_PRESETS = {
 	},
 
 	// ── MACD 週線 ──
-	// MACD DIF/DEA 金叉進場/死叉出場，週線過濾日線假訊號，勝率66%、期望值80.1
 	// 參數: ma=8(TradingSystem day.ma用，策略本身未使用)
 	weeklyMacd: {
 		entry: 'MacdEntry', exit: ['MacdExit'], weekly: true,
 		desc: 'MACD 週線版，過濾日線假金叉/死叉',
 		params: { ma: 8 }
 	},
+	// ── MACD 混合週線（日線資料 + 內部週線 MACD） ──
+	// 接收日線資料，內部壓成週線 MACD。只在完整週結束日檢查，可搭配日線多頭濾網。
+	// 參數: ma=8, weekEndDay=5(5=週五)
+	weeklyMacdMix: {
+		entry: 'MacdMixEntry', exit: ['MacdMixExit'],
+		desc: 'MACD 混合週線（日線壓週線 + 週金叉日多頭濾網）',
+		params: { ma: 8 }
+	},
 
 	// ── ADX+MACD 週線 ──
 	// ADX<20只用MACD → ADX 20~25 MACD為主、ADX試單 → ADX>25且上升全面用ADX
-	// 週線版勝率71%但盈虧比僅1.94，複合濾網提升勝率但犧牲盈虧比
 	// 參數: ma=8, adxRate=0.05(ADX下降率<-0.05出場), drawdownRate=0.3, reentry=true, raiseRate=0.1
 	weeklyAdxMacd: {
 		entry: 'AdxMacdEntryExit', exit: ['AdxMacdEntryExit'], weekly: true,
@@ -1094,7 +1173,6 @@ export const STRATEGY_PRESETS = {
 
 	// ── MA交叉 週線 ──
 	// MA5 金叉 MA10 且收盤 ≥ 年線(MA52) 進場；MA5 死叉 MA10 出場
-	// 週線版期望值 104.5 為所有策略最高，盈虧比 6.16
 	// 參數: ma1=5(短週期), ma2=10(中週期), ma3=52(年線,多空分界)
 	weeklyMaCross: {
 		entry: 'MaCrossEntryExit', exit: ['MaCrossEntryExit'], weekly: true,
@@ -1105,7 +1183,7 @@ export const STRATEGY_PRESETS = {
 	// ── 布林通道週線 ──
 	// 規則1 反轉多：前週跌破下軌 → 本週反彈過前高入場
 	// 規則2 突破多：低波動壓縮(帶寬<歷史20%分位) + 連兩週站上上軌 + 創短期新高入場
-	// 出場：已上中軌後連兩週跌破中軌。盈虧比 16.71 為所有策略最高
+	// 出場：已上中軌後連兩週跌破中軌。
 	// 參數: ma=20(BB中軌期數), bbPeriod=20, bbStdDev=2, atrPeriod=14, atrMult=1.5
 	//       bwLookback=52(帶寬歷史回看週數), shortHighLookback=12(短期新高回看週數)
 	weeklyBB: {
@@ -1126,7 +1204,6 @@ export const STRATEGY_PRESETS = {
 
 	// ── MACD 金叉/死叉 ──
 	// MACD DIF/DEA 金叉進場 / 死叉出場，標準 MACD 交易法
-	// 日線版勝率 47%、期望值 48.7、總損益 +14,079，頻率最高(289筆)
 	// 參數: ma=20(TradingSystem day.ma用，策略本身未使用)
 	macd: {
 		entry: 'MacdEntry', exit: ['MacdExit'],
@@ -1136,7 +1213,6 @@ export const STRATEGY_PRESETS = {
 
 	// ── ADX + MACD 複合 ──
 	// ADX<20只用MACD → ADX 20~25 MACD為主、ADX試單 → ADX>25且上升全面用ADX
-	// 勝率 50%居中，但總損益 +11,853 低於單用 ADX(+13,065) 或 MACD(+14,079)
 	// 複合濾網未提升表現，ADX+MACD 週線版(weeklyAdxMacd)較佳
 	adxMacd: {
 		entry: 'AdxMacdEntryExit', exit: ['AdxMacdEntryExit'],
@@ -1145,16 +1221,13 @@ export const STRATEGY_PRESETS = {
 	},
 
 	// ── OBV + MACD（已移除） ──
-	// 2025/06 評估結論：期望值 13.3、勝率 44%，864 筆頻繁交易每筆僅賺 13 點，
 	// 交易成本吃掉大部分獲利，不建議使用。ObvMacdEntryExit 類別保留供參考。
 
 	// ── 布林通道 + ATR（僅保留週線版） ──
-	// 不支援日線：勝率 39%、期望值 8.2，回測效益最差 (2025/01~2026/06)
-	// 保留週線版 weeklyBB（低波動壓縮後的大波段，勝率 75%、盈虧比 16.71）
+	// 保留週線版 weeklyBB（低波動壓縮後的大波段）
 
 	// ── MA 交叉（二條/三條） ──
 	// MA5 金叉 MA10 且收盤 ≥ 生命線(MA60) 進場；MA5 死叉或 RSI 死叉出場
-	// 日線版 366 筆交易、勝率 41%、期望值 34.6，週線版(weeklyMaCross)期望值 104.5 明顯較佳
 	// 參數: ma=20(TradingSystem day.ma用), ma1=5, ma2=10, ma3=60, rsiThreshold=70(RSI過熱不進場)
 	maCross: {
 		entry: 'MaCrossEntryExit', exit: ['MaCrossEntryExit'],

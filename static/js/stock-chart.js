@@ -12,25 +12,6 @@ class StockChart {
 		bullbear.bullish.forEach(i => bullbearFlags.push({ x: Date.parse(i), title: '牛'}));
 		bullbear.bearish.forEach(i => bullbearFlags.push({ x: Date.parse(i), title: '熊'}));
 		//const exitAlerts = new ExitAlert(this.data).calculate();
-		const macd = new Macd(this.data).calculate(); //  { fast: 5, slow: 34, dea: 5 }
-		const macdData = macd.filter(i => i.diff).map(i => [i.time, i.diff]);
-		const macdDeaData = macd.filter(i => i.dea).map(i => [i.time, i.dea]);
-		const macdSlopeData = macd.map(i => i.slope);
-		//const histogramData = macd.filter(i => i.histogram).map(i => [i.time, i.histogram]);
-		const histogramData = [];
-		macd.forEach((m, idx) => {
-			if (!m.histogram) return;
-			//const color = macdSlopeData[idx] ? '#80FFFF' : (m.histogram > 0 ? 'pink' : 'lightgreen');
-			const diff = m.histogram - (macd[idx - 1].histogram || 0);
-			const color = m.histogram > 0 ? (diff > 0 ? 'DarkSalmon' : 'Moccasin') : (diff > 0 ? 'Teal' : 'LightBlue')
-			histogramData.push({ x: m.time, y: m.histogram, color });
-		});
-		const macdFlags = macd.filter(i => i.golden || i.dead).map(i => ({
-			x: i.time,
-			title: i.golden ? '⭕' : '❌',
-			text: i.golden ? '金叉' : '死叉',
-			color: i.golden ? 'green' : 'red'
-		}));
 		//const lsrData = this.data.filter(i => i.lsr).map(i => [i.date.getTime(), i.lsr]);
 		const rsi = new Rsi(this.data).calculate();
 		const rsiData = rsi.filter(i => i && i.rsi).map(i => [i.time, i.rsi]);
@@ -135,13 +116,31 @@ class StockChart {
 				}
 			]
 		};
+		const weekly = axes.find(a => a.id == '週');
 		if (axes.find(a => a.id == 'MACD')) {
+			const macd = new Macd(this.data, { weekly }).calculate(); //  { fast: 5, slow: 34, dea: 5 }
+			const macdData = macd.filter(i => i.diff).map(i => [i.time, i.diff]);
+			const macdDeaData = macd.filter(i => i.dea).map(i => [i.time, i.dea]);
+			const histogramData = [];
+			macd.forEach((m, idx) => {
+				if (!m.histogram) return;
+				//const color = macdSlopeData[idx] ? '#80FFFF' : (m.histogram > 0 ? 'pink' : 'lightgreen');
+				const diff = m.histogram - (macd[idx - 1].histogram || 0);
+				const color = m.histogram > 0 ? (diff > 0 ? 'DarkSalmon' : 'Moccasin') : (diff > 0 ? 'Teal' : 'LightBlue')
+				histogramData.push({ x: m.time, y: m.histogram, color });
+			});
+			const macdFlags = macd.filter(i => i.golden || i.dead).map(i => ({
+				x: i.time,
+				title: i.golden ? '⭕' : '❌',
+				text: i.golden ? '金叉' : '死叉',
+				color: i.golden ? 'green' : 'red'
+			}));
 			params.yAxis.push({
 				labels: {
 					align: 'left'
 				},
-				top: '50%',
-				height: '25%'
+				top: '80%',
+				height: '20%',
 			});
 			params.series.push({
 				type: 'column',
@@ -229,7 +228,7 @@ class StockChart {
 				y: -40
 			});
 		}
-		//if (axes.find(a => a.id == 'ADX')) {
+		if (axes.find(a => a.id == 'ADX')) {
 			params.yAxis.push({
 				labels: {
 					align: 'left'
@@ -261,7 +260,7 @@ class StockChart {
 					valueDecimals: 3
 				}
 			});
-		//}
+		}
 		/*
 		if (axes.find(a => a.id == 'CCI')) {
 			params.yAxis.push({

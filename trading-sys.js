@@ -87,8 +87,6 @@ export class TradingSystem {
 				const entryCondition = entryStrategy.checkEntry(day, index, position);
 				if (entryCondition) {
 					position = this.openPosition(day, entryCondition, index);
-					// MA 上出場後是否要重複入場
-					//position = (!this.params.reentry && position.reentry) ?  { status: 'closed' } : position;
 				}
 			}
 			// 平倉檢查

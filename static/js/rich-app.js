@@ -761,18 +761,21 @@
 					visible: false,
 					url: 'https://t.ly/PPRaC'
 				}, {
+					id: 'ADX',
+					visible: false,
+					url: 'https://t.ly/sgcOP'
+				}, {
 					id: 'Bollinger',
 					visible: false,
 					url: 'https://t.ly/aDzD9'
+				}, {
+					id: '週',
+					visible: true
 				},
 				/* {
 					id: 'CCI',
 					visible: false,
 					url: 'https://t.ly/G4dSi'
-				}, {
-					id: 'ADX',
-					visible: false,
-					url: 'https://t.ly/sgcOP'
 				}, {
 					id: 'LSR',
 					visible: false
@@ -780,7 +783,7 @@
 					id: 'SAR',
 					visible: false,
 					url: 'https://t.ly/viY8S'
-				},*/ {
+				}, {
 					id: 'RSI',
 					visible: false,
 					url: 'https://t.ly/GHeUp'
@@ -796,7 +799,7 @@
 				}, {
 					id: '200MA',
 					visible: false
-				}],
+				}*/],
 				toggle: function() {
 					$$.chart.draw($$.chartAxis.all).addMa($$.stock.defaultMa);
 				}

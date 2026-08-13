@@ -73,7 +73,11 @@ async function main() {
 	case 'backtest':     return backtest(ARGS[0], ARGS[1], ARGS.slice(2));
 	case 'backtest-all': return backtestAll(ARGS[0], ARGS.slice(1));
 	case 'invest':       return invest(ARGS[0], ARGS[1], ARGS.slice(2));
-	case 'invest-weekly':return invest(ARGS[0], ARGS[1], [...ARGS.slice(2), '--weekly']);
+	case 'invest-weekly': {
+		const s_ = STRATEGIES[ARGS[1]];
+		const isMix = s_ && st[s_.entry]?.name?.includes('混合');
+		return invest(ARGS[0], ARGS[1], [...ARGS.slice(2), ...(isMix ? [] : ['--weekly'])]);
+	}
 	case 'list-stocks':  return listStocks();
 	case 'weekly-analysis':return weeklyAnalysis(ARGS[0] || 'weeklyMacd', ARGS.slice(1));
 	default:             showHelp();
