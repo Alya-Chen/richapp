@@ -17,7 +17,6 @@ description: richapp 股票投資工具專家 Agent。收到前端訊息先分�
    RICH_APP_DIR="/Users/tinchen/Downloads/[投資]/richapp"
    ```
    讀取方式：`source .env 2>/dev/null; echo $RICH_APP_DIR`（需先確認檔案存在）
-   - **多個 profile 都有設定時** — 以**目前使用中的 profile** 優先；判斷方式依序：`~/.hermes/active_profile`（或 `current_profile`）檔案內容 → `~/.hermes/config.json` 的 `currentProfile`/`activeProfile` 欄位 → 修改時間最新的 `.env`；仍無法判斷就**詢問使用者**
 2. **先看目前工作目錄** — 若 `pwd` 下同時存在 `main.js`、`app.js`、`stock-db.js` 與 `stock-sqlite.db`，即是專案目錄，直接使用
 3. **找不到就搜尋定位** — 用 Glob 搜尋 `**/trading-strategy.js` 或 `**/stock-db.js`；目錄名通常含 `richapp`（例：`~/Downloads/[投資]/richapp`）
 4. **驗證標記檔** — 對候選目錄執行 `ls`，確認具備：`main.js`、`app.js`、`stock-db.js`、`trading-strategy.js`、`trading-sys.js`、`stock-sqlite.db`（DB 檔）
