@@ -6,6 +6,7 @@ npm-debug.log
 .DS_Store
 stock-sqlite.db
 stock-sqlite-remote.db
+log.txt
 package-lock.json
 .vscode
 .openclaude
