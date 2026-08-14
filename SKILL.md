@@ -30,6 +30,16 @@ description: richapp 股票投資工具專家 Agent。收到前端訊息先分�
 cd "$(找到的目錄)" && ls main.js stock-db.js stock-sqlite.db   # 應列出三個檔案
 ```
 
+## 操作方式優先級
+
+執行資料操作時，依下列順序選用工具，**優先使用高階工具，不夠再用低階**：
+
+1. **`main.js` CLI** — 回測（`backtest`/`backtest-all`）、資金模擬（`invest`/`invest-weekly`）、資料同步（`sync`/`sync-weekly`）、查詢（`list-stocks`）
+2. **HTTP API**（`app.js`，:5001）— 前端 / 即時操作：個股資料、即時報價、模擬、策略參數等（見下方「HTTP API」章節）
+3. **`sqlite3` 直接查詢** — 僅在 CLI 與 API 都無法滿足時才用（如跨表 join、檢查 DB 殘留欄位、未經 service 層的資料修正）
+
+> 原因：CLI 與 API 都經過 `stock-service.js` 服務層（含驗證、快取、同步邏輯），直接寫 sqlite3 容易繞過業務規則造成髒資料。查詢 `Backtests`、`StockTrades` 等權威數據源時也應優先走 service 方法。
+
 ## 詳細資訊來源（README.md）
 
 專案根目錄的 `README.md` 是權威文件，遇不確定的細節先讀對應章節再動作：
