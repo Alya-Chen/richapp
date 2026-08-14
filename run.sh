@@ -1,7 +1,6 @@
 #!/bin/bash
 # run.sh — 停止執行中的 app.js（若有）並重新啟動
-cd "/Users/tinchen/Downloads/[投資]/richapp" || exit 1
-
+# 注意：需在 richapp 專案目錄內執行（路徑含空格與中括號，請勿用絕對路徑 cd）
 PID_FILE="app.pid"
 OLD_PID=""
 
