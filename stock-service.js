@@ -318,6 +318,7 @@ class Service {
 		}
 		for (const stock of stocks) {
 			if (Array.isArray(codes) && !codes.find(c => c == stock.code)) continue;
+			try {
 			const startDate = dateFns.addYears(params.entryDate, -2);
 			const data = params.weekly
 				? await this.weeklies(stock.code, startDate)
@@ -362,6 +363,10 @@ class Service {
 			}
 			result.push(best);
 			await SLEEP(50);
+			} catch (e) {
+				console.error(`${stock.code} ${stock.name} 回測失敗跳過: ${e.message}`);
+				db.Log.error(`${stock.code} ${stock.name} 回測失敗: ${e.message}`);
+			}
 		}
 		return result;
 		//console.log(`backtest ${new Date().getTime() - now}`);
