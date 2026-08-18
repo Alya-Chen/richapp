@@ -27,4 +27,6 @@ fi
 
 echo "啟動 app.js..."
 nohup env TZ="Asia/Taipei" node app.js > log.txt 2>&1 &
-echo "已啟動，新 PID=$!"
+NEW_PID=$!
+echo "$NEW_PID" > "$PID_FILE"
+echo "已啟動，新 PID=$NEW_PID"

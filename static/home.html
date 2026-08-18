@@ -2,7 +2,7 @@
 <div>
   <div class="grid grid-cols-[1fr_1fr] p-4 gap-4 max-w-6xl mx-auto">
     <div class="gap-2 cursor-pointer hover:bg-base-200" ng-if="stocks.length && stock.trade.invest"
-      ng-repeat="stock in stocks" ng-class="{'stock_usa': stock.country == 'us'}">
+      ng-repeat="stock in stocks track by stock.code" ng-class="{'stock_usa': stock.country == 'us'}">
 
       <!-- Row 1: Primary info (code + name + badges) -->
       <div class="flex flex-wrap items-center gap-5 w-full pt-4">
@@ -98,11 +98,12 @@
 
 
       <!-- Row 6: Invest logs -->
-      <span class="badge badge-primary text-primary-content badge-sm text-info mb-2">MACD 週線</span>
+      <span class="badge badge-primary text-primary-content badge-sm text-info mb-2" ng-bind="strategyName"></span>
       <div ng-if="stock.trade.invest" class="w-full rounded-box bg-primary/50 overflow-hidden"
         ng-class="{'bg-primary': stock.trade.invest.rsiHot}">
 
-        <div ng-class="{'bg-secondary': log.act == '清倉'}" ng-if="log.act" ng-repeat="log in stock.trade.invest.logs"
+        <div ng-class="{'bg-secondary': log.act == '清倉'}" ng-if="log.act"
+          ng-repeat="log in stock.trade.invest.logs track by (log.act + ' ' + (log.date || log.day.date))"
           ng-click="invest.edit(log); $event.stopPropagation()"
           class="flex flex-wrap items-center gap-2 p-2 border-b border-base-200 last:border-b-0">
           <span class="font-date text-sm opacity-60" ng-bind="(log.date || log.day.date) | date:'MM/dd'"></span>
@@ -164,7 +165,7 @@
     <div class="tab-content bg-base-100 border-base-300 rounded-[0]" ng-repeat-end>
       <div class="list p-4 max-w-6xl mx-auto">
         <div class="list-row flex-col items-start gap-1.5 hover:bg-base-200 transition-colors" ng-if="stocks.length"
-          ng-repeat="stock in stocks" ng-class="{'stock_usa': stock.country == 'us'}">
+          ng-repeat="stock in stocks track by stock.code" ng-class="{'stock_usa': stock.country == 'us'}">
           <div class="w-96">
             <!-- Row 1: Primary info (code + name + badges) -->
             <div class="flex flex-wrap items-center gap-2 pb-3 w-full">
@@ -224,7 +225,7 @@
             <!-- Row 4: Entry info -->
             <div class="relative inline-block">
               <span class="badge badge-outline badge-sm text-info cursor-pointer"
-                ng-click="openStrategyPanel(stock, $event)">MACD 週線</span>
+                ng-click="openStrategyPanel(stock, $event)" ng-bind="strategyName"></span>
               <div ng-if="stock._strategyOpen" class="card bg-base-100 shadow-xl border border-base-300 rounded-box"
                 style="position:absolute; top:100%; left:0; margin-top:0.25rem; z-index:50; width:560px;">
                 <div class="card-body p-3 gap-2">

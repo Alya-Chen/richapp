@@ -463,6 +463,19 @@
 			$$.todays = [];
 			$$.closeds = [];
 			$$.bulls = [];
+			$$.strategyNames = {
+				AdxEntry: 'ADX',
+				MacdEntry: 'MACD',
+				MacdMixEntry: 'MACD 混',
+				AdxMacdEntryExit: 'ADX+MACD',
+				TwoDaysUpEntry: '二日突破',
+				MaCrossEntryExit: 'MA 交叉',
+				WeeklyTrendEntry: '週線趨勢',
+				BBEntryExit: '布林通道',
+				ObvMacdEntryExit: 'OBV+MACD',
+				TigerEntry: 'Tiger',
+				BullTigerEntry: 'Bull Tiger'
+			};
 			$$.strategyPanel = {
 				open: false,
 				list: [
@@ -634,8 +647,10 @@
 				stock.winRate = test.winRate;
 				stock.profitRate = test.profitRate;
 				stock.expectation = test.expectation;
+				const previousInvest = stock.trade && stock.trade.invest; // 保留既有 invest，避免 ng-if 閃跳
 				stock.trade = (stock.trades || []).find(t => t.entryDate && t.remain);
 				if (stock.trade) {
+					stock.trade.invest = previousInvest;
 					$$.invest(stock);
 				}
 				else {
@@ -662,6 +677,8 @@
 				service.strategies((strategies) => {
 					const params = user.settings.params || {};
 					$$.entryStrategy = { name: strategies.entryStrategies.find(s => s.key == params.entryStrategy).name, reentry: params.reentry, weekly: params.weekly };
+					const strategyBase = $$.strategyNames[$$.entryStrategy.name] || $$.entryStrategy.name || '';
+					$$.strategyName = strategyBase + ($$.entryStrategy.weekly && !strategyBase.includes('週線') ? ' 週線' : '');
 					$$.exitStrategy = { name: params.exitStrategy.map(strategy => strategies.exitStrategies.find(s => s.key == strategy).name).join('＆') };
 					if ($$.exitStrategy.name.includes('動態止盈止損')) {
 						$$.exitStrategy.dynamicStop = true;
@@ -683,6 +700,22 @@
 				$timeout(service.logs.bind(service), 30 * SEC);
 			});
 			$$.$on('stocksLoaded', (_, stocks) => {
+				// 保留動態狀態，避免整批換新造成 re-render 與 realtime/trade/勾選遺失
+				const oldByCode = new Map(($$.stocks || []).map(s => [s.code, s]));
+				['realtime', 'trade', 'checked', '_strategyOpen', '_strategiesLoaded', '_strategies'].forEach(key => {
+					stocks.forEach(stock => {
+						const old = oldByCode.get(stock.code);
+						if (old && old[key] !== undefined) stock[key] = old[key];
+					});
+				});
+				// 清單區塊改指向同一批物件，realtime 等更新才會同步到目前投資區
+				const byCode = new Map(stocks.map(s => [s.code, s]));
+				['stareds', 'openeds', 'todays', 'closeds', 'bulls'].forEach(key => {
+					if (!$$[key].length) return;
+					const mapped = $$[key].map(s => byCode.get(s.code) || s);
+					$$[key].length = 0;
+					$$[key].push(...mapped);
+				});
 				$$.stocks = stocks;
 				if (!$$.stareds.length) $$.showStareds($$.user);
 			});
