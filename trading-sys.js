@@ -135,18 +135,19 @@ export class TradingSystem {
 		const profit = closedTrades.reduce((sum, t) => sum + (t.profit > 0 ? t.profit : 0), 0); // 總獲利金額
 		const loss = closedTrades.reduce((sum, t) => sum + (t.profit < 0 ? t.profit : 0), 0); // 總虧損金額
 		const breakouts = closedTrades.reduce((sum, t) => sum + (t.breakout || 0), 0);
+		const tradeCount = closedTrades.length;
 		const pnl = profit / Math.abs(loss || 1); // 盈虧比：總獲利金額除以總虧損金額
-		const winRate = wins.length / closedTrades.length;
-		const expectation = (pnl * winRate) - (1 - winRate); // 期望值 =（盈虧比 x 勝率）–（1 - 勝率）
+		const winRate = tradeCount ? wins.length / tradeCount : 0;
+		const expectation = tradeCount ? (pnl * winRate) - (1 - winRate) : 0; // 期望值 =（盈虧比 x 勝率）–（1 - 勝率）
 		return {
 			profit: (profit + loss).scale(),
 			loss: loss.scale(),
 			profitRate: (closedTrades.reduce((sum, t) => sum + t.profitRate, 0)).scale(),
-			breakoutRate: (breakouts / closedTrades.length).scale(),
+			breakoutRate: tradeCount ? (breakouts / tradeCount).scale() : 0,
 			winRate: winRate.scale(),
 			reentry: reentry.length,
 			reentryWins: reentryWins.length,
-			reentryWinRate: (reentryWins.length / reentry.length).scale(),
+			reentryWinRate: reentry.length ? (reentryWins.length / reentry.length).scale() : 0,
 			reentryProfit: reentryProfit.scale(),
 			pnl: pnl.scale(),
 			expectation: expectation.scale(),

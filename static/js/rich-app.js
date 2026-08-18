@@ -263,7 +263,8 @@
 	};
 	const pct = function() {
 		return function(input) {
-			return (parseFloat(input) * 100).scale(2);
+			const value = parseFloat(input);
+			return Number.isFinite(value) ? (value * 100).scale(2) : '';
 		};
 	};
 	app.filter('dt', dt);
@@ -702,7 +703,7 @@
 			$$.$on('stocksLoaded', (_, stocks) => {
 				// 保留動態狀態，避免整批換新造成 re-render 與 realtime/trade/勾選遺失
 				const oldByCode = new Map(($$.stocks || []).map(s => [s.code, s]));
-				['realtime', 'trade', 'checked', '_strategyOpen', '_strategiesLoaded', '_strategies'].forEach(key => {
+				['realtime', 'trade', 'checked', '_strategyOpen', '_strategiesLoaded', '_strategies', 'winRate', 'profitRate', 'expectation'].forEach(key => {
 					stocks.forEach(stock => {
 						const old = oldByCode.get(stock.code);
 						if (old && old[key] !== undefined) stock[key] = old[key];
