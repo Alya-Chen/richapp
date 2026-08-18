@@ -214,7 +214,7 @@ export class TradingSystem {
 		} else {
 			// 全數出清一次性計算
 			position.profit = (position.exitPrice - position.entryPrice).scale();
-			position.profitRate = (position.profit / position.entryPrice).scale();
+			position.profitRate = (position.profit / position.entryPrice).scale(4); // 比值保留 4 位小數，避免小幅損益被取整成 0（falsy）
 			position.pnl = ((day.close / position.entryPrice - 1) * 100).scale();
 		}
 		//position.entryDate = position.entryDate.toLocaleDateString();

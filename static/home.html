@@ -314,7 +314,7 @@
               <span ng-class="{'date--today': stock.trade.exitDate.isToday()}" class="font-date"
                 ng-bind="stock.trade.exitDate | date:'MM/dd'"></span>
               <span class="font-pct font-bold"
-                ng-bind="(stock.trade.profitRate || stock.trade.invest.profitRate) | pct"></span>
+                ng-bind="(stock.trade.profitRate != null ? stock.trade.profitRate : stock.trade.invest.profitRate) | pct"></span>
               <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.trade.rsiHot">過熱</span>
             </div>
 
