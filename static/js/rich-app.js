@@ -649,20 +649,28 @@
 				stock.profitRate = test.profitRate;
 				stock.expectation = test.expectation;
 				const previousInvest = stock.trade && stock.trade.invest; // 保留既有 invest，避免 ng-if 閃跳
-				stock.trade = (stock.trades || []).find(t => t.entryDate && t.remain);
+				const realTrades = (stock.trades || []).filter(t => t.entryDate);
+				const realOpen = realTrades.find(t => t.remain); // 真實持倉（remain 且無 exitDate → 可交易）
+				const twoWeeksAgo = new Date().addDays(-14);
+				const realRecent = realOpen ? null : realTrades.find(t => t.exitDate && (new Date(t.exitDate).isToday() || new Date(t.exitDate).isAfter(twoWeeksAgo))); // 真實近期出場
+				stock.trade = realOpen || realRecent; // 優先：實際 Trade（持倉 → 近期出場）→ 後備：回測
 				if (stock.trade) {
+					stock.trade.source = 'real';
+					if (stock.trade.exitDate) stock.trade.exitDate = new Date(stock.trade.exitDate);
 					stock.trade.invest = previousInvest;
 					$$.invest(stock);
 				}
 				else {
-					stock.trade = test.trades.pop();
-					if (stock.trade) stock.trade.entryDate = new Date(stock.trade.entryDate);
+					stock.trade = test.trades[test.trades.length - 1]; // 取最後一筆（不 pop，避免突變快取陣列）
+					if (stock.trade) {
+						stock.trade.source = 'backtest';
+						stock.trade.entryDate = new Date(stock.trade.entryDate);
+					}
 				}
 				const stocks = $$.stareds.concat($$.openeds, $$.todays, $$.closeds, $$.bulls);
-				const twoWeeksAgo = new Date().addDays(-14);
-				if (stock.trade && stock.trade.status == 'open' && !stocks.find(s => s.code == test.code)) $$.openeds.push(stock);
-				if (stock.trade && stock.trade.exitDate) {
-					stock.trade.exitDate = new Date(stock.trade.exitDate);
+				const isOpen = stock.trade && (stock.trade.source == 'real' ? !stock.trade.exitDate : stock.trade.status == 'open'); // 真實持倉與回測 open 皆可進，但標來源
+				if (isOpen && !stocks.find(s => s.code == test.code)) $$.openeds.push(stock);
+				if (stock.trade && stock.trade.source == 'real' && stock.trade.exitDate) { // 今日/近兩週：只放真實出場
 					stock.trade.rsiHot = stock.trade.exitReason?.includes('過熱');
 					if (!stocks.find(s => s.code == test.code) && stock.trade.exitDate.isToday()) $$.todays.push(stock);
 					if (!stocks.find(s => s.code == test.code) && !stock.trade.exitDate.isToday() && stock.trade.exitDate.isAfter(twoWeeksAgo)) $$.closeds.push(stock);
