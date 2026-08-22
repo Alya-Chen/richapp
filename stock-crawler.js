@@ -117,7 +117,9 @@ class YahooCrawler extends Crawler {
         } catch (error) {
             if (interval !== '1d') throw error; // 週線/月線無備援來源
             console.warn(`[Yahoo Chart] 歷史抓取失敗，嘗試備案...`);
-            const backup = this.country === 'us' ? new UsCrawler(this) : new TwCrawler(this);
+            // 傳 this 無法帶出 code（Crawler constructor 讀 stock.code，YahooCrawler 只有 stockNo）
+            const fallbackStock = { code: this.stockNo, otc: this.otc, country: this.country };
+            const backup = this.country === 'us' ? new UsCrawler(fallbackStock) : new TwCrawler(fallbackStock);
             return await backup.fetchAll(period1, period2);
         }
     }
@@ -139,10 +141,15 @@ class YahooCrawler extends Crawler {
                 const meta = data.chart?.result?.[0]?.meta;
                 if (!meta) throw new Error("No Meta Data");
                 const indicators = data.chart?.result?.[0]?.indicators?.quote?.[0];
-				// Open 的取法：優先取 indicators 裡的第一筆，若無則參考 meta
-                const openPrice = (indicators?.open && indicators.open[0])
-                              ? indicators.open[0]
-                              : meta.regularMarketPrice;
+				// Open 的取法：優先取 indicators 裡的第一筆；若為 null 則整筆跳過，
+				// 與 fetchAll 的 filter(item => item.open != null) 語意一致，避免 open 被 close 頂替造成 open==close
+                const openPrice = (indicators?.open && indicators.open[0]) ? indicators.open[0] : null;
+
+                if (openPrice == null) {
+                    console.warn(`[Yahoo Realtime] ${code} open 為 null，跳過`);
+                    if (codes.length > 1) await randomDelay(100, 250);
+                    continue;
+                }
 
                 results.push({
                     code: code,
@@ -356,15 +363,15 @@ class TwCrawler extends Crawler {
 
     // 私有方法：抓取上櫃 (TPEX) 單月資料
     async fetchTwOtc(date) {
-        const params = { date: date, code: this.stockNo, response: 'utf-8' }; // TPEX 特定參數
+        const params = { date: date, code: this.stockNo, response: 'json' };
         const response = await axios.get(TPEX, { params, headers: HEADERS, responseType: 'json', timeout: 10000 });
 
-        // 修正：TPEX 有時回傳 JSON，但有時需要處理格式
-        // 如果是 JSON 結構 (新版 API)
+        // 修正：TPEX 現行 API 回傳 { tables: [{ data: [...] }] }，舊格式為 aaData
         const rawData = response.data;
-        if (!rawData.aaData) return { data: [] };
+        const rows = rawData.tables?.[0]?.data || rawData.aaData;
+        if (!rows) return { data: [] };
 
-        const data = rawData.aaData.map(item => ({
+        const data = rows.map(item => ({
              date: dateUtils.convertTwDate(item[0]),
              volume: parseInt(item[1].replace(/,/g, '')),
              money: parseInt(item[2].replace(/,/g, '')),
