@@ -675,7 +675,7 @@
 					if (!stocks.find(s => s.code == test.code) && stock.trade.exitDate.isToday()) $$.todays.push(stock);
 					if (!stocks.find(s => s.code == test.code) && !stock.trade.exitDate.isToday() && stock.trade.exitDate.isAfter(twoWeeksAgo)) $$.closeds.push(stock);
 				}
-				if (stock.financial && stock.financial.bullscore == '🐮🐮🐮') {
+				if (stock.financial && stock.financial.bullscore && (stock.financial.bullscore.match(/🐮/g) || []).length >= 2) {
 					if (!$$.stareds.concat($$.openeds, $$.todays, $$.closeds).find(s => s.code == stock.code)) $$.bulls.push(stock);
 				}
 				$$.resort();

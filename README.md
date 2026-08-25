@@ -7,6 +7,7 @@
 - [專案簡介](#專案簡介)
 - [技術架構](#技術架構)
 - [資料庫 Schema](#資料庫-schema-sqlite)
+- [牛熊訊號（bullscore）](#牛熊訊號bullscore)
 - [CLI 工具（main.js）](#cli-工具-mainjs)
 - [HTTP API（Express）](#http-api-express)
 - [工程規範](#工程規範)
@@ -49,7 +50,7 @@
 | `defaultMa` | INTEGER | 金唬男 MA 值（預設 16） |
 | `tigerMa` | STRING(10) | 預設 MA 值 |
 | `otc` | BOOLEAN | 是否上櫃 |
-| `financial` | JSON | 財報資料 |
+| `financial` | JSON | 財報資料（含 `bullscore` 牛熊訊號，見 [牛熊訊號](#牛熊訊號bullscore)） |
 | `stared` / `trades` | TINYINT / JSON | ⚠️ 舊欄位（model 未定義，僅 DB 殘留） |
 
 ### StockDailies — 日線
@@ -126,6 +127,34 @@
 | `level` | VARCHAR | `info` / `error` |
 | `msg` | VARCHAR | 訊息 |
 | `date` | DATETIME | 建立時間 |
+
+## 牛熊訊號（bullscore）
+
+首頁「🐮 牛氣沖天」區塊的資料來源。由 `BullBear`（`static/js/macd-kdj.js:424`）計算，寫入 `Stocks.financial.bullscore`。
+
+### 演算法（`BullBear.calculate()`）
+
+以 MA20 / MA60 / MA120 均線輔助，輸出 `{ bullish, bearish, bullscore }`：
+
+| 輸出 | 說明 |
+|------|------|
+| `bullish` / `bearish` | MA20 對 MA60/MA120 的多頭／空頭轉折日期清單 |
+| `bullscore` | `[S1, S2, S3]`，每訊號 ±1（通過 = 1，未過 = -1） |
+
+三個訊號（全部 AND）：
+
+| 訊號 | 條件 | 意義 |
+|------|------|------|
+| S1 趨勢 | `MA20 > MA60` 且 `MA60 ≥ 5 日前 MA60` | 中期均線多頭排列、MA60 走平轉升 |
+| S2 動能 | 當日收漲且收盤突破近 20 日高點（不含當日） | 動能突破 |
+| S3 趨勢強度 | ADX(14) 末筆 `adx > 25` | 趨勢強度達標 |
+
+評級：`[1,1,1]` 全牛、`[-1,-1,-1]` 全熊、其餘混合。
+
+### 前端門檻
+
+- `rich-app.js:678` — 牛氣沖天 tab 收錄「至少 2 牛」的股票（bullscore 含 ≥2 個 🐮），並排除已在關注／持有／今日／已實現清單者
+- `rich-app.js:205-207` — 將 bullscore 數值陣列 map 成 emoji 字串（🐮=1、🐼=-1）供徽章顯示
 
 ## CLI 工具 (`main.js`)
 
@@ -236,6 +265,9 @@ Web server 監聽 `http://localhost:5001`，靜態檔由 `static/` 提供，API 
 ### 資料庫（Sequelize / SQLite）
 
 - **Upsert**：使用 Sequelize 內建的 `upsert` 或 `bulkCreate({ updateOnDuplicate })`，避免手動 `findOne` + `save` 造成競態條件
+- **Sequelize v6 更新陷阱**（2026-08-24 修復）：
+  - `Base.save()`（`stock-db.js`）必須以純物件 `entity.dataValues` 呼叫 `loaded.set()`，不可直接 `loaded.set(instance)`——instance 屬性**不可列舉**，`for...in` 拷不到任何值，`save()` 靜默 no-op 且不報錯
+  - 避免原地突變 JSON 欄位（如 `Object.assign(instance.field, {...})`）——`setDataValue` 以 `_.isEqual` 偵測變化，同一物件參考會被判定「未變」而不持久化；應以 spread 建立新物件
 - **交易**：多筆寫入或跨表操作需包在 transaction 中
 - **資料型別**：
   - 長字串（備註、日誌）使用 `DataTypes.TEXT`

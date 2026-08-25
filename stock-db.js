@@ -22,7 +22,9 @@ const Base = {
 			}
 		});
 		if (loaded) {
-			loaded.set(entity);
+			// sequelize instance 屬性不可列舉，set(instance) 拷不到任何值；
+			// 改用 entity.dataValues（純物件）才能觸發 changed 偵測並持久化
+			loaded.set(entity.dataValues || entity);
 			return await loaded.save();
 		} else {
 			entity = await dao.create(entity);

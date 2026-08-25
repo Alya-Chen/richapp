@@ -462,7 +462,24 @@ export class BullBear {
             }
         });
         const curr = this.data[this.data.length - 1];
-        result.bullscore = [(curr.ma20 > curr.ma60 ? 1 : -1), (curr.ma20 > curr.ma120 ? 1 : -1), (curr.ma60 > curr.ma120 ? 1 : -1)];
+        const prev = this.data[this.data.length - 2];
+        const n = this.data.length;
+
+        // S1 趨勢：MA20 > MA60 且 MA60 走平轉升（近 5 日未走弱）
+        const ma60Prev5 = n >= 6 ? this.data[n - 6].ma60 : null;
+        const s1 = (curr.ma20 > curr.ma60 && ma60Prev5 != null && curr.ma60 >= ma60Prev5) ? 1 : -1;
+
+        // S2 動能：收漲且突破近 20 日高點（不含當日）
+        const breakout = this.data.slice(Math.max(0, n - 21), n - 1);
+        const hi20 = breakout.length >= 20 ? Math.max(...breakout.map(d => d.close)) : null;
+        const s2 = (prev && curr.close > prev.close && hi20 != null && curr.close > hi20) ? 1 : -1;
+
+        // S3 趨勢強度：ADX(14) > 25（預設 threshold）
+        const adx = new Adx(this.data).calculate();
+        const lastAdx = adx[adx.length - 1].adx;
+        const s3 = (lastAdx != null && lastAdx > 25) ? 1 : -1;
+
+        result.bullscore = [s1, s2, s3];
         return result;
     }
 }
