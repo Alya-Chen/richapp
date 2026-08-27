@@ -52,7 +52,7 @@
       <div class="flex flex-wrap items-center gap-2 w-full pt-4 pb-4" ng-if="stock.realtime">
         <span class="border-l-4 border-accent pl-2 flex items-center gap-2">
           <span class="font-price text-3xl text-accent" ng-bind="stock.realtime.close.scale(2)"></span>
-          <span class="font-pct" ng-bind="stock.realtime.diffRate | pct"></span>
+          <span class="font-pct" ng-class="{'text-rich-red': stock.realtime.diffRate > 0, 'text-rich-green': stock.realtime.diffRate < 0}" ng-bind="stock.realtime.diffRate | pct"></span>
         </span>
         <span class="flex items-center gap-1 text-sm opacity-60">
           <svg fill="currentColor" class="icon-clock size-[1em]">
@@ -217,7 +217,7 @@
           <div class="flex flex-wrap items-center gap-2 w-full" ng-if="stock.realtime">
             <span class="border-l-4 border-accent pl-2 flex items-center gap-2">
               <span class="font-price text-2xl text-accent" ng-bind="stock.realtime.close.scale(2)"></span>
-              <span class="font-pct" ng-bind="stock.realtime.diffRate | pct"></span>
+              <span class="font-pct" ng-class="{'text-rich-red': stock.realtime.diffRate > 0, 'text-rich-green': stock.realtime.diffRate < 0}" ng-bind="stock.realtime.diffRate | pct"></span>
             </span>
           </div>
 
@@ -298,6 +298,7 @@
               <span ng-class="{'date--today': stock.trade.entryDate.isToday()}" class="font-date"
                 ng-bind="stock.trade.entryDate | date:'MM/dd'"></span>
               <span class="font-pct font-bold" ng-if="stock.realtime.profitRate"
+                ng-class="{'text-rich-red': stock.realtime.profitRate > 0, 'text-rich-green': stock.realtime.profitRate < 0}"
                 ng-bind="stock.realtime.profitRate | pct"></span>
               <span class="badge badge-secondary badge-sm ml-auto" ng-if="stock.trade.reentry">返場</span>
               <span class="badge badge-secondary badge-sm ml-auto" ng-if="stock.trade.breakout">二日</span>
@@ -317,6 +318,7 @@
               <span ng-class="{'date--today': stock.trade.exitDate.isToday()}" class="font-date"
                 ng-bind="stock.trade.exitDate | date:'MM/dd'"></span>
               <span class="font-pct font-bold"
+                ng-class="{'text-rich-red': (stock.trade.profitRate != null ? stock.trade.profitRate : stock.trade.invest && stock.trade.invest.profitRate) > 0, 'text-rich-green': (stock.trade.profitRate != null ? stock.trade.profitRate : stock.trade.invest && stock.trade.invest.profitRate) < 0}"
                 ng-bind="(stock.trade.profitRate != null ? stock.trade.profitRate : stock.trade.invest && stock.trade.invest.profitRate) | pct"></span>
               <span class="badge badge-primary badge-sm ml-auto" ng-if="stock.trade.rsiHot">過熱</span>
             </div>
