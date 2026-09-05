@@ -14,6 +14,7 @@
 - [HTTP API（Express）](#http-api-express)
 - [策略](#策略)
 - [策略回測全面比較（2025/01/02 ~ 2026/06/22）](#策略回測全面比較-20250102--20260622)
+- [AI 助手整合（規劃中）](#ai-助手整合規劃中)
 - [工程規範](#工程規範)
 - [開發流程](#開發流程)
 
@@ -417,6 +418,97 @@ const result = await stockService.backtest('2330', {
 - 布林通道日線（勝率 39%）- 已自策略組合移除，保留週線版
 
 **完整各策略說明、MA 參數穩健性測試與個股分析請見 [`data/完整策略比較-2026-06-22.md`](data/完整策略比較-2026-06-22.md)**；上表數據來源為修復版 [`data/完整策略比較-2026-06-26.md`](data/完整策略比較-2026-06-26.md)（含修復前後差異分析與各策略詳細數據）。
+
+## AI 助手整合（規劃中）
+
+**狀態**：規劃階段，尚未實作。目標是在前端加入一個對話式助手，讓使用者用自然語言查詢策略、跑回測、調整自己的策略參數。
+
+### 技術選型：Pi SDK（`@earendil-works/pi-coding-agent`）
+
+- 純 ESM 套件（`type: module`），與本專案相容，不需 CJS interop
+- **需求 Node `>=22.19.0`**（2026-09-05 已將本機 nvm 預設版本升級至 v22.23.2 滿足此需求；`package.json` 尚未加 `engines` 欄位約束，之後導入時應一併加上）
+- 定位是「編碼代理」SDK（預設工具組含 bash / 檔案操作 / 程式碼編輯），**不能直接沿用預設工具組**，必須改用自訂工具（custom tools）把 agent 限制在 richapp 自己的網域邏輯內
+- **版本注意**：registry 的 dist-tags 同時有 `legacy-node20`（0.74.2）與 `latest`（0.85.1，即前面確認 Node 版本需求的版本）——`npm install` 沒指定版本時預設會抓 `latest`，但實際安裝時務必再次確認 `package.json` 裡鎖到的版本與其 `exports` 欄位，避免不同版本 API 差異（本節下方的 API 細節是對照 0.85.1 的 `exports` 與 0.74.2 tarball內建的 `docs/sdk.md` 交叉確認，兩者核心 `AgentSession` API 一致，但 0.74.2 沒有 `./client`／`./rpc-entry`／`./experimental/plugin` 這三個子路徑）
+
+### 已確認的範圍決策
+
+| 項目 | 決策 |
+|:----|:----|
+| Investor 資金管理模擬 | **不**讓 agent 自主觸發（避免長時間 grid search 卡住對話）；改由前端明確按鈕觸發，走既有流程 |
+| 寫入權限 | **開放**——agent 可代使用者調整並儲存自己的策略參數（`user.settings.params`），但工具實作內一律用伺服器端 `getUser(req)` 帶入的 `userId` 覆蓋，絕不信任 agent 或前端傳來的 userId，避免跨帳號寫入 |
+| 回應風格 | 不強制 agent 主動附加樣本外驗證等警語／免責聲明（見 `data/ADX日線-ADX週線-MACD週線-深度比較-2026-08-28.md` 第九節的選股偏誤發現）——回答以使用者問題為主 |
+| bash／檔案系統／程式碼執行工具 | **v1 不開放**。這類工具是 Pi 預設就有的能力，多使用者正式環境直接開放等於留一個能執行任意 shell 指令、讀寫任意檔案的後門。**日後視情況（例如轉為單人本機工具、或加上足夠的沙箱/權限隔離）可能重新評估開放**，屆時應在本節記錄開放範圍、觸發方式與安全措施，而不是無聲放行 |
+
+### 後端整合方式（已確認，取自套件內建 `docs/sdk.md`）
+
+richapp 的 Express 後端要用的是**主要 `.` 匯出點的 `createAgentSession`／`AgentSession`**，不是 `./client` 或 `./rpc-entry`（原因見下方「`./client` 與 `./rpc-entry` 的用途」）：
+
+```typescript
+import { createAgentSession, SessionManager } from "@earendil-works/pi-coding-agent";
+
+const { session } = await createAgentSession({
+  tools: [...],              // 自訂工具白名單，見下一節
+  sessionManager: SessionManager.inMemory(),  // 見下方「對話持久化」
+});
+
+session.subscribe((event) => {
+  if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
+    // event.assistantMessageEvent.delta 就是逐字增量文字，串流回前端見「前端整合方式」
+  }
+});
+
+await session.prompt(userMessage);
+```
+
+**對話持久化**：SDK 本身有一套內建的 session 持久化機制（`AgentSession.sessionFile`，session 存成獨立檔案，由 `SessionManager` 管理，格式見套件內建 `docs/session-format.md`）。**決定不使用這套機制**，改用 `SessionManager.inMemory()`（不落地）+ 前面設計的 `AssistantMessage` 表，在 `session.subscribe()` 的回呼裡自己把每則訊息寫進 SQLite——理由是 SDK 的檔案式 session 是另一套獨立於 SQLite 之外的儲存系統，會讓「使用者對應對話紀錄」的存取控制、多實例部署備份都要多維護一套邏輯；richapp 現有的一切狀態（`User.settings`、回測結果等）都在同一個 SQLite 裡，跟著這個慣例走，用我們自己的表格更好維護、也更容易確保跨使用者隔離。
+
+### `./client` 與 `./rpc-entry` 的用途（已確認，不適用於 richapp 目前架構）
+
+- **`./rpc-entry`**：對應套件內建 `docs/rpc.md` 描述的「RPC 模式」——把 agent 跑成**獨立子行程**、用 stdin/stdout 傳 JSON 溝通，設計給非 Node 環境或需要行程隔離的場景。文件裡明講：「Node.js/TypeScript 使用者應該直接用 `AgentSession`，而不是產生子行程」——**richapp 用不到這個**，因為 Express 本身就是 Node 行程，可以直接 in-process 呼叫 `AgentSession`。
+- **`./client`**：exports 欄位裡這個子路徑只有 `"source": "./src/client/index.ts"`，**沒有 `"import"` 這個標準 Node 解析條件**——代表它是給「本身就有 TypeScript 建置流程的前端 bundler」（例如 Vite/esbuild）直接讀原始碼用的，一般 `node` 執行環境的 `import` 語法解析不到它。richapp 前端目前是純 `<script src>` 載入 AngularJS、**沒有前端建置流程**，無法直接使用這個子路徑；就算之後要用，也得先幫前端加一套 bundler，這是比目前規劃大很多的架構改動，v1 不考慮。
+- **結論**：richapp 只需要主要的 `.` 匯出點，前端一律透過 richapp 自己的 Express API（例如 `/assistant/chat`）溝通，不直接碰 Pi 套件的任何前端相關子路徑。
+
+### 前端整合方式（已確認）
+
+- **UI**：沿用既有 DaisyUI（`input.css` 已有 `@plugin "daisyui"`），右下角一顆 `btn btn-circle btn-primary`（`fixed bottom-4 right-4 z-50` 定位），點擊開關 DaisyUI 的 `drawer drawer-end`（右側對話面板），開關狀態綁 AngularJS `ng-model`（不是純 CSS checkbox 切換），才能之後用程式主動開關。
+- **放置位置**：要放在 `index.html` 的 `<body>` 內、`ng-view` 之外，獨立一個 `assistantCtrl`，不要塞進 `indexCtrl`——這樣切換首頁/個股頁/回測頁時對話狀態不會被重置。已知要避開的衝突：`home.html:463` 有一個既有的 `z-index:9999` 全螢幕遮罩，新面板的 z-index 要避開，屆時需先確認那個遮罩實際用途。
+- **對話內容渲染**：獨立一個 `<assistant-message>` directive，不要用 `ng-bind-html` 直接塞字串，避免之後 agent 回覆帶 Markdown/表格時有 XSS 疑慮。
+- **Streaming 串接**：AngularJS 1.8.3 沒有原生 streaming 支援，比較過 SSE（`EventSource`）／`fetch`+`ReadableStream`／WebSocket 三種：
+  - WebSocket 需要額外依賴跟持久連線基礎建設，對「一次一個使用者發一句、agent 串流回一句」這種單輪對話來說是過度設計，先不用。
+  - `EventSource`（SSE）只能發 GET、不能帶 body，要傳使用者訊息得先 POST 建立請求、再用 GET 接該次請求的串流，多一道「拿 token 再訂閱」的手續。
+  - **選定 `fetch()` + `response.body.getReader()`**：使用者傳訊息用一次 POST 完成（body 就是訊息內容），Express 端用 `session.subscribe()` 收到的 `text_delta` 逐段 `res.write()`、結束時 `res.end()`；前端邊讀邊解碼、累加到 `$scope` 上的訊息文字，因為讀取迴圈跑在 Angular digest 週期之外，每次更新要包在 `$timeout(fn)` 裡才會讓畫面重新渲染。單一請求、不用額外的 token/session 配對機制，是目前最省事的做法。
+
+### 工具白名單（草案，唯讀為主 + 有限寫入）
+
+- `listStrategies()` — 讀 `STRATEGY_PRESETS`
+- `runBacktest({code, strategy, params, entryDate, exitDate})` — 包 `stockService.backtest()`（訊號層級，不含 Investor 模擬）
+- `getStockDailies(code)` / `getStockWeeklies(code)` — 唯讀行情查詢
+- `getUserSettings()` — 讀取呼叫者自己的 `user.settings`
+- `updateUserParams(params)` — 寫入呼叫者自己的 `user.settings.params`（`userId` 由伺服器端強制帶入）
+
+### 資料模型草案
+
+對話紀錄擬用單一表 `AssistantMessage`（延續 `stock-db.js` 現有的 `sequelize.define` + `timestamps:false` + 手動 `date` 欄位風格，不使用 Sequelize 關聯），用自我參照的 `parentId` 對應 Pi SDK 的分支/樹狀對話導覽，`sessionId` 對應 Pi SDK 的 session 識別碼：
+
+```js
+const AssistantMessage = sequelize.define('AssistantMessage', {
+	id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+	userId: { type: DataTypes.INTEGER, allowNull: false, comment: '所屬使用者，伺服器端從 session 帶入，不可信任前端傳的值' },
+	sessionId: { type: DataTypes.STRING, allowNull: false, comment: 'Pi SDK 對話 session 識別碼' },
+	parentId: { type: DataTypes.INTEGER, allowNull: true, comment: '上一則訊息 id；null 為該 session 根訊息' },
+	role: { type: DataTypes.STRING, allowNull: false, comment: 'user / assistant / tool' },
+	content: { type: DataTypes.TEXT, allowNull: true },
+	toolCalls: { type: DataTypes.JSON, allowNull: true },
+	toolResult: { type: DataTypes.JSON, allowNull: true },
+	date: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+}, { indexes: [{ fields: ['userId', 'sessionId'] }, { fields: ['parentId'] }], timestamps: false });
+```
+
+### 尚待確認
+
+- 上方後端整合的 API 細節是對照套件 0.74.2 tarball 內建的 `docs/sdk.md` 確認，實際導入時應改裝 `latest`（0.85.1）版本，重新核對其內建文件（`node_modules/@earendil-works/pi-coding-agent/docs/`）確保 API 沒有變動
+- `home.html:463` 的既有 `z-index:9999` 遮罩實際用途，確認後再訂新對話面板的 z-index
+- 自訂工具（custom tools）的確切 TypeScript schema 定義方式，需要照 `examples/sdk/05-tools.ts` 的範例實際寫一次才能確認
 
 ## 工程規範
 

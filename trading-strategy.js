@@ -198,7 +198,7 @@ export class TigerExit {
 		const threshold = 1 - this.params.threshold;
 		const prev = this.data[index - 1];
 		// 二日法則驗證失敗，為假突破，入場第三天又破均線，應立刻停損
-		if (!position.breakout && dateFns.differenceInDays(new Date(), day) == 2 && day.close < day.ma) {
+		if (!position.breakout && dateFns.differenceInDays(day.date, position.entryDate) == 2 && day.close < day.ma) {
 			return { reason: `金唬男止損，假突破隔日又破均線：${day.close.scale()} < ${day.ma.scale()}` };
 		}
 		// 透過二日法則來檢驗主力洗盤，連續兩日破均線才出場
@@ -260,14 +260,16 @@ export class RsiExit {
 		this.data = data;
 		this.params = params;
 
-		if (!RsiExit.CACHE[this.params.code + this.short]) {
-			RsiExit.CACHE[this.params.code + this.short] = new Cache(Rsi, { period: this.short });
+		const shortKey = this.params.code + '-' + this.short;
+		const longKey = this.params.code + '-' + this.long;
+		if (!RsiExit.CACHE[shortKey]) {
+			RsiExit.CACHE[shortKey] = new Cache(Rsi, { period: this.short });
 		}
-		if (!RsiExit.CACHE[this.params.code + this.long]) {
-			RsiExit.CACHE[this.params.code + this.long] = new Cache(Rsi, { period: this.long });
+		if (!RsiExit.CACHE[longKey]) {
+			RsiExit.CACHE[longKey] = new Cache(Rsi, { period: this.long });
 		}
-		this.rsiShortValues = RsiExit.CACHE[this.params.code + this.short].get(this.params.code, this.data);
-		this.rsiLongValues = RsiExit.CACHE[this.params.code + this.long].get(this.params.code, this.data);
+		this.rsiShortValues = RsiExit.CACHE[shortKey].get(this.params.code, this.data);
+		this.rsiLongValues = RsiExit.CACHE[longKey].get(this.params.code, this.data);
 	}
 
 	// 平倉條件檢查
@@ -291,6 +293,47 @@ export class RsiExit {
 			return { reason: `RSI(${this.short}/${this.long}) 死叉出場：${rsiTodayShort.scale()} < ${rsiTodayLong.scale()}` }
 		}
 		return null;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// RsiEarlyExit — 進場後 N 天內的早期 RSI 過熱出場（實驗性）
+//
+// 背景：ADX日線 的「死叉」出場路徑（AdxExit 最後一段備援）有結構性弱點——
+// 進場 15 天內就走到死叉的交易勝率僅 ~7%，遠低於撐過 15 天的 ~46%，
+// 代表早期失敗被拖到死叉確認時損失已擴大。用敏感的 RSI(9) 全程套用會
+// 連帶提早截斷後段表現良好的交易，因此限制只在進場早期窗口內生效，
+// 窗口外交還給陣列中其他出場策略（例如 AdxExit）繼續判斷。
+// 回測（2025-01-02~2026-06-22，34檔關注股）：訊號層級期望值 1.91→2.12、
+// 總損益 +3%；但透過 Investor 資金管理模擬（4倉位）發現最大回撤 13%→21%，
+// 是報酬與回撤的真實取捨、尚未定論是否採用，因此不預設開放於一般策略選單。
+///////////////////////////////////////////////////////////////////////////////
+export class RsiEarlyExit {
+	static CACHE = {};
+	static name = 'RSI 早期出場策略';
+	static enabled = false; // 實驗性：會提升期望值/總損益，但也會拉高最大回撤，暫不開放一般選單
+	constructor(data, params) {
+		this.period = params.rsiPeriod || 9;
+		this.limit = params.rsiLimit || 80;
+		this.windowDays = params.rsiWindowDays || 10;
+		this.data = data;
+		this.params = params;
+
+		const key = this.params.code + '-' + this.period + '-' + this.limit;
+		if (!RsiEarlyExit.CACHE[key]) {
+			RsiEarlyExit.CACHE[key] = new Cache(Rsi, { period: this.period, limit: this.limit });
+		}
+		this.rsi = RsiEarlyExit.CACHE[key].get(this.params.code, this.data);
+	}
+
+	// 平倉條件檢查：只在進場後 windowDays 天內生效
+	checkExit(day, index, position) {
+		const heldDays = (day.date - position.entryDate) / (1000 * 60 * 60 * 24);
+		if (heldDays > this.windowDays) return null;
+
+		const time = Date.parse(day.date);
+		const rsiExit = this.rsi.find(r => r && r.time == time && r.dead);
+		return rsiExit ? { reason: `${RsiEarlyExit.name}（進場${this.windowDays}天內）：RSI(${this.period}) ${rsiExit.rsi.scale()} 跌破 ${this.limit}` } : null;
 	}
 }
 
@@ -453,7 +496,7 @@ export class AdxExit {
 			return { reason: `${AdxExit.name} 下降率強烈 ${adxNote}` };
 		}
 		position.adxHigh = Math.max(position.adxHigh || 0, adx.adx);
-		const drawdownRate = position.adxHigh ? (position.adxHigh - adx.adx) / adx.adx : 0;
+		const drawdownRate = position.adxHigh ? (position.adxHigh - adx.adx) / position.adxHigh : 0;
 		if (this.params.drawdownRate && drawdownRate > this.params.drawdownRate) {
 			return { reason: `${AdxExit.name} 高點回撤率：-${(drawdownRate * 100).scale(2)}% 強烈 ${adxNote}` };
 		}
@@ -1135,6 +1178,17 @@ export const STRATEGY_PRESETS = {
 		entry: 'AdxEntry', exit: ['AdxExit'],
 		desc: 'ADX +DI/-DI 金叉/死叉 + 谷底回升返場',
 		params: { ma: 20, adxRate: 0.1, drawdownRate: 0.2, reentry: true, raiseRate: 0.1 }
+	},
+
+	// ── ADX 日線 + RSI 早期出場（實驗性，未預設啟用） ──
+	// 在 AdxExit 之外，進場後 10 天內額外套用 RSI(9) 跌破 80 的早期出場，
+	// 針對「死叉」出場路徑裡早期失敗（15天內死叉勝率僅7%）的弱點。
+	// 訊號層級：期望值 1.91→2.12、總損益 +3%；
+	// 但 Investor 資金管理模擬顯示最大回撤 13%→21%，屬報酬換回撤的真實取捨，尚未定論，故獨立成一個 preset、不覆蓋預設的 adx。
+	adxRsiEarly: {
+		entry: 'AdxEntry', exit: ['AdxExit', 'RsiEarlyExit'],
+		desc: 'ADX日線 + RSI早期出場（實驗性：報酬提升但回撤加大）',
+		params: { ma: 20, adxRate: 0.1, drawdownRate: 0.2, reentry: true, raiseRate: 0.1, rsiPeriod: 9, rsiLimit: 80, rsiWindowDays: 10 }
 	},
 
 	// ── ADX 週線（波段版本） ──
