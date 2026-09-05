@@ -234,6 +234,16 @@
 				if (callback) callback(res.data);
 			});
 		}
+		getAiProviders(callback) {
+			this.$http.get('/ai/providers').then((res) => {
+				if (callback) callback(res.data);
+			});
+		}
+		saveAiProviders(providers, callback) {
+			this.$http.post('/ai/providers', providers).then((res) => {
+				if (callback) callback(res.data);
+			});
+		}
 		debounce(fn, delay = 1000) {
 			let timer = null;
 			return (...args) => {
@@ -453,6 +463,61 @@
 					$$.chat.messages = [];
 					$$.chat.sessionId = null;
 					$$.chat.status = '';
+				},
+				// 設定目前使用者的 AI provider／API Key／models／defaultModel（存在 user.settings.aiProviders）
+				settings: {
+					selected: 'deepseek',
+					apiKey: '',
+					modelsText: '',
+					defaultModel: '',
+					error: '',
+					data: { active: null, providers: {} },
+					// 固定已知的 4 個 provider，再併入 DB 裡已存在但不在清單內的 provider（例如手動用腳本加的）
+					list: function() {
+						const known = ['deepseek', 'anthropic', 'openai', 'gemini'];
+						const existing = Object.keys($$.chat.settings.data.providers || {});
+						return known.concat(existing.filter(k => known.indexOf(k) < 0));
+					},
+					loadForm: function() {
+						const p = $$.chat.settings.data.providers[$$.chat.settings.selected] || {};
+						$$.chat.settings.apiKey = p.apiKey || '';
+						$$.chat.settings.modelsText = (p.models || []).join(', ');
+						$$.chat.settings.defaultModel = p.defaultModel || '';
+					},
+					edit: function() {
+						service.getAiProviders(function(data) {
+							$$.chat.settings.data = (data && data.providers) ? data : { active: null, providers: {} };
+							$$.chat.settings.selected = $$.chat.settings.data.active || $$.chat.settings.list()[0];
+							$$.chat.settings.error = '';
+							$$.chat.settings.loadForm();
+							$.blockUI({ message: $('#ai-provider-form'), onOverlayClick: $.unblockUI });
+						});
+					},
+					// 注意：這裡刻意不用 $.growlUI——現有程式碼雖然有幾處呼叫它，
+					// 但整個專案沒有任何地方載入或定義過這個函式，呼叫下去會直接拋例外，
+					// 改用這個表單自己的 error 訊息區塊顯示驗證結果，避免踩到同一個坑
+					save: function() {
+						$$.chat.settings.error = '';
+						const key = $$.chat.settings.selected;
+						const models = $$.chat.settings.modelsText.split(',').map(s => s.trim()).filter(Boolean);
+						if (!key || !$$.chat.settings.apiKey || !models.length || !$$.chat.settings.defaultModel) {
+							$$.chat.settings.error = '請填寫 provider、API Key、至少一個 model，以及預設 model';
+							return;
+						}
+						if (models.indexOf($$.chat.settings.defaultModel) < 0) {
+							$$.chat.settings.error = '預設 model 必須是上面 Models 清單裡的其中一個';
+							return;
+						}
+						$$.chat.settings.data.providers[key] = { apiKey: $$.chat.settings.apiKey, models: models, defaultModel: $$.chat.settings.defaultModel };
+						$$.chat.settings.data.active = key;
+						service.saveAiProviders($$.chat.settings.data, function(result) {
+							if (result.success) {
+								$.unblockUI();
+							} else {
+								$$.chat.settings.error = '儲存失敗，請稍後再試';
+							}
+						});
+					}
 				}
 			};
 			$$.note = {

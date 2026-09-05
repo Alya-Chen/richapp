@@ -483,7 +483,7 @@ await session.prompt(userMessage);
 }
 ```
 
-  **已知取捨**：API 金鑰以明文存在 `User.settings`（SQLite 檔案本身也未加密）。richapp 現有認證機制本來就是 session cookie 等級，非企業級安全模型，此規模另外做加密（還要解決「加密金鑰放哪」的新問題）不划算，先如此記錄為已知風險，之後有需要再加密。目前尚未做設定 UI，`aiProviders` 只能直接寫 DB 設定。
+  **已知取捨**：API 金鑰以明文存在 `User.settings`（SQLite 檔案本身也未加密），且會原樣回傳給前端顯示在設定表單的 API Key 欄位裡（`type="password"` 只是避免螢幕上直接顯示明文，不是真的加密）。richapp 現有認證機制本來就是 session cookie 等級，非企業級安全模型，此規模另外做加密（還要解決「加密金鑰放哪」的新問題）不划算，先如此記錄為已知風險，之後有需要再加密。設定 UI 見下方「前端整合」的 SETTING 圖示。
 
 - **`./client`／`./rpc-entry`（Pi SDK 的其他匯出子路徑）用不到**：`./rpc-entry` 是把 agent 跑成獨立子行程、用 stdin/stdout 溝通，設計給非 Node 環境；Express 本身就是 Node 行程，直接 in-process 呼叫 `AgentSession` 即可。`./client` 只有 `"source"` 條件、沒有 `"import"`，是給有 TypeScript 建置流程的前端 bundler 用的，richapp 前端是純 `<script src>`、沒有建置流程，用不到。
 
@@ -495,6 +495,7 @@ await session.prompt(userMessage);
 - **HELP 圖示**：卡片標題列的問號 icon（`chat.help()`），點下去自動送出「你目前可以回答哪些類型的問題？可以幫我做哪些事？」，不用自己想怎麼問。
 - **CLEAR 圖示**：HELP 左邊的垃圾桶 icon（`chat.clear()`），清空 `chat.messages` 同時把 `chat.sessionId` 重設為 `null`——只清畫面不清 sessionId 的話，AI 仍會記得被清空前的內容，跟使用者預期不符。兩個按鈕都在串流中停用（`ng-disabled="chat.busy"`），避免中途清空後 `done` 事件把舊 sessionId 寫回來讓清空被復原。清空只影響前端顯示，`AssistantMessage` 歷史紀錄不受影響。
 - **股票頁自動帶入代號**：`chat.send()` 送出前用 `$location.path()` 判斷是否在 `/stock/2330` 這類頁面，是的話自動把 `[目前正在查看股票 2330] ` 加在訊息前面才送給後端；聊天泡泡顯示的仍是使用者輸入的原始文字，只有實際送給後端的內容有加這段前綴。卡片內有一行小字提示目前會帶入的股票代號。
+- **SETTING 圖示**：卡片標題列的齒輪 icon（`chat.settings.edit()`），用 `$.blockUI` 開啟表單（沿用既有 `#note-form` 的 modal 慣例），讓使用者設定自己的 `aiProviders`——選一個 provider（`deepseek`／`anthropic`／`openai`／`gemini`，或 DB 裡已存在但不在這個清單內的其他名稱）、填 API Key、用逗號分隔填多個 model，指定其中一個為預設 model；儲存時前端會驗證「預設 model 必須在填的 models 清單裡」，並把這個 provider 設為 `active`，其他已設定過的 provider 不受影響（合併更新，非整包覆蓋）。對應後端 `GET`／`POST /ai/providers`，做法跟既有的 `/sys/params` 一致（`getUser(req)` 讀、`stockService.saveUser()` 寫）。**表單驗證失敗/儲存失敗訊息故意沒用 `$.growlUI`**——這個函式在專案裡多處被呼叫（`rich-app.js` 現有的排程/模擬/參數儲存等功能）但整個專案沒有任何地方定義或載入它，呼叫下去會直接拋例外；這裡改用表單自己的 `chat.settings.error` 訊息區塊顯示驗證結果，是目前唯一保證能顯示出來的做法。
 
 ### 工具白名單（`ai-tools.js`，`createTools(userId)`）
 

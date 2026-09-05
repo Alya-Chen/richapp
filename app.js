@@ -290,6 +290,18 @@ app.post('/sys/params', async (req, res) => {
 	res.json({ success: true });
 });
 
+app.get('/ai/providers', async (req, res) => {
+	const user = await getUser(req);
+	res.json(user.settings?.aiProviders || {});
+});
+
+app.post('/ai/providers', async (req, res) => {
+	const user = await getUser(req);
+	user.settings = Object.assign({}, user.settings, { aiProviders: req.body });
+	await stockService.saveUser(user);
+	res.json({ success: true });
+});
+
 // AI 助手：sessionId -> { session: AgentSession, userId, lastMessageId }
 // 純記憶體、跟著 server process 生命週期，重啟會遺失（AssistantMessage 表仍保留歷史紀錄可供查閱）
 // 詳見 README「AI 助手整合」章節
