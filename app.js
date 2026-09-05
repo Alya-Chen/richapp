@@ -12,6 +12,9 @@ import {
 	WeeklyInvestor
 } from './stock-investor.js';
 import * as st from './trading-strategy.js';
+import crypto from 'crypto';
+import { createAgentSession, ModelRegistry, ModelRuntime, SessionManager } from '@earendil-works/pi-coding-agent';
+import { createTools } from './ai-tools.js';
 
 process.env.TZ = 'Asia/Taipei';
 
@@ -285,6 +288,84 @@ app.post('/sys/params', async (req, res) => {
 	user.settings.params = req.body;
 	await stockService.saveUser(user);
 	res.json({ success: true });
+});
+
+// AI 助手：sessionId -> { session: AgentSession, userId, lastMessageId }
+// 純記憶體、跟著 server process 生命週期，重啟會遺失（AssistantMessage 表仍保留歷史紀錄可供查閱）
+// 詳見 README「AI 助手整合」章節
+const aiSessions = new Map();
+
+app.post('/ai/chat', async (req, res) => {
+	const user = await getUser(req);
+	const providers = user.settings?.aiProviders;
+	if (!providers?.active || !providers.providers?.[providers.active]?.apiKey) {
+		return res.status(400).json({ error: '尚未設定 AI provider／API 金鑰，請先至設定頁面設定' });
+	}
+	const message = req.body.message;
+	if (!message) {
+		return res.status(400).json({ error: 'message 為必填' });
+	}
+
+	let sessionId = req.body.sessionId;
+	let entry = sessionId ? aiSessions.get(sessionId) : null;
+	if (entry && entry.userId !== user.id) entry = null; // 防止用猜測/偷來的 sessionId 接到別人的對話
+
+	if (!entry) {
+		const active = providers.active;
+		const conf = providers.providers[active];
+		const runtime = await ModelRuntime.create();
+		await runtime.setRuntimeApiKey(active, conf.apiKey);
+		const modelRegistry = new ModelRegistry(runtime);
+		const model = modelRegistry.find(active, conf.defaultModel);
+		if (!model) {
+			return res.status(400).json({ error: `找不到模型 ${active}/${conf.defaultModel}` });
+		}
+		const { session } = await createAgentSession({
+			model,
+			modelRuntime: runtime,
+			sessionManager: SessionManager.inMemory(),
+			noTools: 'builtin',
+			customTools: createTools(user.id)
+		});
+		sessionId = crypto.randomUUID();
+		entry = { session, userId: user.id, lastMessageId: null };
+		aiSessions.set(sessionId, entry);
+	}
+
+	res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+	res.setHeader('Cache-Control', 'no-cache');
+	const write = (obj) => res.write(JSON.stringify(obj) + '\n');
+
+	const userMsg = await stockService.saveAssistantMessage({
+		userId: user.id, sessionId, parentId: entry.lastMessageId, role: 'user', content: message
+	});
+	entry.lastMessageId = userMsg.id;
+
+	let fullText = '';
+	const unsubscribe = entry.session.subscribe((event) => {
+		if (event.type === 'message_update' && event.assistantMessageEvent?.type === 'text_delta') {
+			fullText += event.assistantMessageEvent.delta;
+			write({ type: 'text_delta', delta: event.assistantMessageEvent.delta });
+		} else if (event.type === 'tool_execution_start') {
+			write({ type: 'tool_call', toolName: event.toolName, args: event.args });
+		} else if (event.type === 'tool_execution_end') {
+			write({ type: 'tool_result', toolName: event.toolName, isError: event.isError });
+		}
+	});
+
+	try {
+		await entry.session.prompt(message);
+		const assistantMsg = await stockService.saveAssistantMessage({
+			userId: user.id, sessionId, parentId: entry.lastMessageId, role: 'assistant', content: fullText
+		});
+		entry.lastMessageId = assistantMsg.id;
+		write({ type: 'done', sessionId });
+	} catch (e) {
+		write({ type: 'error', message: e.message });
+	} finally {
+		unsubscribe();
+		res.end();
+	}
 });
 
 app.listen(port, () => {

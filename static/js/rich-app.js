@@ -355,15 +355,104 @@
 			$$.chat = {
 				messages: [],
 				input: '',
+				sessionId: null,
+				busy: false,
+				status: '',
+				// AI 回覆常帶 markdown（表格、粗體、清單），轉成 HTML 顯示；先用 DOMPurify 過濾再交給 ng-bind-html
+				// （$sceProvider.enabled(false) 已關閉 AngularJS 的 SCE，ng-bind-html 不會自動過濾，這裡的淨化是必要的，不是多餘的）
+				render: function(text) {
+					if (!window.marked || !window.DOMPurify) return text || '';
+					return window.DOMPurify.sanitize(window.marked.parse(text || ''));
+				},
+				// 停在 /stock/:code 頁面時取得目前股票代號，讓 send() 自動把股票上下文帶給 AI，
+				// 不用使用者自己在訊息裡打代號；每次 digest 都算，純讀取 $location 沒有副作用
+				currentCode: function() {
+					const m = /^\/stock\/([^/]+)/.exec($location.path());
+					return m ? m[1] : null;
+				},
+				// 用 fetch()+ReadableStream 而非 service 慣用的 $http，因為 $http 會整包緩衝、無法邊收邊顯示串流文字
 				send: function() {
 					const text = ($$.chat.input || '').trim();
-					if (!text) return;
+					if (!text || $$.chat.busy) return;
 					$$.chat.messages.push({ from: 'user', text });
 					$$.chat.input = '';
-					$$.chat.messages.push({ from: 'ai', text: '（AI 功能尚未實作）' });
+					$$.chat.busy = true;
+					$$.chat.status = '';
+					const aiMsg = { from: 'ai', text: '' };
+					$$.chat.messages.push(aiMsg);
+
+					// 訊息顯示用原始文字（不帶股票代號雜訊），但實際送給後端的內容自動附上目前頁面的股票代號，
+					// 讓 AI 知道「不用問就懂」使用者現在正在看哪一檔
+					const code = $$.chat.currentCode();
+					const payload = code ? ('[目前正在查看股票 ' + code + '] ' + text) : text;
+
+					fetch('/ai/chat', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ message: payload, sessionId: $$.chat.sessionId })
+					}).then(function(response) {
+						if (!response.ok) {
+							return response.json().then(function(err) {
+								throw new Error(err.error || '請求失敗');
+							});
+						}
+						const reader = response.body.getReader();
+						const decoder = new TextDecoder();
+						let buffer = '';
+						function pump() {
+							return reader.read().then(function(result) {
+								if (result.done) return;
+								buffer += decoder.decode(result.value, { stream: true });
+								const lines = buffer.split('\n');
+								buffer = lines.pop(); // 最後一段可能不完整（NDJSON 分行），留到下次合併
+								lines.forEach(function(line) {
+									if (!line.trim()) return;
+									const evt = JSON.parse(line);
+									$timeout(function() {
+										if (evt.type === 'text_delta') {
+											aiMsg.text += evt.delta;
+										} else if (evt.type === 'tool_call') {
+											$$.chat.status = '正在查詢：' + evt.toolName;
+										} else if (evt.type === 'tool_result') {
+											$$.chat.status = '';
+										} else if (evt.type === 'done') {
+											$$.chat.sessionId = evt.sessionId;
+											$$.chat.busy = false;
+											$$.chat.status = '';
+										} else if (evt.type === 'error') {
+											aiMsg.text += '\n[錯誤] ' + evt.message;
+											$$.chat.busy = false;
+											$$.chat.status = '';
+										}
+									});
+								});
+								return pump();
+							});
+						}
+						return pump();
+					}).catch(function(e) {
+						$timeout(function() {
+							aiMsg.text = '發生錯誤：' + e.message;
+							$$.chat.busy = false;
+							$$.chat.status = '';
+						});
+					});
 				},
 				keypress: function(evt) {
-					if (evt.keyCode === 13) $$.chat.send();
+					if (evt.keyCode === 13 && !evt.shiftKey) $$.chat.send();
+				},
+				help: function() {
+					if ($$.chat.busy) return;
+					$$.chat.input = '你目前可以回答哪些類型的問題？可以幫我做哪些事？請條列說明。';
+					$$.chat.send();
+				},
+				// 連 sessionId 一起清掉，不只是清畫面：否則使用者以為對話重新開始，
+				// 但下一句其實還是接在後端舊 session 上，AI 會記得被「清空」前的內容
+				clear: function() {
+					if ($$.chat.busy) return;
+					$$.chat.messages = [];
+					$$.chat.sessionId = null;
+					$$.chat.status = '';
 				}
 			};
 			$$.note = {

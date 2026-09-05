@@ -14,7 +14,7 @@
 - [HTTP API（Express）](#http-api-express)
 - [策略](#策略)
 - [策略回測全面比較（2025/01/02 ~ 2026/06/22）](#策略回測全面比較-20250102--20260622)
-- [AI 助手整合（規劃中）](#ai-助手整合規劃中)
+- [AI 助手整合](#ai-助手整合)
 - [工程規範](#工程規範)
 - [開發流程](#開發流程)
 
@@ -419,76 +419,110 @@ const result = await stockService.backtest('2330', {
 
 **完整各策略說明、MA 參數穩健性測試與個股分析請見 [`data/完整策略比較-2026-06-22.md`](data/完整策略比較-2026-06-22.md)**；上表數據來源為修復版 [`data/完整策略比較-2026-06-26.md`](data/完整策略比較-2026-06-26.md)（含修復前後差異分析與各策略詳細數據）。
 
-## AI 助手整合（規劃中）
+## AI 助手整合
 
-**狀態**：規劃階段，尚未實作。目標是在前端加入一個對話式助手，讓使用者用自然語言查詢策略、跑回測、調整自己的策略參數。
+左側「AI 對話」卡片（`static/index.html`＋`static/js/rich-app.js` 的 `$$.chat`）讓使用者用自然語言查詢策略、執行回測/資金管理模擬、查閱過往策略分析報告、調整自己的策略參數、新增或修改交易紀錄。停在 `/stock/:code` 頁面時，送出的訊息會自動帶入目前股票代號，不用自己在訊息裡打代號。
 
-### 技術選型：Pi SDK（`@earendil-works/pi-coding-agent`）
+### 技術棧與版本注意事項
 
-- 純 ESM 套件（`type: module`），與本專案相容，不需 CJS interop
-- **需求 Node `>=22.19.0`**（2026-09-05 已將本機 nvm 預設版本升級至 v22.23.2 滿足此需求；`package.json` 尚未加 `engines` 欄位約束，之後導入時應一併加上）
-- 定位是「編碼代理」SDK（預設工具組含 bash / 檔案操作 / 程式碼編輯），**不能直接沿用預設工具組**，必須改用自訂工具（custom tools）把 agent 限制在 richapp 自己的網域邏輯內
-- **版本注意**：registry 的 dist-tags 同時有 `legacy-node20`（0.74.2）與 `latest`（0.85.1，即前面確認 Node 版本需求的版本）——`npm install` 沒指定版本時預設會抓 `latest`，但實際安裝時務必再次確認 `package.json` 裡鎖到的版本與其 `exports` 欄位，避免不同版本 API 差異（本節下方的 API 細節是對照 0.85.1 的 `exports` 與 0.74.2 tarball內建的 `docs/sdk.md` 交叉確認，兩者核心 `AgentSession` API 一致，但 0.74.2 沒有 `./client`／`./rpc-entry`／`./experimental/plugin` 這三個子路徑）
+- **`@earendil-works/pi-coding-agent`**（純 ESM），需 Node `>=22.19.0`。`package.json` 尚未加 `engines` 欄位約束此需求。
+- registry 的 dist-tags 同時有 `legacy-node20`（0.74.2）與 `latest`（0.85.1，目前鎖定版本）——兩者核心 `AgentSession` API 一致，但套件內建文件（`docs/sdk.md`）是隨 0.74.2 發的舊版寫法，跟實際安裝的 0.85.1 **有落差**：文件裡的 `AuthStorage`／`ModelRegistry.create(authStorage)` 在 0.85.1 已經不存在（沒有從套件 export），正確 API 是 `ModelRuntime` + `runtime.setRuntimeApiKey()`（見下方範例）。**之後升級這個套件版本時，務必以 `dist/*.d.ts` 型別定義為準，不要照抄套件內建文件。**
+- 定位是「編碼代理」SDK，預設工具組含 bash／檔案操作／程式碼編輯，**不能直接沿用**，必須用 `noTools: "builtin"` 關掉並改用自訂工具（見「工具白名單」）。
 
 ### 已確認的範圍決策
 
 | 項目 | 決策 |
 |:----|:----|
-| Investor 資金管理模擬 | **不**讓 agent 自主觸發（避免長時間 grid search 卡住對話）；改由前端明確按鈕觸發，走既有流程 |
-| 寫入權限 | **開放**——agent 可代使用者調整並儲存自己的策略參數（`user.settings.params`），但工具實作內一律用伺服器端 `getUser(req)` 帶入的 `userId` 覆蓋，絕不信任 agent 或前端傳來的 userId，避免跨帳號寫入 |
-| 回應風格 | 不強制 agent 主動附加樣本外驗證等警語／免責聲明（見 `data/ADX日線-ADX週線-MACD週線-深度比較-2026-08-28.md` 第九節的選股偏誤發現）——回答以使用者問題為主 |
-| bash／檔案系統／程式碼執行工具 | **v1 不開放**。這類工具是 Pi 預設就有的能力，多使用者正式環境直接開放等於留一個能執行任意 shell 指令、讀寫任意檔案的後門。**日後視情況（例如轉為單人本機工具、或加上足夠的沙箱/權限隔離）可能重新評估開放**，屆時應在本節記錄開放範圍、觸發方式與安全措施，而不是無聲放行 |
+| Investor 資金管理模擬 | 開放給 agent 自主呼叫（`runInvestorSimulation`），用參數上限（最多 10 檔股票）避免長時間運算卡住對話，不是完全禁止 |
+| 寫入權限 | 開放——agent 可代使用者調整策略參數、新增/修改交易紀錄，但所有寫入工具內部一律用伺服器端 session 帶入的 `userId` 覆蓋，絕不信任 agent 或前端傳來的 userId |
+| 回應風格 | 不強制 agent 主動附加樣本外驗證等警語／免責聲明，回答以使用者問題為主 |
+| Pi SDK 內建 bash／檔案系統／程式碼執行工具（`read`/`bash`/`edit`/`write`，以及另一組 `grep`/`find`/`ls`） | **不開放**。這些工具是對整個專案目錄做無限制讀寫/搜尋（能讀到 `app.js` 的 session secret、`stock-sqlite.db` 原始檔案繞過所有 `userId` 隔離邏輯），風險遠大於 richapp 自己寫的白名單工具。日後如需要（例如轉為單人本機工具、或加上沙箱隔離）可重新評估，屆時應在本節記錄開放範圍與安全措施。與下面的 `readProjectFile` 不是同一件事——`readProjectFile` 是唯讀、白名單限定在 `README.md`／`data/` 的自訂工具 |
 
-### 後端整合方式（已確認，取自套件內建 `docs/sdk.md`）
-
-richapp 的 Express 後端要用的是**主要 `.` 匯出點的 `createAgentSession`／`AgentSession`**，不是 `./client` 或 `./rpc-entry`（原因見下方「`./client` 與 `./rpc-entry` 的用途」）：
+### 後端整合（`POST /ai/chat`）
 
 ```typescript
-import { createAgentSession, SessionManager } from "@earendil-works/pi-coding-agent";
+import { createAgentSession, ModelRegistry, ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
+
+// 每個使用者的請求都各自建一個 runtime，用 setRuntimeApiKey 動態帶入該使用者存在 DB 裡的金鑰（不落地到檔案）
+const runtime = await ModelRuntime.create();
+await runtime.setRuntimeApiKey(provider, apiKey);   // provider/apiKey 來自 user.settings.aiProviders
+const modelRegistry = new ModelRegistry(runtime);
+const model = modelRegistry.find(provider, modelId);
 
 const { session } = await createAgentSession({
-  tools: [...],              // 自訂工具白名單，見下一節
-  sessionManager: SessionManager.inMemory(),  // 見下方「對話持久化」
+  model,
+  modelRuntime: runtime,
+  sessionManager: SessionManager.inMemory(),  // 對話持久化改走自己的 AssistantMessage 表，見下方
+  noTools: "builtin",         // 只關閉內建 bash/read/edit/write，保留自訂工具；用 "all" 會連自訂工具也關掉，是常見誤區
+  customTools: createTools(userId),
 });
 
 session.subscribe((event) => {
   if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
-    // event.assistantMessageEvent.delta 就是逐字增量文字，串流回前端見「前端整合方式」
+    // event.assistantMessageEvent.delta 是逐字增量文字，串流回前端見「前端整合」
   }
 });
 
 await session.prompt(userMessage);
 ```
 
-**對話持久化**：SDK 本身有一套內建的 session 持久化機制（`AgentSession.sessionFile`，session 存成獨立檔案，由 `SessionManager` 管理，格式見套件內建 `docs/session-format.md`）。**決定不使用這套機制**，改用 `SessionManager.inMemory()`（不落地）+ 前面設計的 `AssistantMessage` 表，在 `session.subscribe()` 的回呼裡自己把每則訊息寫進 SQLite——理由是 SDK 的檔案式 session 是另一套獨立於 SQLite 之外的儲存系統，會讓「使用者對應對話紀錄」的存取控制、多實例部署備份都要多維護一套邏輯；richapp 現有的一切狀態（`User.settings`、回測結果等）都在同一個 SQLite 裡，跟著這個慣例走，用我們自己的表格更好維護、也更容易確保跨使用者隔離。
+- **事件序列**：`agent_start → turn_start → message_start → message_update(...) → message_end → turn_end → agent_end → agent_settled`。要顯示給使用者的是 `text_delta`；`thinking_delta` 是模型推理過程，要不要顯示是另一個 UI 決策。有呼叫工具時 `turn_end` 前會多出 `tool_execution_start`/`tool_execution_end`，正確欄位是 `toolName`／`args`（start）與 `result`／`isError`（end），直接在 event 物件上，不是巢狀在 `event.toolCall` 底下。
+- **多輪對話**：模組層級的 `aiSessions = new Map()`（`sessionId → {session, userId, lastMessageId}`）讓同一個 `sessionId` 重複使用同一個 in-memory `AgentSession`；`sessionId` 不存在或不屬於當下 `userId` 時會建立新的，防止用猜測/偷來的 sessionId 接到別人的對話。
+- **對話持久化**：不使用 SDK 內建的檔案式 session（`SessionManager.inMemory()` 不落地），改用自己的 `AssistantMessage` 表在 `session.subscribe()` 回呼裡寫入 SQLite——理由是跟著 richapp 現有的一切狀態走同一套資料庫，比另外維護一套獨立儲存系統更好管理、也更容易確保跨使用者隔離。每則訊息無論如何都會寫進 `AssistantMessage`（`parentId` 正確串接），即使記憶體內的 session 消失了歷史紀錄還在。
+- **Provider／API Key**：存在 `User.settings.aiProviders`，不需要新開表：
 
-### `./client` 與 `./rpc-entry` 的用途（已確認，不適用於 richapp 目前架構）
+```json
+{
+  "active": "deepseek",
+  "providers": {
+    "deepseek":  { "apiKey": "sk-...",     "models": ["deepseek-v4-flash", "deepseek-v4-pro"],                   "defaultModel": "deepseek-v4-flash" },
+    "anthropic": { "apiKey": "sk-ant-...", "models": ["claude-sonnet-5", "claude-opus-5", "claude-haiku-4-5"], "defaultModel": "claude-sonnet-5" },
+    "openai":    { "apiKey": "sk-...",     "models": ["gpt-5", "gpt-5-mini"],                                   "defaultModel": "gpt-5" },
+    "gemini":    { "apiKey": "...",        "models": ["gemini-2.5-pro", "gemini-2.5-flash"],                    "defaultModel": "gemini-2.5-flash" }
+  }
+}
+```
 
-- **`./rpc-entry`**：對應套件內建 `docs/rpc.md` 描述的「RPC 模式」——把 agent 跑成**獨立子行程**、用 stdin/stdout 傳 JSON 溝通，設計給非 Node 環境或需要行程隔離的場景。文件裡明講：「Node.js/TypeScript 使用者應該直接用 `AgentSession`，而不是產生子行程」——**richapp 用不到這個**，因為 Express 本身就是 Node 行程，可以直接 in-process 呼叫 `AgentSession`。
-- **`./client`**：exports 欄位裡這個子路徑只有 `"source": "./src/client/index.ts"`，**沒有 `"import"` 這個標準 Node 解析條件**——代表它是給「本身就有 TypeScript 建置流程的前端 bundler」（例如 Vite/esbuild）直接讀原始碼用的，一般 `node` 執行環境的 `import` 語法解析不到它。richapp 前端目前是純 `<script src>` 載入 AngularJS、**沒有前端建置流程**，無法直接使用這個子路徑；就算之後要用，也得先幫前端加一套 bundler，這是比目前規劃大很多的架構改動，v1 不考慮。
-- **結論**：richapp 只需要主要的 `.` 匯出點，前端一律透過 richapp 自己的 Express API（例如 `/assistant/chat`）溝通，不直接碰 Pi 套件的任何前端相關子路徑。
+  **已知取捨**：API 金鑰以明文存在 `User.settings`（SQLite 檔案本身也未加密）。richapp 現有認證機制本來就是 session cookie 等級，非企業級安全模型，此規模另外做加密（還要解決「加密金鑰放哪」的新問題）不划算，先如此記錄為已知風險，之後有需要再加密。目前尚未做設定 UI，`aiProviders` 只能直接寫 DB 設定。
 
-### 前端整合方式（已確認）
+- **`./client`／`./rpc-entry`（Pi SDK 的其他匯出子路徑）用不到**：`./rpc-entry` 是把 agent 跑成獨立子行程、用 stdin/stdout 溝通，設計給非 Node 環境；Express 本身就是 Node 行程，直接 in-process 呼叫 `AgentSession` 即可。`./client` 只有 `"source"` 條件、沒有 `"import"`，是給有 TypeScript 建置流程的前端 bundler 用的，richapp 前端是純 `<script src>`、沒有建置流程，用不到。
 
-- **UI**：沿用既有 DaisyUI（`input.css` 已有 `@plugin "daisyui"`），右下角一顆 `btn btn-circle btn-primary`（`fixed bottom-4 right-4 z-50` 定位），點擊開關 DaisyUI 的 `drawer drawer-end`（右側對話面板），開關狀態綁 AngularJS `ng-model`（不是純 CSS checkbox 切換），才能之後用程式主動開關。
-- **放置位置**：要放在 `index.html` 的 `<body>` 內、`ng-view` 之外，獨立一個 `assistantCtrl`，不要塞進 `indexCtrl`——這樣切換首頁/個股頁/回測頁時對話狀態不會被重置。已知要避開的衝突：`home.html:463` 有一個既有的 `z-index:9999` 全螢幕遮罩，新面板的 z-index 要避開，屆時需先確認那個遮罩實際用途。
-- **對話內容渲染**：獨立一個 `<assistant-message>` directive，不要用 `ng-bind-html` 直接塞字串，避免之後 agent 回覆帶 Markdown/表格時有 XSS 疑慮。
-- **Streaming 串接**：AngularJS 1.8.3 沒有原生 streaming 支援，比較過 SSE（`EventSource`）／`fetch`+`ReadableStream`／WebSocket 三種：
-  - WebSocket 需要額外依賴跟持久連線基礎建設，對「一次一個使用者發一句、agent 串流回一句」這種單輪對話來說是過度設計，先不用。
-  - `EventSource`（SSE）只能發 GET、不能帶 body，要傳使用者訊息得先 POST 建立請求、再用 GET 接該次請求的串流，多一道「拿 token 再訂閱」的手續。
-  - **選定 `fetch()` + `response.body.getReader()`**：使用者傳訊息用一次 POST 完成（body 就是訊息內容），Express 端用 `session.subscribe()` 收到的 `text_delta` 逐段 `res.write()`、結束時 `res.end()`；前端邊讀邊解碼、累加到 `$scope` 上的訊息文字，因為讀取迴圈跑在 Angular digest 週期之外，每次更新要包在 `$timeout(fn)` 裡才會讓畫面重新渲染。單一請求、不用額外的 token/session 配對機制，是目前最省事的做法。
+### 前端整合
 
-### 工具白名單（草案，唯讀為主 + 有限寫入）
+- **UI 位置**：沿用 `index.html` 左側欄（`w-1/5`）既有的「AI 對話」卡片，塞進 `indexCtrl`（`rich-app.js` 的 `$$.chat`），不是獨立 controller——這個卡片本身就在首頁，沒有跨頁保留對話狀態的需求。`chat.sessionId`／`chat.messages` 只存在瀏覽器記憶體，重新整理頁面即歸零（見「已知限制」）。對話捲動區高度 `min-h-[420px] max-h-[70vh]`，維持原本的欄寬不變。
+- **內容渲染**：`ng-bind-html="chat.render(m.text)"`，`chat.render` 用 `marked` 轉 Markdown 再用 `DOMPurify.sanitize` 淨化——`$sceProvider.enabled(false)` 已關閉 AngularJS 的 SCE，`ng-bind-html` 不會自動過濾，這裡的淨化是必要的。
+- **Streaming**：AngularJS 1.8.3 沒有原生 streaming 支援，採 `fetch()` + `response.body.getReader()`：使用者傳訊息一次 POST 完成，Express 端把 `session.subscribe()` 收到的 `text_delta` 逐段 `res.write()`；前端邊讀邊解碼累加到 `$scope`，因為讀取迴圈跑在 Angular digest 週期外，每次更新要包在 `$timeout(fn)` 才會重新渲染。比 SSE（只能 GET、不能帶 body）與 WebSocket（對單輪對話是過度設計）省事。
+- **HELP 圖示**：卡片標題列的問號 icon（`chat.help()`），點下去自動送出「你目前可以回答哪些類型的問題？可以幫我做哪些事？」，不用自己想怎麼問。
+- **CLEAR 圖示**：HELP 左邊的垃圾桶 icon（`chat.clear()`），清空 `chat.messages` 同時把 `chat.sessionId` 重設為 `null`——只清畫面不清 sessionId 的話，AI 仍會記得被清空前的內容，跟使用者預期不符。兩個按鈕都在串流中停用（`ng-disabled="chat.busy"`），避免中途清空後 `done` 事件把舊 sessionId 寫回來讓清空被復原。清空只影響前端顯示，`AssistantMessage` 歷史紀錄不受影響。
+- **股票頁自動帶入代號**：`chat.send()` 送出前用 `$location.path()` 判斷是否在 `/stock/2330` 這類頁面，是的話自動把 `[目前正在查看股票 2330] ` 加在訊息前面才送給後端；聊天泡泡顯示的仍是使用者輸入的原始文字，只有實際送給後端的內容有加這段前綴。卡片內有一行小字提示目前會帶入的股票代號。
 
-- `listStrategies()` — 讀 `STRATEGY_PRESETS`
-- `runBacktest({code, strategy, params, entryDate, exitDate})` — 包 `stockService.backtest()`（訊號層級，不含 Investor 模擬）
-- `getStockDailies(code)` / `getStockWeeklies(code)` — 唯讀行情查詢
-- `getUserSettings()` — 讀取呼叫者自己的 `user.settings`
-- `updateUserParams(params)` — 寫入呼叫者自己的 `user.settings.params`（`userId` 由伺服器端強制帶入）
+### 工具白名單（`ai-tools.js`，`createTools(userId)`）
 
-### 資料模型草案
+自訂工具用 `typebox`（無 scope 的套件，不是 `@sinclair/typebox`，兩者版本與 API 不同）建構 `parameters` schema，回傳值包成 `{ content: [{type:"text", text:...}], details:... }`。所有工具的 `userId` 都來自 `createTools(userId)` 的閉包（伺服器端從 session 帶入），工具內部絕不信任 agent 或前端傳來的 userId，避免跨帳號存取。
 
-對話紀錄擬用單一表 `AssistantMessage`（延續 `stock-db.js` 現有的 `sequelize.define` + `timestamps:false` + 手動 `date` 欄位風格，不使用 Sequelize 關聯），用自我參照的 `parentId` 對應 Pi SDK 的分支/樹狀對話導覽，`sessionId` 對應 Pi SDK 的 session 識別碼：
+| 工具 | 說明 |
+|:----|:----|
+| `listStrategies()` | 列出 `STRATEGY_PRESETS`（代號、說明、是否週線） |
+| `runBacktest({code, strategy})` | 訊號層級回測（不含資金管理模擬），固定近一年期間 |
+| `getStockDailies({code})` | 最近 20 個交易日收盤價（唯讀） |
+| `getStockWeeklies({code})` | 最近 20 週收盤價（唯讀） |
+| `runInvestorSimulation({codes, strategy, money?})` | 資金管理模擬回測，含手續費/證交稅；`codes` 最多 10 檔、`money` 預設 100 萬 |
+| `compareStrategies({codes, strategies})` | 跨股票、跨策略批次比較，依期望值排序；`codes` 最多 20 檔、`strategies` 最多 5 個 |
+| `getUserSettings()` | 讀取呼叫者自己的 `user.settings` |
+| `updateUserParams(params)` | 合併更新呼叫者自己的 `user.settings.params`（不是整包覆蓋） |
+| `listProjectFiles()` | 列出可讀檔案清單：`README.md` + `data/` 目錄下全部檔案（含 `data/stock/`），附相對路徑與 bytes 大小 |
+| `readProjectFile({path})` | 讀取 `README.md` 或 `data/` 目錄下任一檔案內容 |
+| `saveStockTrade({id?, code, act, date, price, amount, ma?})` | 新增或修改 `StockTrade`；帶 `id` 就是修改（只需帶要改的欄位），不帶就是新增（`code`/`act`/`date`/`price`/`amount` 必填）。目前只支援新增/修改，沒有刪除（未被要求） |
+
+**跨股票/策略批次計算的既知陷阱**：`compareStrategies` 在迴圈裡對每檔股票呼叫 `stockService.backtest()` 時，一律用 `{...backtestParams}` 建立獨立副本——因為 `stockService.backtest()` 會把傳入的 `params.entryStrategy`/`exitStrategy` 從字串原地改寫成解析後的 class，共用同一個物件會讓後面的股票拿到已被前一檔股票改寫過的參數。
+
+**檔案讀取工具的範圍與防護**（`listProjectFiles`／`readProjectFile`）：範圍限定 `README.md`＋`data/`（含原始股價 CSV/JSON），排除 `static/`（前端原始碼/第三方函式庫，不是對話內容，開放只會讓 agent 讀入大量無關檔案）。路徑檢查在**輸出端**做：用 `path.resolve(ROOT_DIR, params.path)` 算出最終絕對路徑後，檢查它是否等於 `README.md` 或落在 `data/` 底下（用 `path.sep` 邊界檢查，避免 `data-secret/` 這種同字首但非子目錄的路徑誤判為合法）——不管輸入字串長什麼樣，只看最終落點，包含輸入絕對路徑（`path.resolve` 對絕對路徑會忽略 base directory，是常見的路徑跳脫誤區）也一樣會被擋下。大檔案（超過 20,000 字元）取開頭 60%＋結尾 40%、中間標記省略（時間序列資料的最新內容通常在尾端）；工具說明也提醒 agent 股價/回測數據應優先用專用工具查，這裡只適合讀報告全文或抽查片段。
+
+**交易紀錄寫入工具的設計細節**（`saveStockTrade`）：修改前一定先用 `stockService.getTradeById(id)` 撈出原始紀錄確認 `userId` 相符才放行；工具內部在呼叫 `saveTrade` 之前，會把 `existing` 全部欄位跟這次傳入的欄位合併成一個完整物件再送出——因為 `StockTrade.save()` 內部依 `act`/`amount`/`price` 是否同時有值才會正確重算 `tax`，若只帶 `{id, price}` 直接送出（部分合併更新），`act` 會是 `undefined`，稅金不會跟著新價格重算。**沿用既有行為**：`StockTrade.save()` 對「買入」紀錄一律把 `remain` 重設為 `amount`，若這筆買入之前已被部分賣出配對掉庫存，用 `saveStockTrade` 改動它會把 `remain` 重置回總股數——這是 `StockTrade.save()` 本身的既有行為（既有的 `/stock/:code/trade` 路由也一樣），不是這個工具引入的問題。
+
+### 資料模型：`AssistantMessage`
+
+延續 `stock-db.js` 既有的 `sequelize.define` + `timestamps:false` + 手動 `date` 欄位風格。用自我參照的 `parentId` 對應 Pi SDK 的分支/樹狀對話導覽，`sessionId` 對應 Pi SDK 的 session 識別碼：
 
 ```js
 const AssistantMessage = sequelize.define('AssistantMessage', {
@@ -504,11 +538,18 @@ const AssistantMessage = sequelize.define('AssistantMessage', {
 }, { indexes: [{ fields: ['userId', 'sessionId'] }, { fields: ['parentId'] }], timestamps: false });
 ```
 
+靜態方法：`AssistantMessage.save()`／`findBySession(userId, sessionId)`／`listSessions(userId)`；`stock-service.js` 有對應的薄封裝 `saveAssistantMessage`／`assistantThread`／`assistantSessions`（`assistantSessions`/`assistantThread` 目前前端還沒接上，見「已知限制」）。
+
+### 已知限制（記錄但暫不處理）
+
+- **前端沒有訊息數量上限，也不會載入歷史紀錄**：`chat.messages` 是純前端記憶體陣列，重新整理頁面就歸零（`chat.sessionId` 同樣消失），不會在頁面載入時去讀 `AssistantMessage` 補回歷史。之後若要做「回上次對話」才需要實作讀取歷史 + 訊息數量上限。
+- **`aiSessions` 沒有回收機制**：長時間掛著服務、很多輪對話會一直累積在記憶體裡，之後有需要再加 LRU 或 TTL。
+- **同一個 `userId` 換裝置不會自動共用對話**：`aiSessions` 用 `sessionId` 當 key、不是 `userId`，換裝置預設會拿到全新空白對話；除非前端刻意做「續舊對話」功能讓兩台裝置送出同一個 `sessionId`，但那也只保證**先後**使用安全，**同時**用兩台裝置對同一個 session 送訊息沒有防護（`lastMessageId` 是普通變數，可能有 race condition；`session.prompt()` 是否耐受並發呼叫也沒把握）。
+- **`aiSessions` 只活在單一 Node process 記憶體裡**：現在一台機器一個 process 沒問題；之後若要水平擴展，A 機器建立的 session 換到 B 機器完全看不到，得整套換掉（例如 Redis，或放棄保留活的 `AgentSession`、每次從 `AssistantMessage` 表重建 context）。
+
 ### 尚待確認
 
-- 上方後端整合的 API 細節是對照套件 0.74.2 tarball 內建的 `docs/sdk.md` 確認，實際導入時應改裝 `latest`（0.85.1）版本，重新核對其內建文件（`node_modules/@earendil-works/pi-coding-agent/docs/`）確保 API 沒有變動
-- `home.html:463` 的既有 `z-index:9999` 遮罩實際用途，確認後再訂新對話面板的 z-index
-- 自訂工具（custom tools）的確切 TypeScript schema 定義方式，需要照 `examples/sdk/05-tools.ts` 的範例實際寫一次才能確認
+- `npm audit` 回報 `node-tar` 有 critical 等級漏洞（隨 Pi 相依套件帶入，屬路徑穿越/符號連結類型）——richapp 自身不解壓縮任何檔案不會觸發，但如果之後用到 Pi 的「載入外部 skill/extension」功能要特別注意來源是否可信，並定期關注官方是否釋出修補版本
 
 ## 工程規範
 

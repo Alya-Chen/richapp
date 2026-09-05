@@ -33,6 +33,20 @@
     referrerpolicy="no-referrer"></script>
   <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js" crossorigin="anonymous"
     referrerpolicy="no-referrer"></script>
+  <!-- AI 對話卡片用：把 AI 回覆的 markdown 轉成 HTML（marked）並過濾潛在惡意標籤（dompurify）再顯示 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <!-- AI 對話卡片：markdown 轉出來的表格/清單沒有 Tailwind Typography plugin 可用，手動補基本樣式 -->
+  <style>
+    .ai-chat-bubble { max-width: 100%; overflow-x: auto; }
+    .ai-chat-bubble table { border-collapse: collapse; margin: 0.5em 0; font-size: 0.85em; }
+    .ai-chat-bubble th, .ai-chat-bubble td { border: 1px solid currentColor; padding: 0.25em 0.5em; opacity: 0.9; }
+    .ai-chat-bubble ul, .ai-chat-bubble ol { padding-left: 1.25em; margin: 0.25em 0; }
+    .ai-chat-bubble p { margin: 0.25em 0; }
+    .ai-chat-bubble code { background: rgba(0,0,0,0.15); padding: 0.1em 0.3em; border-radius: 0.25em; }
+  </style>
 </head>
 
 <body ng-app="rich-app" ng-controller="indexCtrl" class="bg-base-200 text-base-content font-rich">
@@ -316,18 +330,43 @@
                   d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
               </svg>
               AI 對話
+              <button type="button" class="btn btn-ghost btn-xs btn-circle ml-auto" title="清空目前對話"
+                ng-click="chat.clear()" ng-disabled="chat.busy">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                  stroke="currentColor" class="size-4">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+              </button>
+              <button type="button" class="btn btn-ghost btn-xs btn-circle" title="這個 AI 助手能做什麼？"
+                ng-click="chat.help()" ng-disabled="chat.busy">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                  stroke="currentColor" class="size-4">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 17.25h.008v.008H12v-.008Z" />
+                </svg>
+              </button>
             </div>
-            <div class="chat chat-start" ng-repeat="m in chat.messages">
-              <div class="chat-bubble" ng-class="m.from === 'user' ? 'chat-bubble-primary' : 'chat-bubble-neutral'"
-                ng-bind="m.text"></div>
+            <div class="ai-chat-scroll min-h-[420px] max-h-[70vh] overflow-y-auto space-y-1 pr-1">
+              <div class="chat chat-start" ng-repeat="m in chat.messages">
+                <div class="chat-bubble ai-chat-bubble" ng-class="m.from === 'user' ? 'chat-bubble-primary' : 'chat-bubble-neutral'"
+                  ng-bind="m.text" ng-if="m.from === 'user'"></div>
+                <div class="chat-bubble ai-chat-bubble chat-bubble-neutral"
+                  ng-bind-html="chat.render(m.text)" ng-if="m.from !== 'user'"></div>
+              </div>
+              <div class="text-center text-xs text-base-content/50" ng-if="!chat.messages.length">
+                尚無訊息，輸入問題開始對話
+              </div>
             </div>
-            <div class="text-center text-xs text-base-content/50" ng-if="!chat.messages.length">
-              尚無訊息（功能待實作）
+            <div class="text-xs text-base-content/40" ng-if="chat.currentCode()">
+              將自動附上目前股票代號：<span class="font-mono">{{chat.currentCode()}}</span>
             </div>
+            <div class="text-xs text-base-content/50 italic" ng-if="chat.status" ng-bind="chat.status"></div>
             <div class="join">
               <input type="text" class="input input-bordered input-sm join-item flex-1" placeholder="輸入訊息..."
-                ng-model="chat.input" ng-keypress="chat.keypress($event)" />
-              <button class="btn btn-sm btn-primary join-item" ng-click="chat.send()">
+                ng-model="chat.input" ng-keypress="chat.keypress($event)" ng-disabled="chat.busy" />
+              <button class="btn btn-sm btn-primary join-item" ng-click="chat.send()" ng-disabled="chat.busy">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                   stroke="currentColor" class="size-4">
                   <path stroke-linecap="round" stroke-linejoin="round"

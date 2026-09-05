@@ -700,6 +700,90 @@ Log.last = async function(limit) {
 	});
 };
 
+const AssistantMessage = sequelize.define('AssistantMessage', {
+	id: {
+		type: DataTypes.INTEGER,
+		autoIncrement: true,
+		primaryKey: true,
+	},
+	userId: {
+		type: DataTypes.INTEGER,
+		allowNull: false,
+		comment: '所屬使用者，伺服器端從 session 帶入，不可信任前端傳的值'
+	},
+	sessionId: {
+		type: DataTypes.STRING,
+		allowNull: false,
+		comment: 'Pi SDK 對話 session 識別碼，同一輪對話的訊息共用同一值'
+	},
+	parentId: {
+		type: DataTypes.INTEGER,
+		allowNull: true,
+		comment: '上一則訊息的 id；null 代表該 session 的根訊息（對應 SDK 的分支/樹狀導覽）'
+	},
+	role: {
+		type: DataTypes.STRING,
+		allowNull: false,
+		comment: 'user / assistant / tool'
+	},
+	content: {
+		type: DataTypes.TEXT,
+		allowNull: true,
+		comment: '訊息文字內容'
+	},
+	toolCalls: {
+		type: DataTypes.JSON,
+		allowNull: true,
+		comment: 'assistant 觸發的工具呼叫（名稱+參數）'
+	},
+	toolResult: {
+		type: DataTypes.JSON,
+		allowNull: true,
+		comment: 'role=tool 時的工具執行結果'
+	},
+	date: {
+		type: DataTypes.DATE,
+		defaultValue: DataTypes.NOW,
+		comment: '建立時間'
+	}
+}, {
+	indexes: [
+		{ fields: ['userId', 'sessionId'] },
+		{ fields: ['parentId'] }
+	],
+	timestamps: false // 不使用Sequelize自帶時間戳
+});
+
+AssistantMessage.save = async function(msg) {
+	return Base.save(AssistantMessage, msg);
+};
+
+// 依 session 重建對話串（依 id 排序，配合 parentId 可還原樹狀分支）
+AssistantMessage.findBySession = async function(userId, sessionId) {
+	return AssistantMessage.findAll({
+		where: {
+			userId,
+			sessionId
+		},
+		order: [
+			['id', 'ASC']
+		]
+	});
+};
+
+// 列出使用者的對話清單（每個 session 的根訊息），供前端側邊欄用
+AssistantMessage.listSessions = async function(userId) {
+	return AssistantMessage.findAll({
+		where: {
+			userId,
+			parentId: null
+		},
+		order: [
+			['date', 'DESC']
+		]
+	});
+};
+
 // 初始化數據庫
 async function initDb() {
 	try {
@@ -725,5 +809,6 @@ export {
 	Backtest,
 	Note,
 	Log,
+	AssistantMessage,
 	initDb
 };

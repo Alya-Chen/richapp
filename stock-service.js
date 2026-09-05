@@ -478,6 +478,11 @@ class Service {
 		return await db.StockTrade.del(id);
 	}
 
+	async getTradeById(id) {
+		const trade = await db.StockTrade.findOne({ where: { id } });
+		return trade ? trade.toJSON() : null;
+	}
+
 	async stocks() {
 		const stocks = (await db.Stock.findAll({
 			order: ['otc', 'code']
@@ -521,6 +526,18 @@ class Service {
 
 	async delNote(id) {
 		return await db.Note.del(id);
+	}
+
+	async saveAssistantMessage(msg) {
+		return await db.AssistantMessage.save(msg);
+	}
+
+	async assistantThread(userId, sessionId) {
+		return await db.AssistantMessage.findBySession(userId, sessionId);
+	}
+
+	async assistantSessions(userId) {
+		return await db.AssistantMessage.listSessions(userId);
 	}
 
 	async logs(limit) {
